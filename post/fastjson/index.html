@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>fastjson：我一路向北，离开有你的季节 | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1616599535374">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1616642016184">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1616599535374" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1616642016184" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -260,7 +260,7 @@ org.springframework
 	&quot;autoCommit&quot;:true
 }
 </code></pre>
-<h2 id="2-fastjson-1242">2. fastjson-1.2.42</h2>
+<h2 id="3-fastjson-1242">3. fastjson-1.2.42</h2>
 <p>在版本 1.2.42 中，fastjson 继续延续了黑白名单的检测模式，但是将黑名单类从白名单修改为使用 HASH 的方式进行对比，这是为了防止安全研究人员根据黑名单中的类进行反向研究，用来对未更新的历史版本进行攻击。同时，作者对之前版本一直存在的使用类描述符绕过黑名单校验的问题尝试进行了修复。</p>
 <blockquote>
 <p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.42</code><br>
@@ -277,7 +277,7 @@ org.springframework
 	&quot;autoCommit&quot;:true
 }
 </code></pre>
-<h2 id="3-fastjson-1243">3. fastjson-1.2.43</h2>
+<h2 id="4-fastjson-1243">4. fastjson-1.2.43</h2>
 <p>这个版本主要是修复上一个版本中双写绕过的问题。</p>
 <blockquote>
 <p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.43</code><br>
@@ -293,7 +293,7 @@ org.springframework
 	&quot;autoCommit&quot;:true
 }
 </code></pre>
-<h2 id="4-fastjson-1244">4. fastjson-1.2.44</h2>
+<h2 id="5-fastjson-1244">5. fastjson-1.2.44</h2>
 <p>这个版本主要是修复上一个版本中使用 <code>[</code> 绕过黑名单防护的问题。</p>
 <blockquote>
 <p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.44</code><br>
@@ -301,7 +301,7 @@ org.springframework
 </blockquote>
 <p>可以看到在 <code>checkAutoType</code> 中添加了新的判断，如果类名以 <code>[</code> 开始则直接抛出异常。</p>
 <figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1616475393707.png" alt="" loading="lazy"></figure>
-<h2 id="5-fastjson-1245">5. fastjson-1.2.45</h2>
+<h2 id="6-fastjson-1245">6. fastjson-1.2.45</h2>
 <p>在此版本爆出了一个黑名单绕过，实际上，黑名单是无穷无尽的，随着 fastjson 的版本更新，一定会有更多的黑名单爆出来，因为隔壁 jackson 都是明文黑名单的，只要隔壁一更新，大家都看到了，就会拿来看 fastjson。</p>
 <blockquote>
 <p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.45</code><br>
@@ -314,7 +314,7 @@ org.springframework
     }
 }
 </code></pre>
-<h2 id="6-fastjson-1247">6. fastjson-1.2.47</h2>
+<h2 id="7-fastjson-1247">7. fastjson-1.2.47</h2>
 <p>在 fastjson 不断迭代到 1.2.47 时，爆出了最为严重的漏洞，可以在不开启 AutoTypeSupport 的情况下进行反序列化的利用。</p>
 <blockquote>
 <p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.32 未开启 AutoTypeSupport</code><br>
@@ -580,7 +580,7 @@ org.springframework
 	}
 }
 </code></pre>
-<h2 id="7-fastjson-1268">7. fastjson-1.2.68</h2>
+<h2 id="8-fastjson-1268">8. fastjson-1.2.68</h2>
 <p>在 1.2.47 版本漏洞爆发之后，官方在 1.2.48 对漏洞进行了修复，在 <code>MiscCodec</code> 处理 Class 类的地方，设置了cache 为 false ，并且 <code>loadClass</code> 重载方法的默认的调用改为不缓存，这就避免了使用了 Class 提前将恶意类名缓存进去。</p>
 <p>这个安全修复为 fastjson 带来了一定时间的平静，直到 1.2.68 版本出现了新的漏洞利用方式。</p>
 <blockquote>
@@ -622,12 +622,12 @@ org.springframework
 <ul>
 <li><a href="#1-fastjson-1224">1. fastjson-1.2.24</a></li>
 <li><a href="#2-fastjson-1225">2. fastjson-1.2.25</a></li>
-<li><a href="#2-fastjson-1242">2. fastjson-1.2.42</a></li>
-<li><a href="#3-fastjson-1243">3. fastjson-1.2.43</a></li>
-<li><a href="#4-fastjson-1244">4. fastjson-1.2.44</a></li>
-<li><a href="#5-fastjson-1245">5. fastjson-1.2.45</a></li>
-<li><a href="#6-fastjson-1247">6. fastjson-1.2.47</a></li>
-<li><a href="#7-fastjson-1268">7. fastjson-1.2.68</a></li>
+<li><a href="#3-fastjson-1242">3. fastjson-1.2.42</a></li>
+<li><a href="#4-fastjson-1243">4. fastjson-1.2.43</a></li>
+<li><a href="#5-fastjson-1244">5. fastjson-1.2.44</a></li>
+<li><a href="#6-fastjson-1245">6. fastjson-1.2.45</a></li>
+<li><a href="#7-fastjson-1247">7. fastjson-1.2.47</a></li>
+<li><a href="#8-fastjson-1268">8. fastjson-1.2.68</a></li>
 </ul>
 </li>
 <li><a href="#%E5%9B%9B-%E6%80%BB%E7%BB%93">四、总结</a></li>
