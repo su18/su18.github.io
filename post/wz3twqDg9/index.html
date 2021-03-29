@@ -1,0 +1,303 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RASP究竟该如何防御SSRF | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1616988203982">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1616988203982" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+      
+        <a href="https://www.facebook.com/ssuu1188/" target="_blank">
+          <i class="fab fa-facebook"></i>
+        </a>
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              RASP究竟该如何防御SSRF
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-01-18
+              </span>
+              <span>
+                5 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="一-漏洞说明">一、漏洞说明</h1>
+<p>对于漏洞的描述和简介不再赘述，大致可解释为利用服务器向外界建立连接的功能，来探测、攻击或读取敏感信息的攻击行为，其重点在于服务器如何与建立连接，建立连接后有什么方式能够发起攻击。</p>
+<p>Java 中，处理网络资源、网络通信所需要的类都在<code>java.net</code>包中，主要是 C/S 结构的 BIO 模型。除此之外，还提供了 <code>java.nio</code> 包，基于 Channel 和 Buffer 进行操作。其中网络编程相关的一些内部实现位于 <code>sun.nio</code> 包内。对于nio模型，各个中间件或框架还有自己的实现。</p>
+<p>因此，作为开发人员来讲，如果想要通过建立网络连接获取外部资源，或单单是为了建立网络连接，则可以使用的方法有：</p>
+<ul>
+<li>使用URL对象获取网络资源。</li>
+<li>使用Socket发起网络连接建立资源。</li>
+</ul>
+<h1 id="二-通过url对象获取网络资源">二、通过URL对象获取网络资源</h1>
+<p>URL表示一个统一资源定位符，它是指向万维网上“资源”的指针。资源可以是简单的文件或目录，也可以是对更复杂对象的引用，例如对数据库或搜索引擎的查询。</p>
+<p>URLConnection 是表示应用程序和 URL 之间的通信链接的所有类的父类。此类的实例可用于读取和写入 URL 引用的资源。</p>
+<p>Java 中的支持的网络连接协议有：<code>file/ftp/http/https/jar/mailto/netdoc/gopher</code>，首先来了解一下这些协议，以及这些协议有哪些可能的攻击方式。</p>
+<h2 id="1-file-协议">1. file 协议</h2>
+<p>file协议用来读取本地文件对象，子类为FileURLConnection，调用<code>openConnection()</code>时会创建一个待读取文件的File对象。<br>
+这个方法有一个有趣的判断，通过 URL 对象的 <code>getHost()</code> 方法获取了这个URL的host，当不满足条件时，将会重新创建URL对象，并使用 ftp 协议来读取文件。</p>
+<p>因此，对于file协议的本地文件读取，以下三种写法的效果是一样的。</p>
+<pre><code class="language-java">file:///Users/phoebe/Downloads/test.txt
+file://~/Users/phoebe/Downloads/test.txt
+file://LocAlHosT/Users/phoebe/Downloads/test.txt（不区分大小写）
+</code></pre>
+<p>例如：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1610942346352.png" alt="" loading="lazy"></figure>
+<p>对于因为file协议会new 一个File对象，对于 RASP 防御技术来说，可以通过文件系统的防御手段来进行防御。</p>
+<h2 id="2-ftp-协议">2. ftp 协议</h2>
+<p>ftp协议用来读取ftp服务器上的文件，子类为FtpURLConnection，返回的内容放在内部类FtpOutputStream中，根据代理情况的不同可能，协议可能使用了 FtpClient 来创建 ftp 连接，或HttpURLConnection 来建立 http 连接。</p>
+<p>使用 ftp 协议可以用来读取 ftp 服务器上的文件，也可以用来进行端口的探测。</p>
+<p>例如：</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1610942100961.png" alt="" loading="lazy"></figure>
+<h2 id="3-httphttps-协议">3. http/https 协议</h2>
+<p>常见的http协议，大家耳熟能详，不再赘述，已经被发掘出内网扫描、攻击 redis/mysql 等等攻击方式。</p>
+<h2 id="4-jar-协议">4. jar 协议</h2>
+<p>jar协议使用JarURLConnection，将内容存放在内部类JarURLInputStream中，获取JarFileFactory获取连接后，进行jar文件的解析并读取其中的内容。使用jar协议进行jar文件的读取，实际调用的还是URL对象的<code>openConnection()</code>方法。</p>
+<p>例如本地 jar 读取：<br>
+<img src="https://su18.org/post-images/1610945478731.png" alt="" loading="lazy"><br>
+ftp 上的 jar 读取：<br>
+<img src="https://su18.org/post-images/1610946204676.png" alt="" loading="lazy"><br>
+http 上的 jar 读取：<br>
+<img src="https://su18.org/post-images/1610952637974.png" alt="" loading="lazy"></p>
+<h2 id="5-mailto-协议">5. mailto 协议</h2>
+<p>子类为MailToURLConnection，此类没有重写 <code>getInputStream()</code> 方法，在使用时调用 <code>connect()</code> 方法创建SmtpClient对象建立连接，使用此协议需要有预先的Property配置，不然会触发报错。因此在实战中比较难以利用。</p>
+<h2 id="6-netdoc-协议">6. netdoc 协议</h2>
+<p>在 <code>newdoc.localonly</code> 和 <code>doc.url</code> 没有配置的情况下，netdoc协议会重新创建URL对象，并使用file协议进行文件的读取。在有配置的情况下，还是调用URL对象的<code>openConnection()</code>方法。这个协议在理论上也是可以通过文件系统的防御手段来进行防御。</p>
+<p>例如：<br>
+<img src="https://su18.org/post-images/1610954150381.png" alt="" loading="lazy"></p>
+<h2 id="7-gopher-协议">7. gopher 协议</h2>
+<p>在JDK 1.8 中， gopher协议被移除，因此要想利用gopher协议需在JDK 1.7之前。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1610934403453.png" alt="" loading="lazy"></figure>
+<h1 id="三-通过socket获取网络资源">三、通过Socket获取网络资源</h1>
+<p>作为</p>
+<h1 id="四-总结">四、总结</h1>
+<h1 id="五-漏洞利用">五、漏洞利用</h1>
+<p>这里我们尝试着还原一下在实际项目中SSRF漏洞可能的攻击利用场景，开发人员使用了一些工具类，开发了一些能够建立连接的功能，而其中的URL String或其他参数由攻击者可控：</p>
+<h2 id="1-httpurlconnection">1. HttpURLConnection</h2>
+<p>这是最常见，也是最可能出现的一种情况，开发人员使用 <code>URL.openConnection()</code> 建立连接并强转为 HttpURLConnection 对象。示例代码：</p>
+<pre><code class="language-java">&lt;%@ page import=&quot;org.apache.commons.io.IOUtils&quot; %&gt;
+&lt;%@ page import=&quot;java.net.HttpURLConnection&quot; %&gt;
+&lt;%@ page import=&quot;java.net.URL&quot; %&gt;
+&lt;%@ page import=&quot;java.net.URLConnection&quot; %&gt;
+&lt;%@ page contentType=&quot;text/html;charset=UTF-8&quot; language=&quot;java&quot; %&gt;
+&lt;%
+    URL url = new URL(request.getParameter(&quot;url&quot;));
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    out.println(IOUtils.toString(connection.getInputStream()));
+    out.flush();
+    out.close();
+
+    connection.disconnect();
+%&gt;
+</code></pre>
+<pre><code>ServerSocket.bind(SocketAddress endpoint, int backlog)   ---InetSocketAddress$InetSocketAddressHolder
+</code></pre>
+<h1 id="六-总结">六、总结</h1>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E6%BC%8F%E6%B4%9E%E8%AF%B4%E6%98%8E">一、漏洞说明</a></li>
+<li><a href="#%E4%BA%8C-%E9%80%9A%E8%BF%87url%E5%AF%B9%E8%B1%A1%E8%8E%B7%E5%8F%96%E7%BD%91%E7%BB%9C%E8%B5%84%E6%BA%90">二、通过URL对象获取网络资源</a>
+<ul>
+<li><a href="#1-file-%E5%8D%8F%E8%AE%AE">1. file 协议</a></li>
+<li><a href="#2-ftp-%E5%8D%8F%E8%AE%AE">2. ftp 协议</a></li>
+<li><a href="#3-httphttps-%E5%8D%8F%E8%AE%AE">3. http/https 协议</a></li>
+<li><a href="#4-jar-%E5%8D%8F%E8%AE%AE">4. jar 协议</a></li>
+<li><a href="#5-mailto-%E5%8D%8F%E8%AE%AE">5. mailto 协议</a></li>
+<li><a href="#6-netdoc-%E5%8D%8F%E8%AE%AE">6. netdoc 协议</a></li>
+<li><a href="#7-gopher-%E5%8D%8F%E8%AE%AE">7. gopher 协议</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89-%E9%80%9A%E8%BF%87socket%E8%8E%B7%E5%8F%96%E7%BD%91%E7%BB%9C%E8%B5%84%E6%BA%90">三、通过Socket获取网络资源</a></li>
+<li><a href="#%E5%9B%9B-%E6%80%BB%E7%BB%93">四、总结</a></li>
+<li><a href="#%E4%BA%94-%E6%BC%8F%E6%B4%9E%E5%88%A9%E7%94%A8">五、漏洞利用</a>
+<ul>
+<li><a href="#1-httpurlconnection">1. HttpURLConnection</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%AD-%E6%80%BB%E7%BB%93">六、总结</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/2020-reading/">
+              <h3 class="post-title">
+                2020年读书小结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.javaweb.org/" target="_blank">园长</a> <a href="http://funk.leanote.com/" target="_blank">连长</a>  <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a>  | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>
