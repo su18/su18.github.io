@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://su18.org</id>
     <title>素十八</title>
-    <updated>2021-03-31T07:19:21.033Z</updated>
+    <updated>2021-04-05T08:36:52.567Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://su18.org"/>
     <link rel="self" href="https://su18.org/atom.xml"/>
@@ -10,6 +10,13 @@
     <logo>https://su18.org/images/avatar.png</logo>
     <icon>https://su18.org/favicon.ico</icon>
     <rights>All rights reserved 2021, 素十八</rights>
+    <entry>
+        <title type="html"><![CDATA[洞态 IAST 试用]]></title>
+        <id>https://su18.org/post/dongtai/</id>
+        <link href="https://su18.org/post/dongtai/">
+        </link>
+        <updated>2021-04-01T03:50:56.000Z</updated>
+    </entry>
     <entry>
         <title type="html"><![CDATA[fastjson：我一路向北，离开有你的季节]]></title>
         <id>https://su18.org/post/fastjson/</id>
@@ -72,12 +79,5 @@
         <link href="https://su18.org/post/su18.php/">
         </link>
         <updated>2019-11-01T03:32:30.000Z</updated>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[您好，我叫素十八]]></title>
-        <id>https://su18.org/post/hello-world/</id>
-        <link href="https://su18.org/post/hello-world/">
-        </link>
-        <updated>2019-08-30T10:10:43.000Z</updated>
     </entry>
 </feed>
