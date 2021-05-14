@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://su18.org</id>
     <title>素十八</title>
-    <updated>2021-05-14T02:39:11.996Z</updated>
+    <updated>2021-05-14T02:41:43.708Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://su18.org"/>
     <link rel="self" href="https://su18.org/atom.xml"/>
@@ -15,7 +15,7 @@
         <id>https://su18.org/post/struts2-5/</id>
         <link href="https://su18.org/post/struts2-5/">
         </link>
-        <updated>2021-05-16T02:47:58.000Z</updated>
+        <updated>2021-05-14T02:39:30.000Z</updated>
     </entry>
     <entry>
         <title type="html"><![CDATA[Struts2：你说你好累，已无法再爱上谁（四）]]></title>
