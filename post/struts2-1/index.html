@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Struts2：你说你好累，已无法再爱上谁（一） | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620606541755">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620959747298">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620606541755" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620959747298" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -127,7 +127,7 @@
             <div class="post-content-wrapper">
               <div class="post-content">
                 <h1 id="前言">前言</h1>
-<p>这是第二篇漏洞文，本文针对 Struts2 历史版本的 RCE（OGNL 注入）进行研究和记录。由于漏洞较多，调试过程写的也比较细致，因此篇幅较长，将分为多篇文章进行发布，本文是第一篇，前置信息介绍以及 S2-001/S2-003/S2-005/S2-007/S2-008/S2-009 的漏洞调试。</p>
+<p>这是第二篇漏洞文，本文针对 Struts2 历史版本的 RCE 进行研究和记录。由于漏洞较多，调试过程写的也比较细致，因此篇幅较长，将分为多篇文章进行发布，本文是第一篇，前置信息介绍以及 S2-001/S2-003/S2-005/S2-007/S2-008/S2-009 的漏洞调试。</p>
 <p>了解我的人都知道，我写文章，又臭又长。因为文章的写法是边学边研究编写，在研究的过程中，如果发现之前的理解和记录有错误的地方，就回去改改，这就导致了文章的通顺性上可能不是特别好，但是我的文章胜在详细和准确，一般情况下，网上的文章不会有比我说得清楚的。</p>
 <p>总体来讲，在我眼里这依旧是一篇水文，因为只是调式记录，并没有太多的延伸和扩展，适合和我一样对漏洞原理感兴趣的人看。</p>
 <h1 id="一-简介">一、简介</h1>
@@ -412,7 +412,7 @@ Object result     = Ognl.getValue(expression,上下文,根);
 <blockquote>
 <p>影响版本：Struts 2.0.0 - Struts 2.2.3<br>
 参考链接：https://cwiki.apache.org/confluence/display/WW/S2-007<br>
-描述：关于表单我们可以设置每个字段的规则验证，如果类型转换错误时，在类型转换错误下，拦截器会将用户输入取出插入到当前值栈中，之后会对标签进行解析进行二次表达式解析，造成表达式注入。</p>
+描述：关于表单我们可以设置每个字段的规则验证，如果类型转换错误时，在类型转换错误下，拦截器会将用户输入取出插入到当前值栈中，之后会对标签进行二次表达式解析，造成表达式注入。</p>
 </blockquote>
 <p>可以为 field 配置验证规则，这里使用了 S2-007 的靶场进行调试，如下可看到为 age 配置了类型和大小限制：</p>
 <pre><code class="language-xml">&lt;validators&gt;
