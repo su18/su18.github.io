@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Struts2 系列漏洞调试总结（完结篇） | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620959974701">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620961457688">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620959974701" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620961457688" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -383,7 +383,6 @@ new java.lang.ProcessBuilder(new java.lang.String[]{&quot;payload&quot;}).start(
 <p>文章写道这里基本上就接近尾声了，写完之后回头又从头顺了一遍自己写的东西，发现已经有看不懂的地方出现了。</p>
 <p>一是这个系列前前后后写了一个月的时间，跨度太长，很多细节上的东西当时理解了觉得是很简单的东西没有写清楚，而过了一段时间就忘却了。</p>
 <p>二是一开始写的时候是从零开始，什么都不懂，越写到后来，对这个系列漏洞理解就越深，很多重复的东西就没有再写了，导致如果从某个漏洞突然开始看起，可能会摸不到头脑。</p>
-<p>由于本人从来没有使用过 Struts2 框架编写任何的应用，对 OGNL 也是现学现卖，因此还是不敢确保这一系列文章的全部内容都是正确的，所以暂时不打算更新在 Javasec 上。</p>
 <p>最后希望呕心沥血写出来的这一系列文章能给安全路上爬坑的伙伴们多多少少带来一点帮助，也十分感谢所有愿意在互联网上发布自己漏洞研究调试成果的师傅们，站在巨人的肩膀上，空气都变甜了。</p>
 <h1 id="0x10-扩展">0x10 扩展</h1>
 <p>那么今后还会不会出现 Struts2 的 RCE 漏洞呢？我认为的答案是肯定的，Struts2 入口处那么多拦截器，返回结果有那么多标签属性，肯定还有能触发解析的地方，只不过绕过 OGNL 和 Struts2 的防御执行高危操作是极其难的。</p>
