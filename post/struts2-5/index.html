@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Struts2 系列漏洞调试总结（完结篇） | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1620961457688">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1621466380322">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1620961457688" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1621466380322" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -378,7 +378,7 @@ new java.lang.ProcessBuilder(new java.lang.String[]{&quot;payload&quot;}).start(
 <pre><code>#response.addHeader(&quot;result&quot;,result);
 </code></pre>
 <p>以上的 payload 仅仅是网上比较常见的，但是其实还有多种实现方式，不局限于这几种，灵活搭配这些 payload，结合我们之前提到的各种不同的触发逻辑，再结合在漏洞调试中我们发现的 unicode 编码等特性，可以使 Struts2 的 payload 诡谲多变，不易被检测出来。</p>
-<p>在写这部分时参考了 Github 上 start 较多的几个 Struts2 扫描及利用项目，发现项目中的 payload 都是写死的字符串，通过替换某些关键字进行发送，这就失去了使用自动化工具的意义了，本来我也想写一个利用工具的，奈何时间和精力不够，感觉受益和回报也不多，还是算了吧。</p>
+<p>在写这部分时参考了 Github 上 star 较多的几个 Struts2 扫描及利用项目，发现项目中的 payload 都是写死的字符串，通过替换某些关键字进行发送，这就失去了使用自动化工具的意义了，本来我也想写一个利用工具的，奈何时间和精力不够，感觉受益和回报也不多，还是算了吧。</p>
 <h1 id="0x09-总结">0x09 总结</h1>
 <p>文章写道这里基本上就接近尾声了，写完之后回头又从头顺了一遍自己写的东西，发现已经有看不懂的地方出现了。</p>
 <p>一是这个系列前前后后写了一个月的时间，跨度太长，很多细节上的东西当时理解了觉得是很简单的东西没有写清楚，而过了一段时间就忘却了。</p>
