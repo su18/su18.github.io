@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://su18.org</id>
     <title>素十八</title>
-    <updated>2021-05-19T23:19:46.362Z</updated>
+    <updated>2021-05-21T10:56:39.080Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://su18.org"/>
     <link rel="self" href="https://su18.org/atom.xml"/>
@@ -16,34 +16,6 @@
         <link href="https://su18.org/post/struts2-5/">
         </link>
         <updated>2021-05-14T02:39:30.000Z</updated>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Struts2：你说你好累，已无法再爱上谁（四）]]></title>
-        <id>https://su18.org/post/struts2-4/</id>
-        <link href="https://su18.org/post/struts2-4/">
-        </link>
-        <updated>2021-05-11T02:53:47.000Z</updated>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Struts2：你说你好累，已无法再爱上谁（三）]]></title>
-        <id>https://su18.org/post/struts2-3/</id>
-        <link href="https://su18.org/post/struts2-3/">
-        </link>
-        <updated>2021-05-06T01:19:22.000Z</updated>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Struts2：你说你好累，已无法再爱上谁（二）]]></title>
-        <id>https://su18.org/post/struts2-2/</id>
-        <link href="https://su18.org/post/struts2-2/">
-        </link>
-        <updated>2021-04-26T02:48:51.000Z</updated>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[Struts2：你说你好累，已无法再爱上谁（一）]]></title>
-        <id>https://su18.org/post/struts2-1/</id>
-        <link href="https://su18.org/post/struts2-1/">
-        </link>
-        <updated>2021-04-16T00:26:36.000Z</updated>
     </entry>
     <entry>
         <title type="html"><![CDATA[洞态 IAST 试用]]></title>
@@ -79,5 +51,33 @@
         <link href="https://su18.org/post/2020-review/">
         </link>
         <updated>2020-12-13T13:23:03.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[sqli-labs 通关之路（未完成）]]></title>
+        <id>https://su18.org/post/BMmmwa7FW/</id>
+        <link href="https://su18.org/post/BMmmwa7FW/">
+        </link>
+        <updated>2020-10-19T02:51:01.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[su18.jsp]]></title>
+        <id>https://su18.org/post/su18.jsp/</id>
+        <link href="https://su18.org/post/su18.jsp/">
+        </link>
+        <updated>2020-09-23T07:28:05.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[JNDI 注入漏洞利用工具]]></title>
+        <id>https://su18.org/post/SfQSdrquM/</id>
+        <link href="https://su18.org/post/SfQSdrquM/">
+        </link>
+        <updated>2020-04-08T06:36:13.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Java Instrumentation]]></title>
+        <id>https://su18.org/post/irP0RsYK1/</id>
+        <link href="https://su18.org/post/irP0RsYK1/">
+        </link>
+        <updated>2020-02-24T10:11:11.000Z</updated>
     </entry>
 </feed>

