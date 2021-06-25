@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>JavaWeb 内存马一周目通关攻略 | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1624592249769">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1624592468125">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1624592249769" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1624592468125" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -411,7 +411,7 @@
 <p>LandGrey 师傅的项目 <a href="https://github.com/LandGrey/copagent">copagent</a> 使用 javaagent 技术获得了全部的类，判断其包名、实现类名、接口名、注解来提取关键类，并根据类是否在磁盘上有资源链接对象、类中是否包含恶意行为关键字来判断其是否为内存马。</p>
 <p>在这里我参考了其项目，在 retransform 时做了同样的事，并在此基础上添加了一定的防御功能：同时 retransform 了恶意类，并在其关键调用代码调用时处理自己的逻辑。</p>
 <h2 id="视频">视频</h2>
-<p>以下为测试过程录屏。</p>
+<p>以下为测试过程<a href="https://youtu.be/tTFv15uCNjQ">录屏</a>。</p>
 <figure data-type="image" tabindex="54"><a href="https://youtu.be/tTFv15uCNjQ" title="Memory Shell Test"><img src="https://res.cloudinary.com/marcomontalbano/image/upload/v1624592145/video_to_markdown/images/youtube--tTFv15uCNjQ-c05b58ac6eb4c4700831b2b3070cd403.jpg" alt="Memory Shell Test" loading="lazy"></a></figure>
 <h1 id="广告">广告</h1>
 <p>公开的还是娱乐向的测试代码，能解决问题吗？首先答案是肯定的，能在一定程度上解决问题，我同时也提供了测试代码，欢迎吐槽。但是如果你看完了本篇的文章和代码，你会发现能玩的东西还很多，这个项目主要用于尝试更多的想法和抛砖引玉，所以较为完整和成熟的 JavaWeb 内存马防御能力代码，请关注 RASP 安全产品：<a href="http://www.anbai.com/lxPlatform/">安百科技-灵蜥</a>。</p>
