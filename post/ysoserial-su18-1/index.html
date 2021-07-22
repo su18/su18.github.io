@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Java 反序列化漏洞（一） - 前置知识 &amp; URLDNS | 素十八</title>
 <meta name="description" content="你救赎的人 终将成为你的光" />
-<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1626924967745">
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1626949032289">
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://su18.org/styles/main.css">
@@ -29,7 +29,7 @@
       <div class="main-content">
         <div class="site-header">
   <a href="https://su18.org">
-  <img class="avatar" src="https://su18.org/images/avatar.png?v=1626924967745" alt="">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1626949032289" alt="">
   </a>
   <h1 class="site-title">
     素十八
@@ -123,7 +123,6 @@
                 <h1 id="前言">前言</h1>
 <p>什么是反序列化？什么是反序列化？如果你想知道什么是反序列化的话，我现在就带你盘它。</p>
 <p>漏洞文章系列第三篇，主要说一下反序列化漏洞原理、常见 gadget、常见的漏洞触发位置、以及涉及到什么、想到什么就写什么吧。</p>
-<p>作为目前最火爆的漏洞类型，此篇漏洞分析系列将相当长，甚至将远远长于 Struts2 系列的几十个漏洞的调试分析，作为写文章的，我顶得住，不知道看文章的顶不顶得住。</p>
 <h1 id="一-背景描述">一、背景描述</h1>
 <p>在 2015 年 11 月 6 日，来自 Fox Glove Security 安全团队的 Steve Breen (推特@breenmachine) ，在其团队<a href="https://foxglovesecurity.com/">博客</a>上发布了一条长文，标题为：“Weblogic，WebSphere，JBoss，Jenkins，OpenNMS 以及你的应用有什么共同点？漏洞！”，将反序列化漏洞的危害引入了大众视野，拉开了发序列化漏洞的帷幕，横扫了大部分的主流 Java 中间件。点击<a href="https://foxglovesecurity.com/2015/11/06/what-do-weblogic-websphere-jboss-jenkins-opennms-and-your-application-have-in-common-this-vulnerability/">这里</a>查看原文。</p>
 <p>早在 2015 年 1 月 28 日，名为 <a href="https://www.slideshare.net/frohoff1/appseccali-2015-marshalling-pickles">Marshalling Pickles</a> 的 PPT 被分享在了 slideshare 网上，演讲由 Gabriel Lawrence（@gebl）和 Chris Frohoff（@frohoff）在AppSecCali 上进行，但是在当时没有激起什么波澜。</p>
@@ -284,7 +283,7 @@ Binder/Parcel, IIOP</li>
 <p>那接下来该如何利用呢？我们需要找到那些类重写了 <code>readObject</code> 方法，并且找到相关的调用链，能够触发漏洞，接下来，我们将分析 ysoserial 中的调用链，积累一些思路。</p>
 <h1 id="四-反序列化-gadget-分析">四、反序列化 Gadget 分析</h1>
 <p>本章将对 ysoserial 中的反序列化调用链进行分析和研究。在之前曾经说过，一个能成功执行的反序列化调用链需要三个元素：“kick-off”、“sink”、“chain”。翻译成中文来说就是 “入口点（重写了 readObject 的类）”、“sink 点（最终执行恶意动作的点：RCE...）”、“chain （中间的调用链）”。</p>
-<h2 id="1-urldns">1. URLDNS</h2>
+<h2 id="urldns">URLDNS</h2>
 <p>漏洞来源地址：<a href="https://blog.paranoidsoftware.com/triggering-a-dns-lookup-using-java-deserialization/">点击这里</a></p>
 <p>URLDNS 是适合新手分析的反序列化链，只依赖原生类，没有 jdk 版本限制，也被 ysoserial 涵盖在其中。它不会执行命令，只会触发 DNS 解析，因此通常用来探测是否存在反序列化漏洞。</p>
 <p>这个漏洞关键点是 Java 内置的 <code>java.net.URL</code> 类，这个类的 <code>equals</code> 和 <code>hashCode</code> 方法具有一个有趣的特性：在对 URL 对象进行比较时（使用 <code>equals</code> 方法或 <code>hashCode</code> 方法），会触发一次 DNS 解析，因为对于 URL 来说，如果两个主机名（host）都可以解析为相同的 IP 地址，则这两个主机会被认为是相同的。</p>
@@ -466,7 +465,7 @@ url.hashCode();
 <li><a href="#%E4%B8%89-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E">三、反序列化漏洞</a></li>
 <li><a href="#%E5%9B%9B-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-gadget-%E5%88%86%E6%9E%90">四、反序列化 Gadget 分析</a>
 <ul>
-<li><a href="#1-urldns">1. URLDNS</a></li>
+<li><a href="#urldns">URLDNS</a></li>
 </ul>
 </li>
 </ul>
