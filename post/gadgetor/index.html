@@ -1,0 +1,389 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>高效挖掘反序列化漏洞——GadgetInspector改造 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              高效挖掘反序列化漏洞——GadgetInspector改造
+            </h2>
+            <div class="post-info">
+              <span>
+                2022-02-21
+              </span>
+              <span>
+                16 min read
+              </span>
+              
+                <a href="https://su18.org/tag/9VY86ft5a/" class="post-tag">
+                  # 自动化漏洞挖掘
+                </a>
+              
+                <a href="https://su18.org/tag/CVcnArQfgO/" class="post-tag">
+                  # 源码阅读
+                </a>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/mBZEXbIuQ/" class="post-tag">
+                  # 工具
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/gadgetor.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="0x00-背景">0x00 背景</h1>
+<p>年前给某用户做培训的时候，简单提到了 GadgetInspector 这款工具，由于时间的原因，没有讲的十分的详细，其中的技术细节也没摸的特别透彻。最近由于有这方面的需求，于是花了大概两周的时间彻底摸了一遍，并根据自己的想法重构了一下，目前来看效果还行，但是还有需要很多优化的地方，本文是思路的记录。</p>
+<p>本文投稿先知社区：<a href="https://xz.aliyun.com/t/10908">https://xz.aliyun.com/t/10908</a></p>
+<h1 id="0x01-前言">0x01 前言</h1>
+<p>早在 2015 年 1 月 28 日， Gabriel Lawrence（@gebl）和 Chris Frohoff（@frohoff）就发布了关于反序列化的<a href="https://www.slideshare.net/frohoff1/appseccali-2015-marshalling-pickles">演讲</a>，演讲中 frohoff 公开了他写的 Java 反序列化漏洞利用的工具 <a href="https://github.com/frohoff/ysoserial">ysoserial</a>。关于 Java 反序列化相关漏洞的背景和相关知识可以看我之前的文章<a href="https://su18.org/post/ysuserial/">《Java 反序列化取经路》</a>。</p>
+<p>7 年后的今天，反序列化漏洞依旧是 Java 安全漏洞中的当红流量明星，高危中的高危，尤其在各大中间件和框架中。而与其他漏洞类型不同的是，Java 反序列化利用的核心，并不是漏洞的入口点，而是环境中的依赖 —— 反序列化 Gadget。</p>
+<p>随着时间的沉淀，各个比较常见的组件库中的 Gadget 被挖掘出来，在用户量较大的 ysoserial 以及 marshalsec 中都公开了一些常见组件的链。</p>
+<p>但是随着各个组件的更新、各种基于黑名单/过滤层的防御模式的出现，这些常见反序列化利用 Gadget 的可用性急速降低，攻击者往往面临着在黑盒进攻时，明明找到了入口点，但是无链可用的情况。</p>
+<p>遇到这种情况怎么办？c0ny1 师傅在 @Joshua Bloch的《effective java》 基础上提出了利用反序列化炸弹的技巧，通过消耗部分性能达到间接延时的作用，来探测 class 是否存在，文章在<a href="https://mp.weixin.qq.com/s/KncxkSIZ7HVXZ0iNAX8xPA">这里</a>。</p>
+<p>珂字辈师傅实现了修改 URLDNS Gadget 通过获取类 hashCode 并通过 DNSLOG 回显的方式来尝试解决此问题，项目在<a href="https://github.com/kezibei/Urldns">这里</a>。</p>
+<p>但是当利用链存在但因为某种原因被 Ban 掉，或者当类存在，但是依赖版本已经更新，关键代码位置已经不再包含可反序列化利用的逻辑时，攻击者还是会束手无策。所以针对目前的反序列化漏洞利用，有以下几个局限性：</p>
+<ol>
+<li>常利用的 Gadget 就那几个，在目标环境有防御措施的情况下，几乎无法利用；</li>
+<li>客户端更新依赖包版本后，原有的 Gadget 将会失效；</li>
+<li>目前的 Gadget 由于为了高利用性，通常是挖掘在同一个依赖下的类 + JDK 自带的类组成链，但其实还可以在几个常用依赖中找可以串联起来的类。</li>
+</ol>
+<p>在对 ysoserial 中全部链进行学习和跟踪后，我发现时至今日，要在一个新组件中挖掘一条新链也并不容易，需要对组件的源码实现、很多关键类的关键方法的调用有十足的了解，并在积累了一定的安全知识后再进行对 kick-off/gadget/sink 进行挖掘和组成。在真实的业务代码中，开发人员引用了更多的依赖，如果手动挖掘，需要的精力和时间将会指数级上升。</p>
+<p>所以，能不能有办法可能较为快速的挖掘呢？</p>
+<p>网飞 Platform Security Team 的 Ian Haken 在 2018 年 8 月的 DEF CON 26 上给出了他的答卷：GadgetInspector。项目在<a href="https://github.com/JackOfMostTrades/gadgetinspector">这里</a>，PPT 在<a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains.pdf">这里</a>，会议视频在<a href="https://www.youtube.com/watch?v=wPbW6zQ52w8&amp;ab_channel=DEFCONConference">这里</a>。</p>
+<p>按照其介绍，本项目可以自动化挖掘反序列化利用链。本篇文章则是对该项目的学习、研究以及优化改造的记录。</p>
+<p>关于项目的介绍和分析，网上已经存在了不少优秀的文章，本文内将不再重复相关的信息，在笔者学习和研究时，主要参考了以下几篇文章，先列举一下，作为本文的前置知识：</p>
+<ul>
+<li><a href="https://www.k0rz3n.com/2019/03/01/%E7%AE%80%E5%8D%95%E7%90%86%E8%A7%A3%E6%B1%A1%E7%82%B9%E5%88%86%E6%9E%90%E6%8A%80%E6%9C%AF/">简单理解污点分析技术</a> by k0rz3n</li>
+<li><a href="https://xz.aliyun.com/t/7058">java反序列化利用链自动挖掘工具gadgetinspector源码浅析</a> by threedr3am</li>
+<li><a href="https://paper.seebug.org/1034/">Java 反序列化工具 gadgetinspector 初窥</a> by Longofo</li>
+<li><a href="https://fynch3r.github.io/GadgetInspector%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">GadgetInspector源码分析</a> by fynch3r</li>
+</ul>
+<h1 id="0x02-明确目标">0x02 明确目标</h1>
+<p>在开始改造之前，首先要明确目标：</p>
+<blockquote>
+<p>核心目的是对包含了若干个依赖库的用户代码进行自动化挖掘反序列化利用链，预期的效果是可以根据现有的知识储备挖掘在用户的整个代码环境下可能由多个依赖组成的反序列化利用链。</p>
+</blockquote>
+<p>很多师傅在 GadgetInspector 的核心代码上进行改造，使其能力可以覆盖 fastjson/jackson/xstream 甚至是常规漏洞的分析与挖掘，不过本次笔者专注于反序列化漏洞，对其他类型漏洞将不进行覆盖。</p>
+<h1 id="0x03-关键流程及技术分析">0x03 关键流程及技术分析</h1>
+<p>这一小节来用文字简单描述一下 GadgetInspector 对于 “自动化挖掘反序列化利用链” 这一目标的技术实现过程中的关键流程。</p>
+<p>一句话来说，GadgetInspector 使用 ASM 对 Java 类字节码进行污点分析来挖掘反序列化利用链。考虑到在很多时候不一定能拿到用户的源代码，所以这一思路还是非常符合现实情况的。</p>
+<h2 id="信息收集">信息收集</h2>
+<p>GadgetInspector 使用 ASM 的 ClassReader 来读取全部类和方法的信息，使用自定义 MethodVisitor 在读取类和方法的指定位置来记录信息。记录的信息有全限定类名、类中包含的方法、方法名、方法描述符等。</p>
+<p>处理完基础信息后，会解析类的继承关系、方法继承关系、构造类和方法的映射等等相关信息的映射，接下来使用 DFS 算法对方法的调用链进行逆拓扑排序，其实就是使用了递归的后序遍历，并解决了环式调用和重复排序的问题，将方法复杂的调用图转为线性的序列，供后续的遍历和处理。</p>
+<h2 id="污点分析">污点分析</h2>
+<p>污点分析这部分是调用链挖掘的重中之重。</p>
+<p>GadgetInspector 使用了自定义 MethodVisitor，模拟帧栈的变化，或者说是模拟本地变量表（local variables）和操作数栈（operand stack）的变化来进行污点传播的追踪，模拟的过程实际是参照了 ASM 提供的 AnalyzerAdapter 的思路。</p>
+<p>这一部分共分为两段，第一段是方法内的污点传播，即方法的入参能否影响到方法返回结果的分析过程。</p>
+<p>GadgetInspector 通过在自己模拟的栈顶数据打标记（入参索引），并在访问字段、访问其他方法等操作时根据自定义规则判断是否能够传播污点来对栈顶数据打标记或清空的方式来进行污点传播的分析。直到方法 return 时，取出栈顶返回数据的污点标记，得到哪个入参对其造成了影响。</p>
+<p>第二段是方法间的污点传播，即一个方法调用下一个方法时，调用者（caller）方法能否影响到被调用者（target）方法的入参的分析过程。</p>
+<p>同样的思路进行方法间调用的污点分析，使用调用者的入参索引作为污点，传播至被调用者入参时，认为其可以影响到下一个方法的调用。</p>
+<h2 id="source-与-sink">Source 与 Sink</h2>
+<p>曾在《Java 反序列化取经路》中提到，反序列化 Gadget 的组成一共有三个：Kick-off，Chain，Sink。而这里的 Kick-off 在静态分析中则称之为 Source。</p>
+<p>对于反序列化漏洞而言，一般是从重写了 <code>readObject</code> 等方法的逻辑开始，进行相关的调用，最终调用到一些可能造成危害的函数，如执行命令、文件写入等。</p>
+<p>GadgetInspector 定义了一些 Source 点：重写 finalize 方法、重写 readObject 方法、InvocationHandler子类的 invoke 方法、重写 equals/hashCode 方法以及指定包下的点如 Closure 的 call/doCall 方法。</p>
+<p>同时定义了一些 Sink 点：FileInputStream/FileOutputStream 的创建与写出、Runtime 执行命令、反射调用、URLClassLoader 实例化、URL 建立连接等等和一些特定包下的利用点如 PyCode 等。</p>
+<h2 id="反序列化链的构造">反序列化链的构造</h2>
+<p>有了 Source，有了 Sink，有了污点分析的结果，就开始最终的反序列化链的构造了。</p>
+<p>GadgetInspector 构造反序列化链从 Source 点方法出发，寻找该方法能污染的方法，并从这个方法和他子类中的方法中继续寻找下一个能污染的方法，直到遇到 Sink 点，就组成了利用链。</p>
+<h1 id="0x04-改造之路">0x04 改造之路</h1>
+<p>在了解了实现思路，过了一遍源代码后，可以发现在部分具体细节中，GadgetInspector 还是存在着一些问题，这些问题导致着很大程度的误报和漏报，虽然 Soundness 和 Completeness 永远是需要平衡的，但是这里还是可以通过一些细节的处理来对其功能进行优化和提高。</p>
+<h2 id="继承方法">继承方法</h2>
+<p>在构造反序列化利用链时，会根据之前生成的污点传播信息获取一个方法能够污染的方法，并判断这个方法所在类和他的子类是否存在可以反序列化的类，再进行进一步的查找。</p>
+<p>这个逻辑就存在一个问题，在 GadgetInspector  标记一个方法时，对方法的签名加入了所在类的信息，那如果一个类的方法是继承至其父类的方法，那可能会导致获取这个类的方法时的结果为空，从而漏掉了调用链的构造。</p>
+<p>因此需要在构造链时对继承至父类的方法进行处理。</p>
+<p>【来自 threedr3am 师傅的<a href="https://github.com/threedr3am/gadgetinspector">版本</a>】</p>
+<h2 id="路径爆炸">路径爆炸</h2>
+<p>在循环过程中，由于各种原因可能导致最终得到的调用链非常之长，并且中间具有多次重复性的调用方法的情况。</p>
+<p>需要进行去重和对调用链中方法出现的次数增加阈值等处理。</p>
+<p>【来自 5wimming 师傅的<a href="https://github.com/5wimming/gadgetinspector">版本</a>】</p>
+<h2 id="transient-字段">transient 字段</h2>
+<p>标识着 transient 的字段将不会加入到序列化和反序列化的流程中，这是众所周知的事实，因此 GadgetInspector 在收集信息和污点分析过程中遇到 transient 修饰的字段时都进行了忽略。</p>
+<p>但实际上，transient 字段只代表开发人员不希望 Java 原生序列化流程来处理它，不代表开发人员自己不会处理它，可能通过自定义 writeObject/readObject 方法内的逻辑来还原对象的状态，因此<font color="red"> transient 修饰字段的对象不会被自动反序列化，但是可以参与反序列化流程，前提是用户在调用前对其进行了处理。</font></p>
+<p>例如 ysoserial 中的 MozillaRhino1 链中用到的 <code>org.mozilla.javascript.MemberBox</code> 类，虽然其成员变量都由 transient 修饰，看起来好像不能参与序列化/反序列化，但类中定义了 writeMember/readMember 方法用来在 writeObject/readObject 中调用中还原，依旧可以参与链条。</p>
+<p>但作为静态分析，不能完全开放对 transient 的限制，还是需要在某些维度进行判断。</p>
+<h2 id="动态代理">动态代理</h2>
+<p>在使用中可以发现， GadgetInspector 是无法完整扫出经典 CC 链和一些常用的 ysoserial 中的链的，这是为什么呢？</p>
+<p>原因是在这些链条中，部分 gadget 之间的调用本就不是串联的，而是在构造时使用了动态代理技术，通过 InvocationHandler 实现类的 invoke 方法中的逻辑进行向后的触发。</p>
+<p>拿 CC1 举例，是使用 AnnotationInvocationHandler 生成的动态代理类调用 <code>AnnotationInvocationHandler#invoke</code> 方法触发 <code>TransformedMap#get</code> 方法，此时可以将其作为 Source 点进行处理，GadgetInspector 就是这么做的。</p>
+<p>但是在 Jdk7u21 等链中，则是触发调用 <code>AnnotationInvocationHandler#equalsImpl</code> 方法来调用代理对象的全部方法。此时则可以将其作为 Sink 点处理。</p>
+<p>再举一个例子，在 CC3 链中，除了入口点， AnnotationInvocationHandler 还充当了代理 LazyMap 的动态代理 handler 类，串联反序列化链的作用。</p>
+<p>除了 AnnotationInvocationHandler 之外，在一些特定的包中还有能触发特定方法的 InvocationHandler 的子类，是反序列化链的构造有更大的灵活空间。</p>
+<p>所以可以看到，InvocationHandler 在反序列化构造中可以起到相当大的作用，既能当 Source，又能当 Chain，还能当 Sink，因此需要对其进行格外的处理。</p>
+<h2 id="agent-技术加持">Agent 技术加持</h2>
+<p>GadgetInspector 是静态的分析手段，借助了 guava 的工具类获取指定 ClassLoader 下的全部类的资源信息，先不说 GadgetInspector 自己的依赖会污染到最终结果，还面临的问题是程序运行时从字节码动态加载，或根据某些规则动态生成的类将无法纳入利用链中。</p>
+<p>虽然目前没有这样的利用链，但是理论上并不排除，而且也许还可能绕过一些限制，因此这里产生的一个想法就是加持 Java Agent 技术来获取运行系统中全部的类。</p>
+<p>这部分在做的时候对实际效果不报有期待，但如果效果好的话，也可以算是给 Java Agent 产品的一种赋能。</p>
+<h2 id="sinksource-点增强">Sink/Source 点增强</h2>
+<p>这里的增强主要分为两个，一个是补充，一个是前/后置。</p>
+<p>GadgetInspector 内置的 Sink 和 Source 点都不全，需要更完全的补充，例如 Source 点通用的只写了 <code>ObjectInputStream#readObject</code>、<code>Object#finalize/hashCode/equals</code>。Sink 点只写了一点点可利用的点，在目前利用手段多种多样情况下，实际上有非常多可以补充的点。</p>
+<p>另外一个是“ Source 点后置”以及“Sink 点前置”。在目前已经掌握到了一些基础信息后，没必要将全部的工作都交给污点分析和最终的利用链组合逻辑。可以利用已有的知识将利用链的构造进行缩短。</p>
+<p>例如：可用明确利用的点比如 <code>org.apache.commons.collections.Transformer#transform</code> 可以直接做为 sink 点，没必再走到 <code>Method#invoke</code>。用动态代理生成的类作为反序列化入口时可以直接使用 <code>java.lang.reflect.InvocationHandler#invoke</code> 作为入口点等等。</p>
+<h2 id="反射">反射</h2>
+<p>GadgetInspector 内置了一些白名单污点流，默认一些类的方法的哪几个参数可以污染返回值，其中一个如下：</p>
+<pre><code class="language-java">{&quot;java/lang/Class&quot;, &quot;getMethod&quot;, &quot;(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;&quot;, 0, 1}
+</code></pre>
+<p>在 Sink 点中，肯定是有 <code>java.lang.reflect.Method#invoke</code> 反射方法调用作为最终的执行点，但是调用之前需要先获得 Method 对象：</p>
+<ul>
+<li>这个 Method 对象可能是可反序列化类的成员变量。</li>
+<li>这个 Method 对象可能是在调用过程中用 <code>Class#getMethod</code> 获得的。</li>
+</ul>
+<p>第一种情况比较好处理，直接构造进去即可；第二种情况则不然，如果要实现任意方法的反射调用，<code>Class#getMethod</code> 的两个参数都要可控。但在静态污点分析中，有一个参数能影响到结果，这个污点就能传过来。</p>
+<p>所以反射和类似的 Sink 点势必要导致一些误报。这里可以选择在后期进行人工参与，也可以选择针对反射的 Sink 点进行特殊处理。</p>
+<h2 id="其他">其他</h2>
+<p>还有其他一些乱七八糟的小 BUG ，直接修复一下。</p>
+<h1 id="0x05-gadgetor">0x05 Gadgetor</h1>
+<p>针对上一节提出的一些问题和处理思路，我将 GadgetInspector 按照个人喜好的代码风格进行了重构，并增强或修改了部分的处理逻辑，形成了新的轮子，这里简单粗暴将其命名为 Gadgetor。</p>
+<p>关键的模拟 JVM 帧栈的污点分析的逻辑部分没有改动，但是针对其他的发现流程进行了优化和重写。</p>
+<p>Gadgetor 的逻辑看起来也许会更清晰一些，不是更好，不是更优雅，只是也许更清晰一些，并且有了比较清晰的注释，非常适合阅读。</p>
+<p>这里简单过一下项目结构，总体的逻辑与之前描述的一致。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1645110903503.png" alt="" loading="lazy"></figure>
+<p>收集生成各种信息，记录各种映射。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1645111633787.png" alt="" loading="lazy"></figure>
+<p>逆拓扑排序。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1645111754712.png" alt="" loading="lazy"></figure>
+<p>污点分析。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1645111828190.png" alt="" loading="lazy"></figure>
+<p>剩下就是利用链的构造，主要是优化逻辑，以及对 Sink 点进行了较大程度的丰富。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1645110915715.png" alt="" loading="lazy"></figure>
+<p>并且将一些已知反序列化链的关键触发位置进行了 Sink 点前置。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1645110992773.png" alt="" loading="lazy"></figure>
+<p>就不再贴出过多的代码了。目前由于扩展之后的 Gadgetor 虽然能扫出利用链，但误报也相对较多，需要人工参与的部分比较多，还需要继续更新和优化，目前代码暂时先不放出来，主要是期待与师傅们进行思路的交流，在沉淀一段时间后再进行开源（懂的都懂）。</p>
+<h1 id="0x06-效果">0x06 效果</h1>
+<p>光说不练假把式，找一个开源项目试一下。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1645114136270.png" alt="" loading="lazy"></figure>
+<p>从图中可以看出，测试的项目得到了 6 个反序列化利用链，经过人工审查后，发现虽然有误报，但是还是有所收获的。</p>
+<h1 id="0x07-todo">0x07 TODO</h1>
+<p>在这个基础上还可以有一些有趣的待实现的功能，比如：结合中间件的依赖进行挖掘、结合 IAST 也许可以自动化构造 Payload 等等。</p>
+<p>对这方面有兴趣或有的师傅可以与我交流，想跳槽的师傅也可以联系我。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#0x00-%E8%83%8C%E6%99%AF">0x00 背景</a></li>
+<li><a href="#0x01-%E5%89%8D%E8%A8%80">0x01 前言</a></li>
+<li><a href="#0x02-%E6%98%8E%E7%A1%AE%E7%9B%AE%E6%A0%87">0x02 明确目标</a></li>
+<li><a href="#0x03-%E5%85%B3%E9%94%AE%E6%B5%81%E7%A8%8B%E5%8F%8A%E6%8A%80%E6%9C%AF%E5%88%86%E6%9E%90">0x03 关键流程及技术分析</a>
+<ul>
+<li><a href="#%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86">信息收集</a></li>
+<li><a href="#%E6%B1%A1%E7%82%B9%E5%88%86%E6%9E%90">污点分析</a></li>
+<li><a href="#source-%E4%B8%8E-sink">Source 与 Sink</a></li>
+<li><a href="#%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E9%93%BE%E7%9A%84%E6%9E%84%E9%80%A0">反序列化链的构造</a></li>
+</ul>
+</li>
+<li><a href="#0x04-%E6%94%B9%E9%80%A0%E4%B9%8B%E8%B7%AF">0x04 改造之路</a>
+<ul>
+<li><a href="#%E7%BB%A7%E6%89%BF%E6%96%B9%E6%B3%95">继承方法</a></li>
+<li><a href="#%E8%B7%AF%E5%BE%84%E7%88%86%E7%82%B8">路径爆炸</a></li>
+<li><a href="#transient-%E5%AD%97%E6%AE%B5">transient 字段</a></li>
+<li><a href="#%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86">动态代理</a></li>
+<li><a href="#agent-%E6%8A%80%E6%9C%AF%E5%8A%A0%E6%8C%81">Agent 技术加持</a></li>
+<li><a href="#sinksource-%E7%82%B9%E5%A2%9E%E5%BC%BA">Sink/Source 点增强</a></li>
+<li><a href="#%E5%8F%8D%E5%B0%84">反射</a></li>
+<li><a href="#%E5%85%B6%E4%BB%96">其他</a></li>
+</ul>
+</li>
+<li><a href="#0x05-gadgetor">0x05 Gadgetor</a></li>
+<li><a href="#0x06-%E6%95%88%E6%9E%9C">0x06 效果</a></li>
+<li><a href="#0x07-todo">0x07 TODO</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/shiro-5/">
+              <h3 class="post-title">
+                从 CVE 学 Shiro 安全
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

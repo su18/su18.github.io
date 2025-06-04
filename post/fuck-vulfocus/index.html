@@ -1,0 +1,364 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>如何一夜之间成为 Vulfocus 榜一大哥 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              如何一夜之间成为 Vulfocus 榜一大哥
+            </h2>
+            <div class="post-info">
+              <span>
+                2022-08-15
+              </span>
+              <span>
+                9 min read
+              </span>
+              
+                <a href="https://su18.org/tag/0HscXmAki/" class="post-tag">
+                  # 绕过
+                </a>
+              
+                <a href="https://su18.org/tag/_UFLgYtkaC/" class="post-tag">
+                  # Vulfocus
+                </a>
+              
+                <a href="https://su18.org/tag/mBZEXbIuQ/" class="post-tag">
+                  # 工具
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/fuck-vulfocus.jpeg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="i-前言">Ⅰ. 前言</h1>
+<p>白帽汇的转正要求有很多，其中一条就是完成 50 个 Vulfocus 靶场的攻击，获取 Flag 并提交。这样普普通通甚至没什么太大难度的一项任务，有什么值得一提的呢？网上下个工具，同类型的漏洞批量打一下，不就完成了吗?</p>
+<p>先不要急，且听我慢慢道来。</p>
+<h1 id="ii-简介">Ⅱ. 简介</h1>
+<p>Vulfocus 全称 “Vulfocus 漏洞威胁分析平台”，是白帽汇推出的一款漏洞集成平台，这类平常通常被白帽子们称之为漏洞靶场。</p>
+<p>官网地址：<a href="https://vulfocus.cn/">https://vulfocus.cn/</a></p>
+<p>这个就不过多的文字介绍了，业内的伙伴们都知道这是一个什么东西，通俗来说，我们使用虚拟化的容器来快速搭建带有指定漏洞的环境，用来进行漏洞的研究、学习、复现。</p>
+<p>对于一个这样的平台，其核心可以说并不是其平台本身，平台仅是一个流程上的串联和覆盖，以及对前端用户体验的内容，目前 Vulfocus 没有花太多的精力做用户体验的相关工作。而且平台在 Github 有开源版本：<a href="https://github.com/fofapro/vulfocus">https://github.com/fofapro/vulfocus</a></p>
+<p>那么核心是什么呢？是其对漏洞环境、漏洞利用方式等等安全学习相关的内容的覆盖度和广度，因此也可以说其核心则是其中的 docker 环境。</p>
+<p>Vulfocus 的 docker 仓库：<a href="https://hub.docker.com/u/vulfocus">https://hub.docker.com/u/vulfocus</a></p>
+<p>心细的你如果仔细看一下 docker 仓库中的内容，以及 dockerfile，你会发现，其中相当一部分镜像来源于 vulhub。这个也无需介绍，官方网址：<a href="https://vulhub.org/">https://vulhub.org/</a></p>
+<p>其实 Vulfocus 之前我也在 Twitter 为其打过广告，当时 Vulfocus 推出“工作台”功能，但是通过在线人数的波动来看，并没有吸引到很多的人来使用，因此这里再简单介绍一下相关的功能。</p>
+<h1 id="iii-功能">Ⅲ. 功能</h1>
+<h2 id="1-首页">1. 首页</h2>
+<p>首页点开就是靶场的展示页面，可以根据规则查询相关类型的靶机。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1660569123923.png" alt="" loading="lazy"></figure>
+<p>可以直接点击启动，会启动指定的虚拟化环境，开箱即用，启动后，详情页面会展示启动虚拟环境虚拟化的 IP 地址，以及在公网的 IP 地址映射，下方有 Flag 提交输入框，在使用攻击手段获取靶标内的 Flag 后，可以在此处提交，完成靶标的攻击。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1660570689680.png" alt="" loading="lazy"></figure>
+<p>在右侧，还有 writeup 功能，有其他的白帽子提交的针对此靶场的 writeup，可以查看参考。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1660571371892.png" alt="" loading="lazy"></figure>
+<h2 id="2-用户">2. 用户</h2>
+<p>用户一栏展示用户相关操作内容。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1660569149600.png" alt="" loading="lazy"></figure>
+<h2 id="3-积分">3. 积分</h2>
+<p>积分这里是一个用户的总积分榜，给分高的朋友装逼用</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1660569164391.png" alt="" loading="lazy"></figure>
+<h2 id="4-场景">4. 场景</h2>
+<p>场景是在多个环境组成的大环境下行程的复杂路径，可以用来练习漏洞组合、内网渗透等等攻击手段。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1660569377687.png" alt="" loading="lazy"></figure>
+<h2 id="5-身份">5. 身份</h2>
+<p>身份切换功能，可以说是 Vulfocus 的一大亮点，也是其他同类产品所不具有的功能。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1660569430097.png" alt="" loading="lazy"></figure>
+<p>在使用 Vulfocus 时，用户存在两种身份，一种是学习模式，一种是验证模式。</p>
+<p>学习模式就是在正常使用时的“夺旗”模式，白帽子通过黑盒攻击获取 flag，完成夺旗；而验证模式则是白盒攻击，在此模式下，白帽子可以使用虚拟终端打开一个 shell 连接，可以动态在靶机上执行命令，从而白盒调试漏洞，查看自己的攻击 payload 对目标服务器上的影响。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1660570710656.png" alt="" loading="lazy"></figure>
+<h2 id="6-工作台">6. 工作台</h2>
+<p>工作台目前说白了就是可以使用一个在线 kali。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1660569403938.png" alt="" loading="lazy"></figure>
+<p>但是此 kali 与所有的漏洞靶机镜像处于同一个网内，可以直接在内网反弹 shell。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1660569416528.png" alt="" loading="lazy"></figure>
+<p>并且还支持操作的录屏及分享，在工作台刚出的时候，正赶上 S2-062 的爆发，我还录了一个演示的视频。</p>
+<p>链接：<a href="https://vulfocus.cn/#/playback/544f246827694405868d341afec51548">https://vulfocus.cn/#/playback/544f246827694405868d341afec51548</a></p>
+<h1 id="iv-绕过">Ⅳ. 绕过</h1>
+<p>什么？绕过？漏洞靶场怎么绕过？</p>
+<p>Of course~ 在简单介绍了相关的内容后，接下来说下本文的内容：绕过攻击过程直接拿 flag 的手段。</p>
+<p>Vulfocus 靶机中的 flag，并非写死在靶机中，而是动态生成的，在两处位置存放，一个是在环境变量中，一个是在 <code>/tmp</code> 目录下。</p>
+<p>目前经过测试，有以下集中情况：</p>
+<ul>
+<li>以<code>学习模式</code>启动的话，会在靶机内生成 flag；</li>
+<li>以<code>验证模式</code>启动的话，不会在靶机内生成 flag；</li>
+<li>从<code>学习模式</code>切换到<code>验证模式</code>，会清除靶机内的 flag；</li>
+<li>从<code>验证模式</code>切换到<code>学习模式</code>，会在靶机内生成 flag；</li>
+</ul>
+<p>那 flag 究竟是怎么生成的呢，这里我通过在开源的版本中搜索 flag 关键字发现了如下代码</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1660575759138.png" alt="" loading="lazy"></figure>
+<p>发现其生成模式是在 docker 镜像中动态执行了 touch 命令创建 flag 文件。既然生成 flag 是 touch，那清除 flag 会不会是 rm？</p>
+<p>而从 <code>学习模式</code> 到 <code>验证模式</code> 的模式的互相切换，是不是就是动态执行了 touch 及 rm，来对 flag 进行管理？</p>
+<p>有了上述的知识描述后，就有了无需做题进行获取 flag 的思路:</p>
+<ul>
+<li>先使用<code>验证模式</code>启动靶机，此时机器内无 flag；</li>
+<li>进入<code>验证模式</code>的虚拟终端，执行系统命令反弹 shell 出来；</li>
+<li>从<code>验证模式</code>切换到<code>学习模式</code>，此时会动态在靶机内生成 flag；</li>
+<li>利用反弹出来的 shell 查看 flag。</li>
+</ul>
+<p>理论存在，开始实践：</p>
+<p>先启动一个镜像，切换到<code>验证模式</code>，打开虚拟终端，并反弹一个 shell。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1660576666895.png" alt="" loading="lazy"></figure>
+<p>在服务器上获得了反弹 shell。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1660576674843.png" alt="" loading="lazy"></figure>
+<p>此时切换到<code>学习模式</code>，按照我们的设想，此时应该会动态的生成 flag 文件，切换后，在反弹的 shell 中查看果然生成了 flag。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1660576682658.png" alt="" loading="lazy"></figure>
+<h1 id="v-自动化">Ⅴ. 自动化</h1>
+<p>接下来看下自动化流程，这样的动作我不可能每个靶机做一次，肯定是要自动化的，首先是接口分析：</p>
+<ul>
+<li>通过接口 <code>/api/images/xxx/start/</code> 启动靶机；</li>
+<li>通过接口 <code>/api/tasks/xxx/get</code> 获取靶机状态，是否正常启动；</li>
+<li>通过接口 <code>/api/update_user_identity</code> 切换用户身份；</li>
+<li>通过地址 <code>/ws/docker/shell/</code> 进行虚拟终端的 websocket 通信；</li>
+<li>通过接口 <code>/api/containers</code> 上传 Flag。</li>
+</ul>
+<p>这里需要注意的是，针对镜像、容器，平台有 <code>image_id</code>、<code>container_id</code>、<code>real_image_id</code> 等多个不同的标识符，需要一一对应匹配。</p>
+<p>然后是实现流程:</p>
+<ul>
+<li>获取所有未提交 Flag 的靶机，排除启动慢的、不支持虚拟终端的、反弹shell（bash）有问题的；</li>
+<li>启动靶机；</li>
+<li>启动 VPS 监听端口（例如我用了 3306）；</li>
+<li>切换验证模式，打开虚拟终端，执行反弹shell；</li>
+<li>VPS 监听发现回连 shell，切换到学习模式；</li>
+<li>VPS 监听执行 <code>ls /tmp | grep flag</code>，读取 flag；</li>
+<li>提交 flag，成功后自动关闭靶机；</li>
+<li>如果上述某一个过程出错，删除启动的靶机。</li>
+</ul>
+<p>还有一点需要注意的是，每个用户同时最多只能启动 3 个镜像，所以在自动化过程中要关注已经启动但由于某种原因无法执行流程的容器。</p>
+<p>之后就是写代码了，有手就行。</p>
+<h1 id="vi-成果">Ⅵ. 成果</h1>
+<p>来吧，展示：</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1660573375886.png" alt="" loading="lazy"></figure>
+<p>上记录，平均 40 秒一个靶机：</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1660573422933.png" alt="" loading="lazy"></figure>
+<p>挂 VPS 跑了一晚上，最后，看看现在谁是榜一大哥了？</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1660628643579.png" alt="" loading="lazy"></figure>
+<h1 id="vii-后记">Ⅶ. 后记</h1>
+<p>写这个工具也是突发奇想，本来用 python 写能更快的，但是主要是顺便学了一下 hutool ，感觉还是挺方便的，不知道为什么网上那么多人不推荐。个人觉得对初学者上手还是比较容易的。</p>
+<p>链接：<a href="https://www.hutool.cn/">https://www.hutool.cn/</a></p>
+<p>首先，这其实是一个内部已知的漏洞，而且内部已经对其进行了几次修复。</p>
+<p>之前在 Vulfocus 与 Goby 联名做活动时，就跟相关负责人针对此问题进行了讨论，当时的绕过流程是：</p>
+<ul>
+<li>从<code>学习模式</code>启动镜像，镜像带有 flag 信息；</li>
+<li>切换为<code>验证模式</code>，进入虚拟终端，获取 flag 信息。</li>
+</ul>
+<p>后来负责人进行了修复，在切换为<code>验证模式</code>时，清除相关 flag 信息，但是这次我们使用反弹 shell 的手段进行了绕过。</p>
+<p>而事实上这种绕过手段相关负责人也早就已知，目前的情况是，为了不影响用户体验，没有在切换模式的时候进行强制容器重启，因此反弹出去的 shell 依旧会有获取 flag 的能力。</p>
+<p>而且，除了我之外，目前 Vulfocus 榜单前几名的用户，感觉也应该是利用了类似的手段进行刷榜，因为他们的排名都是突然上来的。其实是不是正常答题，在 Vulfocus 后台都能看的出来，而且刷榜没有实际任何意义，希望大家能自己调试，认真学习漏洞原理哦~</p>
+<h1 id="viii-结尾">Ⅷ. 结尾</h1>
+<p>前两天公司发了个证，说是凭此证海鲜自助、下午茶免费，有没有人来让我导一下的？</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1660629887593.jpeg" alt="" loading="lazy"></figure>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#i-%E5%89%8D%E8%A8%80">Ⅰ. 前言</a></li>
+<li><a href="#ii-%E7%AE%80%E4%BB%8B">Ⅱ. 简介</a></li>
+<li><a href="#iii-%E5%8A%9F%E8%83%BD">Ⅲ. 功能</a>
+<ul>
+<li><a href="#1-%E9%A6%96%E9%A1%B5">1. 首页</a></li>
+<li><a href="#2-%E7%94%A8%E6%88%B7">2. 用户</a></li>
+<li><a href="#3-%E7%A7%AF%E5%88%86">3. 积分</a></li>
+<li><a href="#4-%E5%9C%BA%E6%99%AF">4. 场景</a></li>
+<li><a href="#5-%E8%BA%AB%E4%BB%BD">5. 身份</a></li>
+<li><a href="#6-%E5%B7%A5%E4%BD%9C%E5%8F%B0">6. 工作台</a></li>
+</ul>
+</li>
+<li><a href="#iv-%E7%BB%95%E8%BF%87">Ⅳ. 绕过</a></li>
+<li><a href="#v-%E8%87%AA%E5%8A%A8%E5%8C%96">Ⅴ. 自动化</a></li>
+<li><a href="#vi-%E6%88%90%E6%9E%9C">Ⅵ. 成果</a></li>
+<li><a href="#vii-%E5%90%8E%E8%AE%B0">Ⅶ. 后记</a></li>
+<li><a href="#viii-%E7%BB%93%E5%B0%BE">Ⅷ. 结尾</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/hessian/">
+              <h3 class="post-title">
+                Hessian 反序列化知一二
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

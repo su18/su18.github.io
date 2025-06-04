@@ -1,0 +1,650 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Struts2：你说你好累，已无法再爱上谁（一） | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Struts2：你说你好累，已无法再爱上谁（一）
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-16
+              </span>
+              <span>
+                35 min read
+              </span>
+              
+                <a href="https://su18.org/tag/Z0wjLXu3H/" class="post-tag">
+                  # struts2
+                </a>
+              
+                <a href="https://su18.org/tag/Aj7jHTqIBO/" class="post-tag">
+                  # ognl
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/struts2-1.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="前言">前言</h1>
+<p>这是第二篇漏洞文，本文针对 Struts2 历史版本的 RCE 进行研究和记录。由于漏洞较多，调试过程写的也比较细致，因此篇幅较长，将分为多篇文章进行发布，本文是第一篇，前置信息介绍以及 S2-001/S2-003/S2-005/S2-007/S2-008/S2-009 的漏洞调试。</p>
+<p>了解我的人都知道，我写文章，又臭又长。因为文章的写法是边学边研究编写，在研究的过程中，如果发现之前的理解和记录有错误的地方，就回去改改，这就导致了文章的通顺性上可能不是特别好，但是我的文章胜在详细和准确，一般情况下，网上的文章不会有比我说得清楚的。</p>
+<p>总体来讲，在我眼里这依旧是一篇水文，因为只是调式记录，并没有太多的延伸和扩展，适合和我一样对漏洞原理感兴趣的人看。</p>
+<h1 id="一-简介">一、简介</h1>
+<p>Apache Struts2 是一个非常优秀的 JavaWeb MVC 框架，2007年2月第一个 full release 版本发布，直到今天，Struts 发布至  2.5.26 版本，而在这些版本中，安全更新已经更新至 S2-061，其中包含了非常多的 RCE 漏洞修复。</p>
+<p>可以说的是，甚至在我还不知道 Struts2 是什么的时候，我就听说这个框架有非常多的 RCE 漏洞，而这些漏洞层出不迭，补也补不完，本文将记录 Struts2 全版本的高危漏洞利用和攻防过程，也会保持更新。</p>
+<h1 id="二-使用">二、使用</h1>
+<h2 id="struts2-配置及使用">struts2 配置及使用</h2>
+<p>Struts2 是一个基于 MVC 设计模式的Web应用框架，它的本质就相当于一个 servlet，在 MVC 设计模式中，Struts2 作为控制器（Controller）来建立模型与视图的数据交互。Struts2 是在 Struts 和WebWork 的技术的基础上进行合并的全新的框架。Struts2 以 WebWork 为核心，采用拦截器的机制来处理的请求。这样的设计使得业务逻辑控制器能够与 ServletAPI 完全脱离开。</p>
+<p>对于一次请求，Struts2 的执行流程如下：</p>
+<ol>
+<li>Filter：首先经过核心的过滤器，也就是通常在 <code>web.xml</code> 中配置的 filter 及 filter-mapping，这部分通常会配置 <code>/*</code> 全部的路由交给 struts2 来处理。<br>
+<img src="https://su18.org/post-images/1618543349524.png" alt="" loading="lazy"></li>
+<li>Interceptor-stack：执行拦截器，应用程序通常会在拦截器中实现一部分功能。也包括在 struts-core 包中 <code>struts-default.xml</code> 文件配置的默认的一些拦截器。<br>
+<img src="https://su18.org/post-images/1618544033513.png" alt="" loading="lazy"></li>
+<li>Action：根据访问路径，找到处理这个请求对应的 Action 控制类，通常配置在 <code>struts.xml</code> 中的 package 中。<br>
+<img src="https://su18.org/post-images/1618544434993.png" alt="" loading="lazy"></li>
+<li>Result：最后由 Action 控制类执行请求的处理，执行结果可能是视图文件，可能是去访问另一个 Action，结果通过 HTTPServletResponse 响应。</li>
+</ol>
+<p>实现一个 Action 控制类一共有 3 种方式：</p>
+<ul>
+<li>Action 写为一个 POJO 类，并且包含 excute() 方法。</li>
+<li>Action 类实现 <code>Action</code> 接口。</li>
+<li>Action 类继承 <code>ActionSupport</code> 类。</li>
+</ul>
+<p>对上述流程有所了解后，我们就可以使用 struts2 搭建一个 web 应用了，框架的实现原理和技术细节将在下面漏洞分析时讨论，此处将不再提及。</p>
+<h2 id="struts2-执行流程图">struts2 执行流程图</h2>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1618878522908.png" alt="" loading="lazy"></figure>
+<h2 id="ognl-表达式">OGNL 表达式</h2>
+<p>Struts2 中支持以下几种表达式语言：OGNL、JSTL、Groovy、Velocity。Struts 框架使用 OGNL 作为默认的表达式语言。</p>
+<p><a href="http://commons.apache.org/proper/commons-ognl/">OGNL</a> 是 Object Graphic Navigation Language (对象图导航语言)的缩写，是一个开源项目。它是一种功能强大的表达式语言，通过它简单一致的表达式语法，可以存取对象的任意属性，调用对象的方法。</p>
+<p><strong>OGNL 的使用</strong></p>
+<p>表达式的使用非常简单，以下两行代码即可，其中“表达式”为我们编写的 OGNL 表达式，从后两个参数中获取值，“上下文”指的是 OGNL Context，“根”是 ognl 的 Root，可以为 JavaBean、List、Map、.... 等等很多值。</p>
+<pre><code class="language-Java">Object expression = Ognl.parseExpression(&quot;表达式&quot;);
+Object result     = Ognl.getValue(expression,上下文,根);
+</code></pre>
+<p>其中需要注意的是，OGNL 表达式的取值范围只能在其 context 和 root 中。</p>
+<p><strong>OGNL Context</strong></p>
+<p>OGNL 上下文对象位于 <code>ognl.OgnlContext</code>，上下文实际上是就一个 Map 对象，可以由我们自己创建，通过 <code>put()</code> 方法在上下文环境中放元素。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1618551435638.png" alt="" loading="lazy"></figure>
+<p>在这个上下文环境中，有两种对象：根对象和普通对象。可以使用 <code>setRoot()</code> 方法设置根对象。根对象只能有一个，而普通对象则可以有多个。即：OgnlContext = 根对象(1个)+非根对象(n个)。</p>
+<p>非根对象要通过 <code>#key</code> 访问，根对象可以省略 <code>#key</code>。获取根对象的属性值，可以直接使用属性名作为表达式，也可以使用 <code>#Class.field</code> 的方式；而获取普通对象的属性值，则必须使用后面的方式。</p>
+<p>OGNL 主要有以下几种常见的使用：</p>
+<ul>
+<li>对于类属性的引用：<code>Class.field</code></li>
+<li>方法调用： <code>Class.method()</code></li>
+<li>静态方法/变量调用：<code>@org.su18.struts.Test@test('aaa')</code> 或 <code>@org.su18.struts.Constants@MY_CONSTANTS</code></li>
+<li>创建 java 实例对象：完整类路径：<code>new java.util.ArrayList()</code></li>
+<li>创建一个初始化 List：<code>{'a', 'b', 'c', 'd'}</code></li>
+<li>创建一个 Map：<code>#@java.util.TreeMap@{'a':'aa', 'b':'bb', 'c':'cc', 'd':'dd'}</code></li>
+<li>访问数组/集合中的元素：<code>#Arrays[0]</code></li>
+<li>访问 Map 中的元素：<code>#Map['key']</code></li>
+<li>OGNL 针对集合提供了一些伪属性（如size，isEmpty），让我们可以通过属性的方式来调用方法。</li>
+</ul>
+<p>除了以上基础操作之外，OGNL 还支持投影、过滤：</p>
+<ul>
+<li>投影（把集合中所有对象的某个属性抽出来，单独构成一个新的集合对象）：<code>collection.{expression}</code></li>
+<li>过滤（将满足条件的对象，构成一个新的集合返回）：<code>collection.{?|^|$ expression}</code></li>
+</ul>
+<p>其中上面 <code>?|^|$</code> 的含义如下：</p>
+<ul>
+<li><code>?</code>：获得所有符合逻辑的元素。</li>
+<li><code>^</code>：获得符合逻辑的第一个元素。</li>
+<li><code>$</code>：获得符合逻辑的最后一个元素。</li>
+</ul>
+<p>在使用过滤操作时，通常会使用 <code>#this</code>，这个表达式用于代表当前正在迭代的集合中的对象。</p>
+<p>OGNL 还支持 Lambda 表达式：<code>:[ ... ]</code>，例如计算阶乘 <code>#f = :[#this==1?1:#this*#f(#this-1)] , #f(4)</code>。</p>
+<p>还有使用数学运算符，使用“,”号连接表达式，in 与 not in 运算符，比较简单，不再赘述。</p>
+<h2 id="ognl-in-struts2">OGNL in Struts2</h2>
+<p>前面提到过，Struts 框架使用 OGNL 作为默认的表达式语言，那究竟 Struts2 是怎么操作 OGNL 的呢？重点关注的就是 OGNL 解析表达式中关键的三要素 expression、root、Context。</p>
+<p>在 Struts2 中，OGNL 上下文即为 ActionContext ，而实际上存放内容是其中的 context，ActionContext 中的 <code>get()/put()</code> 方法实际上都在操作 ActionContext 中的 context。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1618559956356.png" alt="" loading="lazy"></figure>
+<p>ActionContext 是 action 的上下文，也可以叫做 action 的数据中心，本质是一个 map，所有数据都存放在这里。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1618626572991.png" alt="" loading="lazy"></figure>
+<p>这里面存了一些属性，我们先来了解一下：</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>存放内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>com.opensymphony.xwork2.ActionContext.locale</code></td>
+<td><code>LOCALE</code> 常量</td>
+</tr>
+<tr>
+<td><code>struts.actionMapping</code></td>
+<td><code>ActionMapping</code> 引用对象，其中包括name/namespace/method/params/result</td>
+</tr>
+<tr>
+<td><code>com.opensymphony.xwork2.util.ValueStack.ValueStack</code></td>
+<td><code>ValueStack</code> 引用对象</td>
+</tr>
+<tr>
+<td><code>attr</code></td>
+<td>按照 request &gt; session &gt; application 顺序访问 <code>attribute</code></td>
+</tr>
+<tr>
+<td><code>application</code><br><code>com.opensymphony.xwork2.ActionContext.application</code></td>
+<td>当前应用 <code>ServletContext</code> 中的<code>attribute</code></td>
+</tr>
+<tr>
+<td><code>request</code></td>
+<td><code>HttpServletRequest</code>中的<code>attribute</code></td>
+</tr>
+<tr>
+<td><code>com.opensymphony.xwork2.dispatcher.HttpServletRequest</code></td>
+<td><code>request</code> 引用对象</td>
+</tr>
+<tr>
+<td><code>com.opensymphony.xwork2.dispatcher.HttpServletResponse</code></td>
+<td><code>response</code> 引用对象</td>
+</tr>
+<tr>
+<td><code>session</code><br><code>com.opensymphony.xwork2.ActionContext.session</code></td>
+<td><code>HttpSession</code> 中的<code>attribute</code></td>
+</tr>
+<tr>
+<td><code>parameters</code><br><code>com.opensymphony.xwork2.ActionContext.parameters</code></td>
+<td>请求参数 HashMap</td>
+</tr>
+<tr>
+<td><code>com.opensymphony.xwork2.dispatcher.ServletContext</code></td>
+<td><code>ApplicationContext</code> 对象</td>
+</tr>
+<tr>
+<td><code>com.opensymphony.xwork2.ActionContext.name</code></td>
+<td>当前 action 的 name</td>
+</tr>
+</tbody>
+</table>
+<p>OGNL 中的根对象即为 ValueStack（值栈），这个对象贯穿整个 Action 的生命周期（每个 Action 类的对象实例会拥有一个 ValueStack 对象）。当Struts 2接收到一个 <code>.action</code> 的请求后，会先建立Action 类的对象实例，但并不会调用 Action 方法，而是先将 Action 类的相应属性放到 ValueStack 的实现类 OgnlValueStack 对象 root 对象的顶层节点（ ValueStack 对象相当于一个栈）。在处理完上述工作后，Struts2 就会调用拦截器链中的拦截器，这些拦截器会根据用户请求参数值去更新 ValueStack 对象顶层节点的相应属性的值，最后会传到 Action 对象，并将 ValueStack 对象中的属性值，赋给 Action 类的相应属性。当调用完所有的拦截器后，才会调用 Action 类的 Action 方法。ValueStack 会在请求开始时被创建，请求结束时消亡。</p>
+<p>以上内容作为 Struts2 系列漏洞的基础铺垫，在了解以后可以开始下面的漏洞之旅了。</p>
+<h1 id="三-漏洞分析">三、漏洞分析</h1>
+<h2 id="s2-001">S2-001</h2>
+<p>Struts2 对 OGNL 表达式的解析使用了开源组件 <code>opensymphony.xwork 2.0.3</code>，所以实际上这是一个 xwork 组件的漏洞，影响了 Struts2。</p>
+<blockquote>
+<p>影响版本：WebWork 2.1 (with altSyntax enabled), WebWork 2.2.0 - WebWork 2.2.5, Struts 2.0.0 - Struts 2.0.8<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-001<br>
+描述：由于在 variable translation 的过程中，使用了 <code>while(true)</code> 来进行字符串的处理和表达式的解析，导致攻击者可以在可控的能解析的内容中通过添加 &quot;%{}&quot; 来使应用程序进行二次表达式解析，这就导致了ognl注入，也就是所谓的RCE漏洞。官方将这种解析方式描述为递归，实际上不是传统意义上的递归，只是循环解析。</p>
+</blockquote>
+<p>此漏洞源于 Struts 2 框架中的一个标签处理功能： altSyntax。在开启时，支持对标签中的 OGNL 表达式进行解析并执行。altSyntax 功能在处理标签时，对 OGNL 表达式的解析能力实际上是依赖于开源组件 XWork。</p>
+<p>首先来跟一下 Struts2 应用的访问流程，由于我们在 <code>web.xml</code> 中指定了由 Struts2 处理的 Filter 为 <code>org.apache.struts2.dispatcher.FilterDispatcher</code>，则程序会执行该类的 <code>doFilter()</code> 方法进行处理，方法的最后调用 <code>this.dispatcher.serviceAction()</code> 方法：</p>
+<ul>
+<li>通过 <code>createContextMap()</code> 方法将获取当前 HttpServletRequest/HttpServletResponse/ServletContext 中的相关信息放到 extraContext 中。</li>
+<li>通过 ActionProxyFactory 的 <code>createActionProxy()</code> 类初始化一个 ActionProxy，在这过程中也会创建 DefaultActionInvocation 的实例，并通过其 <code>createContextMap()</code> 方法创建一个 OgnlValueStack 实例，并将 extraContext 全部放入 OgnlValueStack 的 context 中。</li>
+<li>通过 ObjectFactory 的 <code>buildAction()</code>  实际上就是 ClassLoader 的 load 实例化了当前访问的 action 类，并将其放入 OgnlValueStack 的 root 中。</li>
+</ul>
+<p>此时，应用程序以及在本次请求中创建了 OgnlValueStack 实例，并将当前请求的各种信息存入了其中的 context 里，然后将当前要访问的 action 实例放入了 root 中。</p>
+<p>在 <code>this.dispatcher.serviceAction()</code> 方法的最后，执行创建的 ActionProxy 实例的 <code>execute()</code> 方法，调用创建的 DefaultActionInvocation 的 <code>invoke()</code> 方法，调用程序配置的各个 interceptors 的 <code>doIntercept()</code> 方法执行相关逻辑，其中的一个拦截器是 ParametersInterceptor，这个拦截器会在本次请求的上下文中取出访问参数，将参数键值对通过 OgnlValueStack 的 setValue 通过调用 <code>OgnlUtil.setValue()</code> 方法，最终调用 <code>OgnlRuntime.setMethodValue</code> 方法将参数通过 set 方法写入到 action 中，并存入 context 中。</p>
+<p>此时 OgnlValueStack 实例中 root 中的 Action 对象的参数值已经被写入了。</p>
+<p>在循环执行 interceptors 结束后，DefaultActionInvocation 的 <code>invoke()</code> 方法执行了 <code>invokeActionOnly()</code> 方法，这个方法通过反射调用执行了 action 实现类里的 execute 方法，开始处理用户的逻辑信息。</p>
+<p>用户逻辑走完后，会调用 DefaultActionInvocation 的 <code>executeResult()</code>  方法，调用 Result 实现类里的 <code>execute()</code> 方法开始处理这次请求的结果。</p>
+<p>如果返回结果是一个 jsp 文件，则会调用 JspServlet 来处理请求，然后交由 Struts 来处理解析相关的标签。</p>
+<p>如果在 jsp 中想使用 struts2 的标签，需要在头部声明： <code>&lt;%@taglib prefix=&quot;s&quot; uri=&quot;/struts-tags&quot; %&gt;</code>，对于各个标签的属性及处理类，在 struts2-core 包中的 <code>struts-tags.tld</code> 中进行了定义，在对标签进行解析时，会根据不同的 tag 类型找到不同的 <code>TagSupport</code> 的实现类进行处理。</p>
+<p>在解析一个标签如 <code>&lt;s:textfield name=&quot;username&quot; label=&quot;用户名&quot;/&gt;</code>，在标签的开始和结束位置，会分别调用对应实现类如<code>org.apache.struts2.views.jsp.ComponentTagSupport</code> 中的 <code>doStartTag()</code> 及 <code>doEndTag()</code> 方法：</p>
+<ul>
+<li><code>doStartTag()</code>：获取一些组件信息和属性赋值，总之是些初始化的工作</li>
+<li><code>doEndTag()</code>：在标签解析结束后需要做的事，如调用组件的 <code>end()</code> 方法</li>
+</ul>
+<p>而这个漏洞的触发点，就从 <code>doEndTag()</code> 开始，这个方法调用组件 <code>org.apache.struts2.components.UIBean</code> 的<code>end()</code> 方法，随后调用 <code>evaluateParams()</code> 方法，这个方法判断了 altSyntax 是否开启，并调用 <code>findValue()</code> 方法寻找参数值：</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1618656609695.png" alt="" loading="lazy"></figure>
+<p><code>findValue()</code> 方法调用了 <code>com.opensymphony.xwork2.util.TextParseUtil#translateVariables</code> 来解析和处理</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1618656961839.png" alt="" loading="lazy"></figure>
+<p>这个方法实际上就是真正的漏洞点，由于篇幅有限，这里不贴代码，用文字来描述一下逻辑：</p>
+<ol>
+<li>对要解析的表达式寻找最外层的 <code>%{}</code>，至于为什么是 <code>%{}</code>，是在之前提到的 <code>evaluateParams()</code> 中定义的，并去除掉。</li>
+<li>调用 <code>ValueStack#findValue()</code> 实际上是实现类 <code>OgnlValueStack</code> 的该方法来调用 <code>OgnlUtils</code> 解析这个表达式。</li>
+<li>解析过后将解析结果替换回原来的表达式中，继续第一步，如果找不到 <code>%{}</code>，则通过 break 跳出<code>while(true)</code> 循环。</li>
+</ol>
+<p>到这一步，整个漏洞的原理就大概说清了，用户通过使用 <code>%{}</code> 包裹恶意表达式的方式，将参数传递给应用程序，应用程序由于处理逻辑失误，导致了二次解析，造成了漏洞。</p>
+<p>那漏洞究竟是如何触发的呢？其实就在于，第一次 OGNL 解析，解析的是 <code>%{var}</code>，解析的实际上是标签里写的变量名，而由于在 Struts 收到对应的 action 请求时，将 Action 对象的相关属性都放在了OgnlValueStack 的 root 对象中，此时由于是根节点的属性， OGNL 可以不使用 “#” 直接使用名称获得，也就获得我们输入的恶意表达式，此时再次进行二次解析，就完成了漏洞的触发。</p>
+<p>而触发点，很多文章描述在表单验证失败，其实跟验证没关系，只是在一次请求中， ValueStack 中写入了用户请求参数，也就是对应 action 中的属性，在其消亡前如果被调用并解析，就会触发此漏洞。而在表单验证错误或成功或者任意情况，如果跳转回原来的页面，那在这个请求处理结束前，ValueStack 中的用户参数还依然存在，页面在解析标签时就会使用表达式解析将标签的内容解析出来重新展现在页面上。只是在登陆的位置或者配置了 Validation 的位置由于错误时会返回原来的界面，所以成为了漏洞经常出现的区域。</p>
+<h2 id="s2-003">S2-003</h2>
+<p>Struts2 在解析参数时，将所有参数名都使用了 OGNL 来解析，构成了这个漏洞。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0 - Struts 2.1.8.1<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-003<br>
+描述：在拦截器 ParametersInterceptor 调用 <code>setParameters()</code> 装载参数时，会使用<code>stack.setValue()</code> 最终调用 <code>OgnlUtil.setValue()</code> 方法来使用 OGNL 表达式解析参数名，造成漏洞。</p>
+</blockquote>
+<p>在之前梳理逻辑过程中提到过，程序会调用设置的拦截器栈来执行相关命令，其中一个拦截器是 ParametersInterceptor，这个拦截器会解析参数，将参数放入 OgnlValueStack root 中的 action 中，也同时将参数调用 set 方法写入要执行的 Action 类中。</p>
+<p>在拦截器的 <code>doIntercept()</code> 方法中，初始化的过程中将 <code>DENY_METHOD_EXECUTION</code> 设置为 true。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1618883829798.png" alt="" loading="lazy"></figure>
+<p>然后调用 <code>setParameters()</code> 方法，循环参数 Map，首先调用 <code>this.acceptableName(name)</code> 来校验参数名是否非法，在较低版本中是判断是否包含 <code>#,=:</code></p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1618881023371.png" alt="" loading="lazy"></figure>
+<p>在高一点的版本中是使用正则来匹配</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1618881030286.png" alt="" loading="lazy"></figure>
+<p>如果校验通过则调用 <code>stack.setValue(name, value)</code> 方法，这个方法会将待解析的表达式以 “conversion.property.fullName” 的值放在 context 里，然后调用 <code>OgnlUtil.setValue()</code> 方法。</p>
+<p>中间有个 <code>compile()</code> 方法会先调用 <code>ognl.Ognl#parseExpression</code> 方法，这个方法创建了一个 OgnlParser 对象，并调用其 <code>topLevelExpression()</code> 方法解析给定的 OGNL 表达式，并返回可由 OGNL 静态方法使用的表达式的树表示形式（Node）。</p>
+<p>在 OGNL 中，有一些不同类型的语法树，这些在在解析表达式的过程中，根据表达式的不同将会使用不同的构造树来进行处理，比如如果表达式为 <code>user.name</code>，就会生成 ASTChain，因为采用了链式结构来访问 user 对象中的 name 属性。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1618899904193.png" alt="" loading="lazy"></figure>
+<p>这些树都是 SimpleNode 的子类中，且各子类都根据自己的特性需求对父类的部分方法进行了重写，这些特性可能导致表达式最终执行结果受到影响。这些树对应的表现形式以及重写的方法可以参考 <a href="https://xz.aliyun.com/t/111">这篇文章</a>。</p>
+<p>而本次漏洞触发形式就在于 <code>(one)(two)</code> 这种表达形式，属于 <code>ASTEval</code> 类型。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1618984613601.png" alt="" loading="lazy"></figure>
+<p>看一下解析执行流程：</p>
+<ol>
+<li>取第一个节点，也就是 one，调用其 <code>getValue()</code> 方法计算其值，放入 expr 中；</li>
+<li>取第二个节点，也就是 two，赋值给 source ；</li>
+<li>判断 expr 是否为 node 类型，如果不是，则调用 <code>Ognl.parseExpression()</code> 尝试进行解析，解析的结果强转为 node 类型；</li>
+<li>将 source 放入 root 中，调用 node 的 <code>setValue()</code> 方法对其进行解析；</li>
+<li>还原之前的 root。</li>
+</ol>
+<p>因此我们得知：使用 <code>(one)(two)</code> 这种表达式执行时，将会计算 one ，two，并将 two 作为 root 再次为 one 的结果进行计算。如果 one 的结果是一个 AST，OGNL 将简单的执行解释它，否则 OGNL 将这个对象转换为字符串形式然后解析这个字符串。</p>
+<p>所以，比如使用 Runtime 弹计算器，原本的表达式可以这样写：</p>
+<pre><code>@java.lang.Runtime@getRuntime().exec('open -a Calculator.app')
+</code></pre>
+<p>但是使用 <code>(one)(two)</code> 可以改成这样：</p>
+<pre><code>('@java.lang.Runtime'+'@getRuntime().exec(\'open -a Calculator.app\')')('aaa')
+('@java.lang.Runtime@'+'getRuntime().exec(#aa)')(#aa='open -a Calculator.app')
+</code></pre>
+<p>将 one 用字符串括起来，甚至是进行拼接，后面再跟一个括号，这样程序就会对 one 进行二次解析，第一次解析成为字符串，第二次解析成为对应的 AST 并执行，也可以将其中的部分变量拆分到 two 中，因为 two 会作为 one 的 root 解析执行，可以拿到其中的值。</p>
+<p>又由于表达式的执行是由右向左执行的，因此向右面写入更多个括号，都会依次拆分，最后执行到 one 表达式中：</p>
+<pre><code>('@java.lang.Runtime'+'@getRuntime().exec(\'open -a Calculator.app\')')('su18')('su19')('su20')('su21')('su22')('su23')('su24')('su25')('su26')('su27')('su28')('su29')
+</code></pre>
+<p>或者向左叠入更多层级的括号：</p>
+<pre><code>('su23')(('su22')(('su21')(('su20')(('su19')(('@java.lang.Runtime'+'@getRuntime().exec(\'open -a Calculator.app\')')('su18'))))))
+</code></pre>
+<p>这些写法都不影响最终 one 表达式的执行，如下图均可以成功弹出计算器：</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1618984520933.png" alt="" loading="lazy"></figure>
+<p>以上是使用<code>Ognl.parseExpression()</code>  加 <code>Ognl.getValue()</code> 来执行的，与 <code>OgnlUtil.getValue()</code> 一致。</p>
+<p>那使用 <code>OgnlUtil.setValue()</code>，调用会一致吗？答案是否定的。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1618992692870.png" alt="" loading="lazy"></figure>
+<p>如上图，我们的 payload 报错了，为什么呢？<code>OgnlUtil.setValue()</code> 的调用链为：<code>OgnlUtil.setValue()</code>-&gt; <code>OgnlUtils.compile()</code> -&gt;<code>Ognl.setValue()</code> -&gt; <code>Node.setValue()</code> -&gt; <code>SimpleNode.evaluateSetValueBody()</code> -&gt;<code>ASTEval.setValueBody()</code>。</p>
+<p>在 <code>ASTEval.setValueBody()</code> 中，分别取了 <code>children[0]</code> 的 <code>children[1]</code> Node 并调用其 <code>getValue()</code> 方法。这个方法的调用链为：<code>SimpleNode.getValue()</code> 、<code>SimpleNode.evaluateGetValueBody()</code>、 <code>ASTEval.getValueBody()</code>，到这步进入了 <code>OgnlUtil.getValue()</code> 的漏洞触发链。</p>
+<p>也就是说，在使用 <code>OgnlUtil.setValue()</code> 执行恶意表达式时，要比 <code>OgnlUtil.getValue()</code> 多出一步取节点并执行的步骤，如下图两种方法都可以弹出计算器：</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1618994308303.png" alt="" loading="lazy"></figure>
+<p>上面讨论了调用静态方法的表达式，那如果想要修改 context 里的值呢？根据官方文档的描述和测试的结果，以下的方式都可以：</p>
+<pre><code>('#context[\'key\']=aaaa')('su18')
+('#context[\'key\']')('su18')=aaa
+('#context[\'key\']=#a')(#a='aaa')
+</code></pre>
+<p>还有关键的一点是：在对表达式进行解析时，由于在 <code>OgnlParserTokenManager</code> 方法中使用了 <code>ognl.JavaCharStream#readChar()</code> 方法，在读到 <code>\\u</code> 的情况下，会继续读入 4 个字符，并将它们转换为 char，因此 OGNL 表达式实际上支持了 unicode 编码，这就绕过了之前正则或者字符串判断的限制。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1618890320157.png" alt="" loading="lazy"></figure>
+<p>在解析完表达式执行方法的时候，会调用 <code>MethodAccessor#callMethod/callStaticMethod</code> 方法，在调用之前会在 context 中取 <code>xwork.MethodAccessor.denyMethodExecution</code> 的值转为布尔型进行判断，如果是 true 则不会调用方法，只有为 false 才会进行调用。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1618902801344.png" alt="" loading="lazy"></figure>
+<p>因此，这个漏洞的触发流程就明确了，攻击者在参数名处传入恶意表达式：</p>
+<ul>
+<li>使用 unicode 编码特殊字符绕过对关键字符黑名单的判断；</li>
+<li>将 context 中的 <code>xwork.MethodAccessor.denyMethodExecution</code> 值修改为 false，这样在后面才可以调用方法；</li>
+<li>执行恶意的表达式。</li>
+</ul>
+<p>因此 S2-003 的漏洞利用 payload 为：</p>
+<pre><code>(su18)(('\u0023context[\'xwork.MethodAccessor.denyMethodExecution\']\u003d\u0023su19')(\u0023su19\u003dnew\u0020java.lang.Boolean(false)))&amp;(su20)(('\u0023su21.exec(\'open -a Calculator.app\')')(\u0023su21\u003d@java.lang.Runtime@getRuntime()))
+</code></pre>
+<p>或者</p>
+<pre><code>(%27\u0023context[\%27xwork.MethodAccessor.denyMethodExecution\%27]\u003dfalse%27)(su18)(su19)&amp;(%27\u0023su20\u003d@java.lang.Runtime@getRuntime().exec(\%27open%20-a%20Calculator.app\%27)%27)(su21)(su22)
+</code></pre>
+<p>当然也可以根据上面的分析随意改成自己喜欢的样子。这里有一点要注意的是，可以看到第二个 payload 没有直接使用 @ 调用静态方法的方式，而是使用了 <code>#su=</code> 进行了赋值，这是因为在 OGNL 对参数解析时，静态方法的解析会排在其他方式的前面，这就导致了还没修改 context 里的值，导致无法执行，所以先进行了赋值。主要的原因是 <code>TreeMap</code> 的默认排序是按照 key 的字典顺序排序即升序。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1619053605872.png" alt="" loading="lazy"></figure>
+<h2 id="s2-005">S2-005</h2>
+<p>官方在 struts2-core 2.0.12 对 S2-003 进行了修复，实际上是 xwork 2.0.6 版本修复。S2-005 是对 S2-003 修复的绕过。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0 - Struts 2.1.8.1<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-005<br>
+描述：为了修复 S2-003，官方添加了 SecurityMemberAccess ，但是没有从根本上进行修复漏洞。</p>
+</blockquote>
+<p>先来 diff 一下更新，在 <code>ParametersInterceptor#setParameters</code> 方法，使用了 ValueStackFactory 为当前值栈重新初始化 ValueStack，不再使用原有的 ValueStack，并为其设置了相关属性，包括新增的 <code>acceptParams</code> 和 <code>excludeParams</code> 是接收访问的参数名白名单和黑名单。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1619059581984.png" alt="" loading="lazy"></figure>
+<p>新增了 MemberAccessValueStack 和 ClearableValueStack 接口，由 OgnlValueStack 实现，用来配置额外的属性和清除 context 中的内容，并为 OgnlValueStack 添加了新的 allowStaticMethodAccess 和 securityMemberAccess 属性，用来限制静态方法的调用。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1619060627165.png" alt="" loading="lazy"></figure>
+<p>在为 ValueStack 设置 root 时，会创建 <code>SecurityMemberAccess</code> 对象，并调用 <code>Ognl.createDefaultContext()</code> 方法将其放在 Context 里，key 为 <code>OgnlContext.MEMBER_ACCESS_CONTEXT_KEY</code>，也就是 <code>_memberAccess</code>。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1619079764399.png" alt="" loading="lazy"></figure>
+<p>在 OGNL 解析完表达式，试图调用方法时，会调用 MemberAccess 的 <code>isAccessible()</code> 方法来判断是否允许调用，xwork 创建了 <code>SecurityMemberAccess</code> 对象继承自 DefaultMemberAccess 并重写了这个方法，因此，我们需要让这个方法返回 true，才能执行最终的方法。</p>
+<p>我们先使用 S2-003 的 payload 再打一次，看一下调用流程：</p>
+<p>首先在<code>ParametersInterceptor#setParameters</code> 方法创建新的 ValueStack，里面 securityMemberAccess 的 allowStaticMethodAccess 默认为 true，excludeProperties 里有一个数据，是在配置文件中读出来的参数名的黑名单，acceptProperties 中没有数据。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1619071179016.png" alt="" loading="lazy"></figure>
+<p>在 payload 的第一步设置 denyMethodExecution 为 false 没有问题，第二步调用方法前执行 <code>isAccessible()</code> 判断，由于 allowStaticMethodAccess 为 true ，所以 <code>!getAllowStaticMethodAccess()</code> 返回false，程序调用父类 DefaultMemberAccess 的 <code>isAccessible()</code> 方法判断调用的类是不是 public 属性，由于我们调用的 <code>Runtime.getRuntime()</code> 没有问题，所以这步判断也直接过了，接下来程序会调用到 <code>isAcceptableProperty()</code> ，会进行两个判断：<code>isAccepted()</code> 和 <code>isExcluded()</code> ：</p>
+<ul>
+<li><code>isAccepted()</code>：判断参数名是否在白名单中，如果白名单为空，则返回 true；如果白名单不为空，则进行匹配，匹配到了就返回 true，匹配不到就返回 false；</li>
+<li><code>isExcluded()</code> ：判断参数是否在黑名单中，如果匹配到了，则返回 true，如果没匹配到或黑名单为空，则返回 false。</li>
+</ul>
+<p>在这种判断下，只有当 <code>isAccepted()</code> 返回 true，<code>isExcluded()</code> 返回 false 的情况下，才能调用方法，最好的方式是黑白名单都为空，这样直接绕过判断。</p>
+<p>由于 <code>MethodAccessor#callMethod/callStaticMethod</code> 时传入的 propertyName 为 null，所以进行判断的参数  paramName 为 null，会触发空指针异常，中断调用流程。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1619079158081.png" alt="" loading="lazy"></figure>
+<p>所以我们需要将 excludeProperties 设置为空集，绕开判断，其他不变，与 S2-003 保持一致。最好的 payload 是再将 acceptProperties 设为空集，allowStaticMethodAccess 设置为 true，用来兼容多种情况。因此，最终的 payload 为：</p>
+<pre><code>(%27\u0023_memberAccess.allowStaticMethodAccess\u003dtrue%27)(su18)(su19)&amp;(%27\u0023_memberAccess.acceptProperties\u003d@java.util.Collections@EMPTY_SET%27)(su20)(su21)&amp;(%27\u0023context[\%27xwork.MethodAccessor.denyMethodExecution\%27]\u003dfalse%27)(su22)(su23)&amp;(%27\u0023_memberAccess.excludeProperties\u003d@java.util.Collections@EMPTY_SET%27)(su24)(su25)&amp;(%27\u0023su26\u003d@java.lang.Runtime@getRuntime().exec(\%27open\u0020/System/Applications/Calculator.app\%27)%27)(su27)(su28)
+</code></pre>
+<p>当然了，这是执行命令的 payload，如果只是想读取/修改 context 中的内容的话就不需要这么麻烦了。</p>
+<h2 id="s2-007">S2-007</h2>
+<p>用字符串拼接还不进行处理，yyds。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0 - Struts 2.2.3<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-007<br>
+描述：关于表单我们可以设置每个字段的规则验证，如果类型转换错误时，在类型转换错误下，拦截器会将用户输入取出插入到当前值栈中，之后会对标签进行二次表达式解析，造成表达式注入。</p>
+</blockquote>
+<p>可以为 field 配置验证规则，这里使用了 S2-007 的靶场进行调试，如下可看到为 age 配置了类型和大小限制：</p>
+<pre><code class="language-xml">&lt;validators&gt;
+	&lt;field name=&quot;age&quot;&gt;
+		&lt;field-validator type=&quot;int&quot;&gt;
+			&lt;param name=&quot;min&quot;&gt;1&lt;/param&gt;
+			&lt;param name=&quot;max&quot;&gt;150&lt;/param&gt;
+		&lt;/field-validator&gt;
+	&lt;/field&gt;
+&lt;/validators&gt;
+</code></pre>
+<p>此时如果输入不正确的数据类型，会校验失败并提示：</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1619232859203.png" alt="" loading="lazy"></figure>
+<p>此时程序会进入 struts 拦截器栈中的 <code>ConversionErrorInterceptor#intercept()</code> 方法，这个方法从 context 中获取类型转换错误的字段键值对</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1619233239520.png" alt="" loading="lazy"></figure>
+<p>拿出这些类型转换错误的键值对，创建了一个新的 HashMap fakie，并将其储存进去，储存之前对参数值进行了处理，调用了 <code>getOverrideExpr()</code> 方法在参数值前后加了引号。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1619233508107.png" alt="" loading="lazy"></figure>
+<p>把 fakie 放在了 context 中的 <code>original.property.override</code> 中，创建了一个 PreResultListener，在 Action 完成控制处理之后，将 fakie 取出放入 stack 的 overrides 中，在后面 <code>findValue()</code> 时，会取出其中的值并解析。</p>
+<p>所以这个漏洞的触发点，其实和 S2-001 是一样的，是在 <code>doEndTag()</code> 解析时回填用户输入时进行 OGNL 解析触发的，但是取值的方式不同： S2-001 是从 ValueStack 中的 root 对象直接取值，而 S2-007 由于类型验证失败，用户输入值没法放到 Action 对象中，那怎么办呢？</p>
+<p>就是上面提到的 overrides，程序将用户输入前后添加单引号处理成字符串，然后放在 context 和 stack 对象中，在  <code>doEndTag()</code>  解析对应的参数 <code>%{age}</code> 时，会调用 <code>lookupForOverrides()</code> 方法在 stack 中取回用户输入。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1619238146350.png" alt="" loading="lazy"></figure>
+<p>然后调用 <code>getValue()</code> 方法实际上就是 <code>Ognl.getValue()</code> 方法解析字符串。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1619238180644.png" alt="" loading="lazy"></figure>
+<p>因此我们只需要闭合 <code>getOverrideExpr()</code> 方法添加的单引号，即可构成 OGNL 注入，由于这个方法使用了字符串拼接的方式，所以最终的 payload 为：</p>
+<pre><code>' + (#_memberAccess[&quot;allowStaticMethodAccess&quot;]=true ,#context[&quot;xwork.MethodAccessor.denyMethodExecution&quot;]=new java.lang.Boolean(&quot;false&quot;),@org.apache.commons.io.IOUtils@toString(@java.lang.Runtime@getRuntime().exec('open -a Calculator.app').getInputStream())) + '
+</code></pre>
+<p>这个 payload 由于是直接写 OGNL 表达式，不用那么多复杂的变化，所以比较简单。</p>
+<p>除了 ConversionErrorInterceptor，还有一个类能触发类型转换错误，那就是 RepopulateConversionErrorFieldValidatorSupport，原理相同，此处略过。</p>
+<h2 id="s2-008">S2-008</h2>
+<p>S2-008 还是对 S2-003 的绕过。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0 - Struts 2.3.17<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-008<br>
+描述：官方文档提出了 4 种绕过防御的手段，其中关注比较多的是 Debug 模式导致的绕过。</p>
+</blockquote>
+<p>通过 S2-003/S2-005 ，Struts 2 为了阻止攻击者在参数中植入恶意 OGNL，设置了 <code>xwork.MethodAccessor.denyMethodExecution</code> 以及 <code>SecurityMemberAccess.allowStaticMethodAccess</code>，并使用白名单正则 <code>[a-zA-Z0-9\.][()_']+</code>  来匹配参数中的恶意调用，但是在一些特殊情况下，这些防御还是可以被绕过。</p>
+<p>官方文档描述了四种情况：</p>
+<ol>
+<li>Struts &lt;= 2.2.3 ExceptionDelegator RCE：看了一下，指的就是 S2-007。</li>
+<li>Struts &lt;= 2.3.1 CookieInterceptor RCE：acceptedParamNames 没有应用到 Cookie 拦截器上，而 cookie 名也同样会被解析。</li>
+</ol>
+<p>接下来跟一下 CookieInterceptor 的逻辑：</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1619249850130.png" alt="" loading="lazy"></figure>
+<p>从 ServletActionContext 获取当前的 request 对象，并获取当前请求的 Cookie 对象数组，循环这个数组，在里面取得 name 和 value，调用 <code>populateCookieValueIntoStack()</code> 方法，顾名思义，将 cookie 值放入值栈中，最终调用 <code>stack.setValue()</code> 方法。</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1619250563206.png" alt="" loading="lazy"></figure>
+<p>由于 CookieInterceptor 不在默认拦截器栈中，因此需要我们进行配置：</p>
+<pre><code>&lt;interceptor-ref name=&quot;defaultStack&quot; /&gt;
+&lt;interceptor-ref name=&quot;cookie&quot;&gt;
+        &lt;param name=&quot;cookiesName&quot;&gt;*&lt;/param&gt;
+        &lt;param name=&quot;cookiesValue&quot;&gt;*&lt;/param&gt;
+&lt;/interceptor-ref&gt;
+</code></pre>
+<p>而大多 Web 容器对 Cookie 名称都有字符限制，例如 tomcat 不允许出现以下字符:</p>
+<pre><code class="language-java"> public static final char SEPARATORS[] = { '\t', ' ', '\&quot;', '(', ')', ',', ':', ';', '&lt;', '=', '&gt;', '?', '@', '[', '\\', ']', '{', '}' };
+</code></pre>
+<p>这基本上阻拦了 ognl 调用的方式，想了一下确实没有想到能绕过的方式。略过。</p>
+<ol start="3">
+<li>Struts &lt;= 2.3.1 ParameterInterceptor 任意文件覆盖：这是一种思路的拓展，由于 acceptedParamNames 正则允许了括号，因此可以调用一些构造方法可以执行操作的类，比如使用 FileWriter 的构造方法传入文件名可以直接创建这个文件或者清空其内容：</li>
+</ol>
+<pre><code>name=/tmp/1.txt&amp;su18[new+java.io.FileWriter(name)]=1
+</code></pre>
+<p>这里需要注意的是，如果 FileWriter 的参数直接写文件名的话，无法跳出执行目录，因为正则不允许使用 &quot;&quot; 或者 &quot;/&quot;，所以无法使用相对路径或者绝对路径，但是我们可以使用当前请求 action 的参数，因为这些参数会被放入 ValueStack  的 root 中，无需 # 即可调用。当然这里也可以使用 <code>(one)(two)</code> 的方式，与之前一致。</p>
+<ol start="4">
+<li>Struts &lt;= 2.3.17 DebuggingInterceptor RCE</li>
+</ol>
+<p>严格意义上来讲，这并不算是一个漏洞，在应用程序配置成为了 devMode 时，开发人员提供了一个拦截器 DebuggingInterceptor 来进行调试，提供了执行命令等功能，按理来说生产环境上是不应该使用开发模式，但这算一种风险。</p>
+<p>在 struts.xml 上进行配置即可开启 devMode :<code>&lt;constant name=&quot;struts.devMode&quot; value=&quot;true&quot; /&gt;</code>。</p>
+<p>开启之后，会成功进入 <code>DebuggingInterceptor#intercept</code> 的相关逻辑，首先取得 request 中的参数 &quot;debug&quot;，这个参数可以有 4 种值，分别对应了 DebuggingInterceptor 提供的四种功能。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1619397849228.png" alt="" loading="lazy"></figure>
+<ul>
+<li><code>debug=xml</code> ：从 ServletActionContext 中获取 response 对象，把一些 context 中的内容以 xml 的格式打印出来。</li>
+</ul>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1619399910801.png" alt="" loading="lazy"></figure>
+<ul>
+<li><code>debug=command&amp;expression=</code>：非常清晰的漏洞调用点，如果参数 debug 是 command ，取参数 expression 的值，并调用 <code>stack.findValue()</code> 进行解析。</li>
+</ul>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1619402580599.png" alt="" loading="lazy"></figure>
+<ul>
+<li><code>debug=console</code>：如果参数 debug 是 console，struts2 调用 freemarker 跳转了 <code>org/apache/struts2/interceptor/debugging/console.ftl</code> 的 html 模板。</li>
+</ul>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1619403020411.png" alt="" loading="lazy"></figure>
+<p>模板引入了 struts/webconsole.html ，我们也可以直接访问这个路径来访问这个页面</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1619403118705.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1619403124927.png" alt="" loading="lazy"></figure>
+<p>这个页面提供了一个黑色的交互页面，可以输入 ognl 表达式，解析结果会返回在页面上，而这个功能的实现实际上是使用了 <code>debug=command&amp;expression=</code> 的功能。</p>
+<ul>
+<li><code>debug=browser&amp;object=</code>：如果参数 debug 是 browser，取参数 object 的值，如果没有默认为 <code>#context</code>，并调用 <code>stack.findValue()</code> 进行解析，结果也是使用了 freemarker 的 <code>/org/apache/struts2/interceptor/debugging/browser.ftl</code> 进行展示。</li>
+</ul>
+<figure data-type="image" tabindex="36"><img src="https://su18.org/post-images/1619403339646.png" alt="" loading="lazy"></figure>
+<p>由上可知，开启 debug 模式后将会有两个 RCE 的点。</p>
+<h2 id="s2-009">S2-009</h2>
+<p>S2-009 是对 S2-005 的绕过，但是不同的是，S2-009 是参数值注入，对于 S2-003/S2-005 都是参数名的 OGNL 注入，这次的漏洞出在参数值上。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0-Struts 2.3.1.1<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-009<br>
+描述：由于 ParametersInterceptor 对参数名进行了过滤，对参数值没有进行过滤，结合其正则可以使用 <code>()</code> 和 <code>[]</code> 的特性，以及 Struts Action 参数会被放在 ValueStack Root 里可以不使用 # 调用的特性，可以绕过校验。</p>
+</blockquote>
+<p>在 S2-008 的第三种情况中，我使用了在 action 参数中填入路径，用来规避正则校验的方法，但是小了，格局小了，这一特性可以直接用来绕过对参数值的校验。由于在进行 acceptableName 判断时，使用了如下正则对参数名进行判断，而对参数值没有进行判断：</p>
+<pre><code>private String acceptedParamNames = &quot;[a-zA-Z0-9\\.\\]\\[\\(\\)_'\\s]+&quot;;
+</code></pre>
+<p>这样就导致了安全漏洞，由于 Struts Action 参数会被直接放在 ValueStack 里，因此可以不使用 # 调用，可以直接构造 payload ：</p>
+<pre><code>param=(#context[&quot;xwork.MethodAccessor.denyMethodExecution&quot;]=new java.lang.Boolean(false), #_memberAccess[&quot;allowStaticMethodAccess&quot;]=true,@java.lang.Runtime@getRuntime().exec(&quot;open -a Calculator.app&quot;))(su18)&amp;(param)(su20)
+</code></pre>
+<p>在有些文章中使用了payload：<code>one[(two)(three)]</code>，在 OGNL 解析这个表达式时，他本身是 ASTChain，首先会解析成为两个 ASTProperty ：<code>one</code> 和 <code>[(two)(three)]</code>，然后分别调用他们的 <code>ASTProperty#setValue</code> 方法，经过一系列的调用，最后调用 <code>getProperty()</code> 方法获取值，并调用 <code>OgnlRuntime.getProperty()</code> 获取对应的属性，对于 <code>[(two)(three)]</code> 来说，解析成为 ASTEval 之后的过程与之前分析的无异，会将 three 中内容作为 two 的 root 对象来执行。</p>
+<figure data-type="image" tabindex="37"><img src="https://su18.org/post-images/1619418723385.png" alt="" loading="lazy"></figure>
+<p>简单来说使用 <code>one[(two)(three)]</code> 表达式，会对 two 进行二次解析。</p>
+<p>因此构造如下，或者类似 <code>&quot;su17[('@java.lang.Runtime@getRuntime().exec(#su19)')(#su19='open -a Calculator.app')]&quot;</code> ，即可弹出计算器。</p>
+<figure data-type="image" tabindex="38"><img src="https://su18.org/post-images/1619414380180.png" alt="" loading="lazy"></figure>
+<p>除了使用之前熟悉的 ASTEval 的 payload ，官方通报了一种新的表达式执行方式： <code>top['foo'](0) </code>，在上下文中，可以用 top 来访问 Action 中的成员变量，这种方式会对 foo 进行二次解析。</p>
+<p>这种方式正好对应了我们的思路，使用一个 String 类型的 Action 参数，在值中写入恶意代码，然后通过 top 调用并进行二次解析，造成 OGNL 注入漏洞。</p>
+<p>那为什么 top 可以访问呢？来调试研究一下，首先 <code>top['foo'](0)</code> 会被解析成 <code>(top['foo'])(0)</code> 这个 ASTEval 的形式，并分隔成为两段，其中 <code>top['foo']</code> 是 ASTChain 对象。</p>
+<figure data-type="image" tabindex="39"><img src="https://su18.org/post-images/1619493318321.png" alt="" loading="lazy"></figure>
+<p>这个对象又会被解析成 <code>top</code> 和 <code>['foo']</code> 两个 ASTProperty 对象，会调用 <code>OgnlRuntime.getProperty()</code> 获取其值，取值的方式是调用 PropertyAccessor 的实现类的 <code>getProperty()</code> 方法，对于目前的情况下，是 CompoundRootAccessor，在这个实现类中，判断如果名称是 top 的情况下，会返回 root 中的第一个对象。</p>
+<figure data-type="image" tabindex="40"><img src="https://su18.org/post-images/1619501507812.png" alt="" loading="lazy"></figure>
+<p>而第一个对象就是 Action 对象，里面存放了参数信息，可以直接调用到，所以在这里 payload 也可以为</p>
+<pre><code>param=(#context[&quot;xwork.MethodAccessor.denyMethodExecution&quot;]=new java.lang.Boolean(false), #_memberAccess[&quot;allowStaticMethodAccess&quot;]=true,@java.lang.Runtime@getRuntime().exec(&quot;open -a Calculator.app&quot;))(su18)&amp;top[&quot;param&quot;](0)
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#%E4%B8%80-%E7%AE%80%E4%BB%8B">一、简介</a></li>
+<li><a href="#%E4%BA%8C-%E4%BD%BF%E7%94%A8">二、使用</a>
+<ul>
+<li><a href="#struts2-%E9%85%8D%E7%BD%AE%E5%8F%8A%E4%BD%BF%E7%94%A8">struts2 配置及使用</a></li>
+<li><a href="#struts2-%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B%E5%9B%BE">struts2 执行流程图</a></li>
+<li><a href="#ognl-%E8%A1%A8%E8%BE%BE%E5%BC%8F">OGNL 表达式</a></li>
+<li><a href="#ognl-in-struts2">OGNL in Struts2</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89-%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90">三、漏洞分析</a>
+<ul>
+<li><a href="#s2-001">S2-001</a></li>
+<li><a href="#s2-003">S2-003</a></li>
+<li><a href="#s2-005">S2-005</a></li>
+<li><a href="#s2-007">S2-007</a></li>
+<li><a href="#s2-008">S2-008</a></li>
+<li><a href="#s2-009">S2-009</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

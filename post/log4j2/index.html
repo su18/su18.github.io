@@ -1,0 +1,596 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Log4j2：里程碑式的顶级供应链漏洞 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Log4j2：里程碑式的顶级供应链漏洞
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-12-13
+              </span>
+              <span>
+                29 min read
+              </span>
+              
+                <a href="https://su18.org/tag/BoEqI-rRM/" class="post-tag">
+                  # log4j
+                </a>
+              
+                <a href="https://su18.org/tag/88AcuR3x8y/" class="post-tag">
+                  # rce
+                </a>
+              
+                <a href="https://su18.org/tag/TMMOORyTW/" class="post-tag">
+                  # javasec
+                </a>
+              
+                <a href="https://su18.org/tag/NvsPvSxv1i/" class="post-tag">
+                  # shell
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/3WtBYGru6/" class="post-tag">
+                  # JNDI注入
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/log4j2.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>本文首发跳跳糖社区，链接：<a href="https://tttang.com/archive/1378/">https://tttang.com/archive/1378/</a>，社区文中加入了威胁情报及黑产家族利用情况分析。</p>
+<h1 id="前言">前言</h1>
+<p>最近的 Log4j 漏洞在安全圈引起了轩然大波，可以说是核弹级别的漏洞，无论是渗透、研发、安服、研究，所有人都在学习和复现这个漏洞，由于其覆盖面广，引用次数庞大，直接成为可以与永恒之蓝齐名的顶级可利用漏洞，官方 CVSS 评分更是直接顶到 10.0，国内有厂商将其命名为“毒日志”，国外将其命名为 Log4Shell。</p>
+<p>在漏洞爆发的当天，很多安全负责人、安全厂商连夜应急修复、通宵添加规则，而我看了一下是 JNDI 的触发点，直接回去睡觉了。因为作为 RASP 思想的实践者，Hook 点都已经选好了，只要触发点没有超出我的知识范围，这种类型的 0 day 是可以直接防的（为什么某些号称能防 0 day 的安全产品要连夜更新啊，搞不懂）。</p>
+<p>在第二天，漏洞利用方式逐渐被研究、披露，因为朋友要做预警，所以找到我简单写了一个漏洞分析和 rc1 补丁绕过的分析，但是我没有发出来，当时也并没有几个人发文章，可能大家都在观望，毕竟国有国法，家有家规，不能也不应该这样轻易的披露漏洞细节。</p>
+<p>时间又过去了几天，种种绕过的思路、手段不断的出现，官方也在不断完善更新补丁，本来是不打算写博客的，但毕竟 Struts2 我没赶上，fastjson 赶上个末尾，这次好不容易赶上一个可能载入史册的漏洞，所以还是写篇文章留个底。本文不会提供 POC 及利用方式，仅进行思路上的探究分享及研究成果记录。</p>
+<p>同时本篇将作为本年度最后一篇技术文章，告别彷徨、迷茫、看不清未来的 2021 年。</p>
+<h1 id="漏洞描述">漏洞描述</h1>
+<p><a href="https://logging.apache.org/log4j/2.x/index.html">Apache Log4j2</a> 是 Apache 软件基金会下的一个<a href="https://github.com/apache/logging-log4j2">开源</a>的基于 Java 的日志记录工具。Log4j2 是一个 Log4j 1.x 的重写，并且引入了大量丰富的特性。该日志框架被大量用于业务系统开发，用来记录日志信息。由于其优异的性能而被广泛的应用于各种常见的 Web 服务中。</p>
+<p>2021 年 12 月 9 日晚，Log4j2 的一个远程代码执行漏洞的利用细节被公开。攻击者使用 <code>${}</code> 关键标识符触发 JNDI 注入漏洞，当程序将用户输入的数据进行日志记录时，即可触发此漏洞，成功利用此漏洞可以在目标服务器上执行任意代码。</p>
+<p>由于其触发方式简单、使用范围广泛，因此漏洞危害极大。</p>
+<p>目前，已经为此漏洞颁发了 CVE 编号：<a href="https://www.cve.org/CVERecord?id=CVE-2021-44228">CVE-2021-44228</a>，根据<a href="https://logging.apache.org/log4j/2.x/security.html">官方安全公告</a>，以下为相关信息：</p>
+<ul>
+<li>漏洞：Log4j2 的 JNDI 功能点无法防御来自攻击者的 ldap 以及其他相关端点的攻击行为。</li>
+<li>严重等级：Critical</li>
+<li>Basic CVSS 评分：10.0 CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H</li>
+<li>影响版本：all versions from 2.0-beta9 to 2.14.1</li>
+<li>详情描述：Apache Log4j2 &lt;=2.14.1 版本提供的 JNDI 特性用于配置、日志信息、参数位置时，无法防护攻击者使用 ldap 或其他 JNDI 相关断点的攻击行为。攻击者如果可以控制日志信息或日志信息参数，则可以在开启了  lookup substitution 功能时利用恶意的 ladp 服务器执行任意代码，在 2.15.0 版本时，默认将其此行为关闭。</li>
+<li>缓解措施：在 &gt;= 2.10 版本，可以通过设置系统属性 <code>log4j2.formatMsgNoLookups</code> 或环境变量 <code>LOG4J_FORMAT_MSG_NO_LOOKUPS</code> 为 true 来缓解。在  2.0-beta9 to 2.10.0 版本，可以通过移除 classpath 中的 <code>JndiLookup</code> 类来缓解，命令为：<code>zip -q -d log4j-core-*.jar org/apache/logging/log4j/core/lookup/JndiLookup.class</code>。</li>
+<li>致谢：此问题由阿里云安全团队的 Chen Zhaojun 发现。</li>
+<li>引用：<a href="https://issues.apache.org/jira/browse/LOG4J2-3201">LOG4J2-3201</a> &amp; <a href="https://issues.apache.org/jira/browse/LOG4J2-3198">LOG4J2-3198</a></li>
+</ul>
+<h1 id="漏洞分析">漏洞分析</h1>
+<p>在 Log4j2 中提供的众多特性中，其中一个就是 Property Support。这个特性让使用者可以引用配置中的属性，或传递给底层组件并动态解析。这些属性来自于配置文件中定义的值、系统属性、环境变量、ThreadContext、和事件中存在的数据，用户也可以提供自定义的 Lookup 组件来配置自定义的值。</p>
+<p>这个 Lookup &amp; Substitution 的过程，就是本次漏洞的关键点。提供 Lookup 功能的组件需要实现 <code>org.apache.logging.log4j.core.lookup.StrLookup</code> 接口，并通过配置文件进行设置。在最新的官方文档 <a href="https://logging.apache.org/log4j/2.x/manual/lookups.html">Lookups</a> 中，列举了 Log4j2 支持的 Context Map、Date、Docker、Environment、Event、Java、Jndi、JVM Input Arguments、Kubernetes、Log4j Configuration Location、Main Arguments、Map、Marker、Spring Boot 、Structured Data、System Properties、Lower、Upper、Web 如此多种的属性查找及替换选项。</p>
+<p>而其中所支持的 Jndi 就是本次漏洞的触发点。</p>
+<p>我们首先使用没进行安全补丁更新的 2.14.0 版本进行复现和测试。</p>
+<h2 id="漏洞复现">漏洞复现</h2>
+<p>启动恶意服务器，用来给 ldap/rmi 调用返回恶意代码，这里使用的是作者自写的 <a href="https://github.com/su18/JNDI">JNDI 注入测试工具</a>。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1639299432984.png" alt="" loading="lazy"></figure>
+<p>使用 <code>logger.info()</code> 方法触发漏洞，弹出计算器。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1639299700998.png" alt="" loading="lazy"></figure>
+<p>可以看到，漏洞的触发非常简单，也正因为如此，说明漏洞的危害非常之大。</p>
+<h2 id="关键点分析">关键点分析</h2>
+<p>Log4j2 关于 Lookup 功能的使用以及漏洞的触发，包括几个关键点，这里依次来进行分析。</p>
+<h3 id="日志记录触发点">日志记录/触发点</h3>
+<p>通常我们使用 <code>LogManager.getLogger()</code> 方法来获取一个 Logger 对象，并调用其 debug/info/error/warn/fatal/trace/log 等方法记录日志等信息。</p>
+<p>在这些所有的方法里，都会先使用名为 <code>org.apache.logging.log4j.spi.AbstractLogger#logIfEnabled</code> 的若干个重载方法来根据当前的配置的记录日志的等级，来判断是否需要输出 console 和记录日志文件。其中 Log4j 包括的日志等级层级分别为：ALL &lt; DEBUG &lt; INFO &lt; WARN &lt; ERROR &lt; FATAL &lt; OFF。</p>
+<p>在默认情况下，会输出 WARN/ERROR/FATAL 等级的日志。可以使用配置文件更改日志输出等级：</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;Configuration&gt;
+    &lt;Loggers&gt;
+        &lt;Logger name=&quot;org.su18&quot; level=&quot;All&quot;/&gt;
+    &lt;/Loggers&gt;
+&lt;/Configuration&gt;
+</code></pre>
+<p>也可以使用如下代码来配置输出等级：</p>
+<pre><code class="language-java">LoggerContext ctx          = (LoggerContext) LogManager.getContext(false);
+Configuration config       = ctx.getConfiguration();
+LoggerConfig  loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+loggerConfig.setLevel(Level.ALL);
+ctx.updateLoggers();
+</code></pre>
+<p>本此漏洞的触发点，实际上是从 <code>AbstractLogger#logMessage</code> 方法开始的，凡是调用了此方法的 info/error/warn 等全部方法均可以作为本次漏洞的触发点，只是取决于配置的漏洞输出等级。</p>
+<h3 id="消息格式化">消息格式化</h3>
+<p>Log4j2 使用 <code>org.apache.logging.log4j.core.pattern.MessagePatternConverter</code> 来对日志消息进行处理，在实例化 MessagePatternConverter 时会从 Properties 及 Options 中获取配置来判断是否需要提供 Lookups 功能。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1639328891984.png" alt="" loading="lazy"></figure>
+<p>获取 <code>log4j2.formatMsgNoLookups</code> 配置的值，默认为 false，因此 Lookups 功能默认是开的。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1639328731733.png" alt="" loading="lazy"></figure>
+<p>调用 <code>StrSubstitutor#replace</code> 方法进行字符替换操作。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1639329616666.png" alt="" loading="lazy"></figure>
+<h3 id="字符替换">字符替换</h3>
+<p>Log4j2 提供 Lookup 功能的字符替换的关键处理类，位于<code>org.apache.logging.log4j.core.lookup.StrSubstitutor</code>，首先来看一下这个类。</p>
+<p>类中提供了关键的 <code>DEFAULT_ESCAPE</code> 是 <code>$</code>，<code>DEFAULT_PREFIX</code> 前缀是 <code>${</code>，<code>DEFAULT_SUFFIX</code> 后缀是 <code>}</code>，<code>DEFAULT_VALUE_DELIMITER_STRING</code> 赋值分隔符是 <code>:-</code>，<code>ESCAPE_DELIMITER_STRING</code> 是 <code>:\-</code>。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1639306342745.png" alt="" loading="lazy"></figure>
+<p>这个类提供的 <code>substitute</code> 方法，是整个 Lookup 功能的核心，用来递归替换相应的字符，这里来仔细看一下处理逻辑。</p>
+<p>方法通过 while 循环逐个字符串寻找 <code>${</code> 前缀。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1639307635251.png" alt="" loading="lazy"></figure>
+<p>找到前缀后开始找后缀，但是在找后缀的 while 循环里，又判断了是否替换变量中的值，如果替换，则再匹配一次前缀，如果又找到了前缀，则 continue 跳出循环，再走一次找后缀的逻辑，用来满足变量中嵌套的情况。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1639308571999.png" alt="" loading="lazy"></figure>
+<p>后续的处理中，通过多个 if/else 用来匹配 <code>:-</code> 和 <code>:\-</code>。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1639312862840.png" alt="" loading="lazy"></figure>
+<p>由于篇幅原因，这里我不再依次跟代码讲解，直接描述一下：</p>
+<ul>
+<li><code>:-</code> 是一个赋值关键字，如果程序处理到 <code>${aaaa:-bbbb}</code> 这样的字符串，处理的结果将会是 <code>bbbb</code>，<code>:-</code> 关键字将会被截取掉，而之前的字符串都会被舍弃掉。</li>
+<li><code>:\-</code> 是转义的 <code>:-</code>，如果一个用 <code> a:b</code> 表示的键值对的 key <code>a</code> 中包含 <code>:</code>，则需要使用转义来配合处理，例如 <code>${aaa:\\-bbb:-ccc}</code>，代表 key 是，<code>aaa:bbb</code>，value 是 <code>ccc</code>。</li>
+</ul>
+<p>在没有匹配到变量赋值或处理结束后，将会调用 <code>resolveVariable</code> 方法解析满足 Lookup 功能的语法，并执行相应的 lookup ，将返回的结果替换回原字符串后，再次调用 <code>substitute</code> 方法进行递归解析。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1639312397298.png" alt="" loading="lazy"></figure>
+<p>因此在字符串替换的过程中可以看到，方法提供了一些特殊的写法，并支持递归解析。而这些特性，将会可以用来进行绕过 WAF。</p>
+<p><code>resolveVariable</code> 则调用 <code>this.variableResolver#lookup</code> 方法进行处理，而这实际上是一个代理类 <code>Interpolator</code>，这个类在接下来的内容进行说明。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1639313250556.png" alt="" loading="lazy"></figure>
+<p>通过在 <code>StrSubstitutor#substitute</code> 方法下断点/Hook 点，可以找到来自日志信息、配置文件、变量名、参数等位置的调用，也就是说，这个漏洞的触发点不仅仅在于记录日志的部分，但是是最容易触发的位置。</p>
+<h3 id="lookup-处理">Lookup 处理</h3>
+<p>Log4j2 使用 <code>org.apache.logging.log4j.core.lookup.Interpolator</code> 类来代理所有的 <code>StrLookup</code> 实现类。也就是说在实际使用 Lookup 功能时，由 Interpolator 这个类来处理和分发。</p>
+<p>这个类在初始化时创建了一个 <code>strLookupMap</code> ，将一些 lookup 功能关键字和处理类进行了映射，存放在这个 Map 中。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1639314169255.png" alt="" loading="lazy"></figure>
+<p>在 2.14.0 版本中，默认是加入 log4j、sys、env、main、marker、java、lower、upper、jndi、jvmrunargs、spring、kubernetes、docker、web、date、ctx，由于部分功能的支持并不在 core 包中，所以如果加载不到对应的处理类，则会添加警告信息并跳过。而这些不同 Lookup 功能的支持，是随着版本更新的，例如在较低版本中，不存在 upper、lower 这两种功能，因此在使用时要注意环境。</p>
+<p>处理和分发的关键逻辑在于其 <code>lookup</code> 方法，通过 <code>:</code> 作为分隔符来分隔 Lookup 关键字及参数，从<code>strLookupMap</code> 中根据关键字作为 key 匹配到对应的处理类，并调用其 lookup 方法。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1639314930122.png" alt="" loading="lazy"></figure>
+<p>本次漏洞的触发方式是使用 <code>jndi:</code> 关键字来触发 JNDI 注入漏洞，对于 <code>jndi:</code> 关键字的处理类为 <code>org.apache.logging.log4j.core.lookup.JndiLookup</code> 。看一下最关键的 <code>lookup</code> 方法，可以看到是使用了 JndiManager 来支持 JNDI 的查询功能。具体实现将在下一小节进行描述。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1639315282500.png" alt="" loading="lazy"></figure>
+<p>这里除了  <code>jndi:</code> 方法外，还支持上述多种 Lookup 功能，包括获取环境变量、系统配置、Java 环境等等，由于 Log4j2 支持递归和嵌套解析，所以可以用来获取相关信息来实现一些攻击思路，将在后续的技巧中进行详述。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1639315474972.png" alt="" loading="lazy"></figure>
+<h3 id="jndi-查询">JNDI 查询</h3>
+<p>Log4j2 使用 <code>org.apache.logging.log4j.core.net.JndiManager</code> 来支持 JDNI 相关操作。</p>
+<p>JndiManager 使用私有内部类 JndiManagerFactory 来创建 JndiManager 实例，如下图：</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1639304752624.png" alt="" loading="lazy"></figure>
+<p>可以看到是创建了一个新的 InitialContext 实例，并作为参数传递用来创建 JndiManager，这个 Context 被保存在成员变量 context 中：</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1639304872448.png" alt="" loading="lazy"></figure>
+<p><code>JndiManager#lookup</code> 方法则调用 <code>this.context.lookup()</code> 实现 JNDI 查询操作。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1639304970816.png" alt="" loading="lazy"></figure>
+<p>实际上，JndiManager 这个类就是在本次漏洞中 Log4j2 包内的最终 sink 点。</p>
+<h2 id="rc1-及绕过">rc1 及绕过</h2>
+<p>在漏洞遭到披露后，Log4j2 官方发布了 log4j-2.15.0-rc1 安全更新包，但经过研究后发现在开启 lookup 配置时，可以被绕过。</p>
+<p>本次安全更新关键有两个位置。</p>
+<p>在 2.15.0-rc1的更新包中，移除了从 Properties 中获取 Lookup 配置的选项，并修改判断逻辑，默认不开启 lookup 功能。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1639332152586.png" alt="" loading="lazy"></figure>
+<p>并在 MessagePatternConverter 类中创建了内部类 <code>SimpleMessagePatternConverter</code>、<code>FormattedMessagePatternConverter</code>、<code>LookupMessagePatternConverter</code>、<code>RenderingPatternConverter</code>，将一些扩展的功能进行模块化的处理，而只有在开启 lookup 功能时才会使用 <code>LookupMessagePatternConverter</code> 来进行 Lookup 和替换。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1639331984445.png" alt="" loading="lazy"></figure>
+<p>在默认情况下，将使用 <code>SimpleMessagePatternConverter</code> 进行消息的格式化处理，不会解析其中的 <code>${}</code> 关键字。</p>
+<p>第二个关键位置是 <code>JndiManager#lookup</code> 方法中添加了校验，使用了 JndiManagerFactory 来创建 JndiManager 实例，不再使用 InitialContext，而是使用子类 InitialDirContext，并为其添加白名单 JNDI 协议、白名单主机名、白名单类名。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1639332549257.png" alt="" loading="lazy"></figure>
+<p>其中 <code>permanentAllowedHosts</code> 是本地 IP，<code>permanentAllowedClasses</code> 是八大基础数据类型加 <code>Character</code>，<code>permanentAllowedProtocols</code> 包含 java/ldap/ldaps。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1639332834375.png" alt="" loading="lazy"></figure>
+<p>并在关键的 lookup 函数中加入了校验判断，但是由于校验逻辑有误，程序在 catch 住异常后没有 return，导致可以利用 <code>URISyntaxException</code> 异常来绕过校验，直接走到后面的 lookup。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1639332979607.png" alt="" loading="lazy"></figure>
+<p>因此，只要在判断时触发 <code>URISyntaxException</code> 异常，例如在 URI 中插入空格，即可触发漏洞，复现如下：</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1639748232113.png" alt="" loading="lazy"></figure>
+<p>虽然此处绕过了校验，但由于默认 lookup 配置为关闭，需要开启才能触发漏洞，所以危害较低。</p>
+<h2 id="rc2-及思考">rc2 及思考</h2>
+<p>在 rc1 更新被绕过后，官方发布了 rc2，代码如下，可以看到是在 catch 里添加了 return，修复了 rc1 的绕过。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1639334658277.png" alt="" loading="lazy"></figure>
+<p>但是还有师傅并不满足于止步在官方的更新，尝试使用 Appenders 配置及异常处理等问题来进行绕过。但总体来说，后续的几个版本更新已经默认禁用了 JNDI Lookup 的功能，甚至直接移除了对日志消息的 Lookup 功能支持，因此在此处继续研究绕过的意义并不大。</p>
+<h2 id="update-3208">UPDATE 3208</h2>
+<p>在最近一次的版本提交<a href="https://github.com/apache/logging-log4j2/commit/44569090f1cf1e92c711fb96dfd18cd7dccc72ea">LOG4J2-3208</a>中，可以看到官方表示 “Disable JNDI by default”，默认将 JNDI 关闭，这是如何实现的呢？其实也不难想象，那就是在 <code>org.apache.logging.log4j.core.lookup.Interpolator</code> 初始化内部变量 <code>strLookupMap</code> 时，需要经过判断才将实现 JNDI Lookup 的类 JndiLookup 加入。</p>
+<p>官方引入了一个 <code>log4j2.enableJndi</code> 参数用来表示是否开启 Jndi。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1639357218410.png" alt="" loading="lazy"></figure>
+<p>在初始化 <code>strLookupMap</code> 时，先进行判断。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1639357595271.png" alt="" loading="lazy"></figure>
+<p>同时保留了在 JndiManager 中的白名单校验。</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1639357625674.png" alt="" loading="lazy"></figure>
+<p>并将判断同时引入了 JmsManager，对 JMS Appenders 进行了限制。</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1639357915879.png" alt="" loading="lazy"></figure>
+<p>通过此判断，可以较好的确保在未开启 <code>log4j2.enableJndi</code> 时，无法使用 JNDI 查询功能。</p>
+<h2 id="2160-rc1">2.16.0-rc1</h2>
+<p>截至作者发文前，官方又提了一次<a href="https://github.com/apache/logging-log4j2/compare/log4j-2.15.1-rc1...log4j-2.16.0-rc1">更新</a>，版本号 2.16-rc1，通过两个版本的对比可以看出，官方移除了 MessagePatternConverter 的内部实现类 LookupMessagePatternConverter，并删除了相关调用代码。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1639376059241.png" alt="" loading="lazy"></figure>
+<p>也就是说，从这个版本开始，log4j2 不再支持日志消息的 Lookup 功能。</p>
+<p>至此为止，由记录日志导致的攻击可以说是落下了帷幕。</p>
+<h2 id="技巧">技巧</h2>
+<p>在 Log4j2 的影响迅速蔓延之后，各大安全防御类产品都在尝试添加规则对此种漏洞类型进行有效防护，包括流量层、HTTP 协议层等防御层级。</p>
+<p>但对于此类漏洞，触发点非常广泛，除了使用 RASP 技术能防范的较为理想之外，其他的防御手段也可能因为校验有瑕疵而导致被绕过。</p>
+<p>本小节总结几个可以用来绕过的技巧。</p>
+<h3 id="关键字截取">关键字截取</h3>
+<p>在 Lookup 功能处理时的关键字替换过程中，提到了可以使用 <code>:-</code> 进行一个截取和赋值的操作，因此我们可以用其来混淆流量，分隔关键字。例如：</p>
+<pre><code>jndi
+</code></pre>
+<p>可以尝试混淆为：</p>
+<pre><code>${:::::-j}${what:-n}${ls:-d}${1QAZ2wxs:-i}
+</code></pre>
+<p>并可以将其嵌套使用，可以用来绕过一些不完善的正则、关键字的匹配。</p>
+<h3 id="编码绕过">编码绕过</h3>
+<p>在浅蓝师傅发的<a href="https://mp.weixin.qq.com/s/vAE89A5wKrc-YnvTr0qaNg">公众号</a>中，利用了 UpperLookup 调用字符串的 <code>toUpperCase</code> 方法可以将不同 Locale 转为 Unicode Standard 字符的特性，例如将 Turkish 的 ı（\u0131） 经过  <code>toUpperCase</code>  转为 I（\u0069）。</p>
+<p>JDK 注释中也提到了这种一对多的映射方式，用的就是这个示例：</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1639318126245.png" alt="" loading="lazy"></figure>
+<p>结合 <code>${upper:}</code> 用法，可以绕过一些对于关键字的校验：</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1639747568014.png" alt="" loading="lazy"></figure>
+<h3 id="嵌套">嵌套</h3>
+<p>由于 Lookup 功能在替换字符时支持递归解析和替换，因此在构造 POC 时可以嵌套构造，增加 payload 复杂度，绕过 WAF 的同时，还可能给服务器带来解析负担，造成 DOS 漏洞。</p>
+<p>这个问题由 4rain 师傅提交并获得致谢。</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1639368555293.jpg" alt="" loading="lazy"></figure>
+<h3 id="带外">带外</h3>
+<p>虽然除了 JNDI 之外的核心包里的 Lookup 不能直接用来执行恶意代码，但是可以获取系统信息、环境变量、属性配置、JVM参数等等信息，这些信息可以被攻击者用来进行下一步的攻击。</p>
+<p>例如使用 <code>${hostName}</code>、<code>${env:USERDOMAIN}</code>、<code>${env:COMPUTERNAME}</code> 配合 dnslog 快速定位受影响机器进行修复。</p>
+<h2 id="appenders">Appenders</h2>
+<p><a href="https://logging.apache.org/log4j/2.x/manual/appenders.html">Appenders</a> 是 Log4j2 提供的特性之一，通俗来说，就是用来将日志“附加”输出到其他位置。</p>
+<p>通过官方文档可以看到，目前支持了 Async、Cassandra、Console、Failover、File、Flume、JDBC、JMS、JPA、Http、Kafka、MemoryMappedFile、NoSQL、NoSQL、MongoDB、MongoDB 3、MongoDB 4、CouchDB、OutputStream、RandomAccessFile、Rewrite、RollingFile、RollingRandomAccessFile、Routing、SMTP、Socket、Syslog 等数十种日志输出位置。</p>
+<p>其中包括了多种网络通信协议、多种数据存储方式以及多种不同类型的数据交换操作，也就是说，Log4j2 自身通过诸多 Appenders 提供了非常多的操作，并使用对应的 <code>org.apache.logging.log4j.core.appender.AbstractManager</code> 的实现类来进行此项操作，例如 HttpManager 会发送 http 请求，FileManager 会写入文件等等，而这些 “Manager” 在调用不当时将会产生安全风险。</p>
+<p>在本次漏洞中没有直接使用 Appenders 来参与漏洞调用链，但在涉及到 Log4j 1.x 版本是否会受到影响的讨论时，有人提出由于 Appenders 特性的存在会导致 Log4j 1.x 版本也是潜在的风险版本，这一点下一节影响范围中将会详述。</p>
+<h1 id="影响范围">影响范围</h1>
+<p>根据各大公众号、群聊、小道消息、各位师傅分享等消息来源途径，本次漏洞可能影响 Apache Struts2、Apache Solr、Apache Druid、Apache Flink、ElasticSearch、VCenter 等等产品，甚至影响到了 Log4j 1.x 版本，接下来我们来分析一下本次漏洞影响组件的实际情况。</p>
+<p>首先可以通过在 maven 仓库中搜索引用的方式来查找引用，例如：<a href="https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core/usages?p=1">https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core/usages?p=1</a></p>
+<p>火线平台也上线了<a href="https://log4j2.huoxian.cn/layout">Apache Log4j2 漏洞影响面查询</a>，可以用来查询风险组件。</p>
+<p>在 Gist 上也存在一个共同维护的<a href="https://gist.github.com/SwitHak/b66db3a06c2955a9cb71a8718970c592">项目</a>，列举了一些受到威胁的组件及版本。</p>
+<p>接下来分析和测试一些比较受关注的组件。</p>
+<h2 id="log4j-1x">Log4j 1.x</h2>
+<p>在漏洞刚刚爆发出来了的时候，看到有人说 Log4j 1.x 版本也能受到影响，但是 Log4j 还没支持 Lookup 功能，为什么会受到此漏洞的影响的？</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1639360452335.png" alt="" loading="lazy"></figure>
+<p>答案是之前提到的 Appenders，以 1.2.17 版本为例，Log4j 支持 18 种 Appenders（第一个是抽象类），其中就包括了 JMS Appender。</p>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1639360594870.png" alt="" loading="lazy"></figure>
+<p>在 Log4j 中，由 <code>org.apache.log4j.net.JMSAppender</code> 直接提供 JNDI 的查询功能。</p>
+<figure data-type="image" tabindex="36"><img src="https://su18.org/post-images/1639361270301.png" alt="" loading="lazy"></figure>
+<p><code>this.lookup</code> 方法直接调用 Context 对象的 lookup 方法，触发查询功能。</p>
+<figure data-type="image" tabindex="37"><img src="https://su18.org/post-images/1639361261323.png" alt="" loading="lazy"></figure>
+<p>可以看到，Log4j 1.x 版本还是有执行 JNDI 查询的能力的，但触发点呢？由于其并不是解析用户日志消息，所以 Appenders 的触发点只能是配置文件。</p>
+<p>也就是说，如果配置文件可控，攻击者将其修改连接恶意的 JNDI 服务器，再调用 appender 时即可触发攻击。</p>
+<p>由于攻击链路条件限制较高，所以我认为其不能算是受到影响，甚至连“风险”都算不上，只能说是特殊场景下的一种攻击链路而已，而且现在 Log4j 已经作为一个过时的项目，不再维护，所以只要是正常使用的用户，本质上不会受到本次 Log4j2 漏洞影响。</p>
+<p>漏洞复现截图：</p>
+<figure data-type="image" tabindex="38"><img src="https://su18.org/post-images/1639363458073.png" alt="" loading="lazy"></figure>
+<p>既然能控制配置文件，那攻击思路就不止局限于 JMS Appender，也可以使用 JDBC 等其他 Appenders 尝试触发攻击，在作者发表文章之前，p4nda 师傅已经将其对于 Log4j 受影响情况的研究发了出来，里面的配置和示例比较详细，可以<a href="https://mp.weixin.qq.com/s/NzDli0ul4PoAoABdyQq7Hg">移步观看</a>。</p>
+<p>同 Log4j，threedr3am 师傅指出，Log4j2 对于配置文件中的变量解析也是可以触发漏洞。</p>
+<figure data-type="image" tabindex="39"><img src="https://su18.org/post-images/1639747722857.png" alt="" loading="lazy"></figure>
+<p>这是由于 Log4j2 读取配置文件中的内容不会经过判断，直接调用进入替换 lookup 逻辑，在低版本中可以直接触发，在高版本中需要经过校验。</p>
+<figure data-type="image" tabindex="40"><img src="https://su18.org/post-images/1639367264492.png" alt="" loading="lazy"></figure>
+<h2 id="springboot">SpringBoot</h2>
+<p>默认情况下，Spring Boot 会用 Logback 来记录日志，并用 INFO 级别输出到控制台。也就是说，虽然包含了  Log4j2 的 jar 包，但是如果没有配置调用，是不会受到危害的。</p>
+<p>但如果将日志框架修改为 Log4j2，则会受到此漏洞的影响，例如将配置文件改为如下格式：</p>
+<pre><code class="language-xml">&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+        &lt;exclusions&gt;
+            &lt;exclusion&gt;
+                &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+                &lt;artifactId&gt;spring-boot-starter-logging&lt;/artifactId&gt;
+            &lt;/exclusion&gt;
+        &lt;/exclusions&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-log4j2&lt;/artifactId&gt;
+        &lt;version&gt;2.6.1&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+</code></pre>
+<p>漏洞复现截图</p>
+<figure data-type="image" tabindex="41"><img src="https://su18.org/post-images/1639363747621.png" alt="" loading="lazy"></figure>
+<h2 id="apache-struts2">Apache Struts2</h2>
+<p>Apache Struts2 使用了 Log4j2 作为日志组件，并且默认的日志等级为 Info，在目前官方最新的 showcase 2.5.28 版本中，引用了 2.12.1 的 log4j-core 以及 log4j-api 组件，是包含漏洞的版本，所以 Struts2 也在此次受影响的范围之内。</p>
+<figure data-type="image" tabindex="42"><img src="https://su18.org/post-images/1639373362701.png" alt="" loading="lazy"></figure>
+<p>只需要找到在解析和处理请求时触发的异常以及日志记录位置并构造即可。整个 Struts2 的请求解析流程在我的前文<a href="https://su18.org/post/struts2-5/">Struts2 系列漏洞调试总结</a>中有详细介绍，只要跟随调用找点即可，想挖洞的师傅可以自行跟随一下。</p>
+<p>在且听安全公众号<a href="https://mp.weixin.qq.com/s/T-rcZnQxxUK1n2_lJNoUZg">发文</a>中，披露了一处利用 <code>If-Modified-Since</code> header 解析异常调用 <code>LOG.warn()</code> 方法触发的姿势，漏洞复现如下：</p>
+<figure data-type="image" tabindex="43"><img src="https://su18.org/post-images/1639373195260.png" alt="" loading="lazy"></figure>
+<h2 id="apache-solr">Apache Solr</h2>
+<p>Apache Solr 是 Apache Lucene 项目的开源企业搜索平台。其主要功能包括全文检索、命中标示、分面搜索、动态聚类、数据库集成，以及富文本（如 Word、PDF）的处理。当然也是此次漏洞的受害者。</p>
+<p>官方通告：<a href="https://solr.apache.org/security.html#apache-solr-affected-by-apache-log4j-cve-2021-44228">https://solr.apache.org/security.html#apache-solr-affected-by-apache-log4j-cve-2021-44228</a></p>
+<p>Apache Solr 的 POC 都已经传遍了世界，大家请自行搜索，这里就不贴了。</p>
+<p>当然入口点也肯定不止这一个，挖掘思路与 Struts2 类似，只需要找到点就可以了。</p>
+<h2 id="elasticsearch">Elasticsearch</h2>
+<p>根据 Elasticsearch 在官方论坛里发布的公告，Elasticsearch 5.0.0+ 版本包含了带有漏洞版本的 Log4j2 包，但由于其使用了 Java Security Manager，减轻了受到的危害。</p>
+<p>phith0n 师傅在知识星球上发布了其<a href="https://wx.zsxq.com/dweb2/index/topic_detail/818814858152212">研究成果</a>，经其实测发现，写入操作一般会写日志。并给出测试时 dnslog 的截图。</p>
+<figure data-type="image" tabindex="44"><img src="https://su18.org/post-images/1639747848050.png" alt="" loading="lazy"></figure>
+<p>在 B 站上，也有一位名为杰锐朱的 UP 主发布了相关的 DEBUG 及分析，链接在<a href="https://www.bilibili.com/video/BV1Ua411r7zN">这里</a>。关于相关的细节，这位 UP 主的介绍以及足够，这里就不再重复，师傅们可以自行跟调。</p>
+<p>总体来说，在漏洞存在的版本，存在 Lookup 渲染的功能，可以配合 dnslog 进行测试，但由于 SM 的介入，使用 ldap 执行远程恶意类时会由于权限不足而抛出异常，因此大大减轻的实际受到的攻击威胁。</p>
+<p>提到 ES，那顺便也提一下本家的 logstash，logstash 也受到本次漏洞的危害，并在漏洞爆发后更新了 Log4j2 的版本。在 Twitter 上有老外发出截图展示其脆弱性：</p>
+<figure data-type="image" tabindex="45"><img src="https://su18.org/post-images/1639747949547.jpeg" alt="" loading="lazy"></figure>
+<h2 id="vmware-产品线">vmware 产品线</h2>
+<p>根据 VMware 的<a href="https://www.vmware.com/security/advisories/VMSA-2021-0028.html">官方安全通告</a>，包括 vCenter 在内的多个产品均受到了此次安全漏洞的影响，并且提供了受影响产品的环境的版本号。</p>
+<p>以下为启明星辰  ADLab 在其<a href="https://mp.weixin.qq.com/s/J5H9aZVhwQaVn3LvKi2Kqw">公众号文章</a>中发布的 2 张复现截图。</p>
+<figure data-type="image" tabindex="46"><img src="https://su18.org/post-images/1639297743749.jpg" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="47"><img src="https://su18.org/post-images/1639297797594.jpg" alt="" loading="lazy"></figure>
+<p>而在 Twitter 上也流传出使用 <code>X-Forwarded-For</code> 配置为 POC 触发漏洞攻击 VCenter 的信息。</p>
+<figure data-type="image" tabindex="48"><img src="https://su18.org/post-images/1639748032109.png" alt="" loading="lazy"></figure>
+<h2 id="其他">其他</h2>
+<p>其他受影响组件还有很多很多，这里只列举了大家讨论和关心较多的几个，大家可以根据上面的几个查询连接信息查找，并自行探究利用方式。</p>
+<p>这里墨菲安全实验室也发布了本次 Log4j2 供应链级别分析，文章在<a href="https://mp.weixin.qq.com/s/pBythwQB8az9J7wyPBVXaw">这里</a>。</p>
+<h1 id="修复和防御">修复和防御</h1>
+<p>随着漏洞细节、姿势的不断披露，各个安全厂商和从业者发布了若干漏洞修复的建议和手段，部分公司和团队还发布了针对本次漏洞防御的小工具、项目用来缓解和免疫相关攻击。那么哪些修复效果是有效的呢？最好的修复方式是那种呢？</p>
+<h2 id="修复建议">修复建议</h2>
+<p>由于大多数公众号给出的修复措施均为复制粘贴的，这里就整理的较全的奇安信威胁情报中心的<a href="https://mp.weixin.qq.com/s/oWOJIJAR7915b28X3vtM8g">文章</a>中的修复建议进行探索。</p>
+<figure data-type="image" tabindex="49"><img src="https://su18.org/post-images/1639383712467.png" alt="" loading="lazy"></figure>
+<p>在这些修复建议里，存在的问题是：</p>
+<ul>
+<li>在 jvm 参数、配置、环境系统变量中设置 nolookups：关闭 lookup 功能，但是只限版本 &gt; 2.10，低版本不生效。</li>
+<li>更新 jdk 版本：借助 JEP 290 及其他安全特性来降低风险，只能说是一种思路，治标不治本</li>
+<li>限制外连：可行，但也要看业务情况</li>
+<li>移除包中的 JndiLookup class：可行</li>
+<li>禁用 JNDI ：可行</li>
+<li>其他防御措施：WAF/RASP，确保防御逻辑是正确的。</li>
+</ul>
+<p>关于修复建议，在360安全忍者的星球<a href="https://wx.zsxq.com/dweb2/index/topic_detail/818814851554482">文章</a>中有较为详细的讨论，提到了在不同业务场景下，不能盲目使用网上提供的环境变量修复参数进行“一刀切”，而且要考虑不同版本不同需求情况下的安全可落地的解决方案。</p>
+<p>与此同时，很多团队和公司给出了自己缓解措施解决方案，下面随便列举几个发在 Github 上的：</p>
+<ul>
+<li>https://github.com/javasec/log4j-patch</li>
+<li>https://github.com/chaitin/log4j2-vaccine</li>
+<li>https://github.com/qingtengyun/cve-2021-44228-qingteng-online-patch</li>
+<li>https://github.com/Cybereason/Logout4Shell</li>
+<li>...</li>
+</ul>
+<p>这里有删除关键类的、javaagent 技术的、甚至以洞打洞以洞修洞的，对于以上项目作者没有亲自使用过，各位自行测试。</p>
+<h2 id="真正的安全建议">真正的安全建议</h2>
+<p>截止到目前发文时间，根据上述知识，我这里给出修复建议：</p>
+<ul>
+<li>如果在记录日志时动态使用到了 lookup 特性，建议更新到 2.15.0-rc2 安全版本，并确认不开启 JNDI Lookup 功能；</li>
+<li>如果确认没有在记录日志时动态解析 lookup 及替换，建议更新到 2.16.0-rc1 最新版本，此版本移除了对记录日志的 lookup 支持。</li>
+</ul>
+<p>若由于各种原因无法更新依赖库版本，则建议：</p>
+<ul>
+<li>删除依赖库中对应的 jndi lookup 类的 class 文件，在程序无法找到对应类时，将不会进行加载。</li>
+<li>使用 RASP 技术进行安全防御。</li>
+</ul>
+<p>由于本漏洞影响巨大，建议要求开发人员了解漏洞原理，重复确认自己的配置。</p>
+<p>对于出现在开源项目、框架、组件中受到影响的情况，建议积极关注各个官方给出的安全通告及安全更新，并在修复期间使用其他类型的防御手段减轻受到攻击的可能性。</p>
+<p>如果你是安全从业人员，建议你确认你的修复方案是稳定、通用、有效的，再给到客户。</p>
+<h2 id="威胁情报">威胁情报</h2>
+<p>奇安信 CERT 发布了漏洞相关攻击的 <a href="https://mp.weixin.qq.com/s/kOadrJtWBOLZefp4pAGHzQ">IOC</a>，并创建了一个 Github 项目用来持续收集整理：<a href="https://github.com/RedDrip7/Log4Shell_CVE-2021-44228_related_attacks_IOCs">https://github.com/RedDrip7/Log4Shell_CVE-2021-44228_related_attacks_IOCs</a></p>
+<p>项目里提供了 Snort、Suricata、IOC、IP 等威胁情报供安防人员使用。</p>
+<p>Twitter 账户 @bad_packets 也发布了一些捕获的样本并提取了其中的恶意 IP，主题帖在这里：<a href="https://twitter.com/bad_packets/status/1469408389331488771">https://twitter.com/bad_packets/status/1469408389331488771</a></p>
+<p>此漏洞由于受灾面广，很容易被用来作为蠕虫病毒的传播，更是被人称为黑产者的狂欢，作为防御人员，也应结合相关威胁情报进行防御。</p>
+<h1 id="感触">感触</h1>
+<p>本次漏洞对业内影响巨大，有一点感触：</p>
+<ol>
+<li>希望安全从业人员以及安全厂商在发文时，能小心求证，用技术说话，不要为了求速度、抢热度而复制粘贴，在没有测试、求证、实践的情况下发布信息、解决方案等，这都是不负责任的体现，作为大厂，应该有责任和担当；</li>
+<li>开发人员的安全意识不够时，写出来的漏洞危害将会是巨大的，这不能只依赖安全从业人员来通报漏洞，在开发各个环节中的安全都应该落地，DevSecOps 不能只图一乐；</li>
+<li>据说这个漏洞是使用 codeql 发现的，此条消息我没有求证，但无论如何，自动化漏洞挖掘的技术都应该加速发展，在这种级别的漏洞被提出之前能快速内部发现，避免造成危害。</li>
+</ol>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%8F%8F%E8%BF%B0">漏洞描述</a></li>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90">漏洞分析</a>
+<ul>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E5%A4%8D%E7%8E%B0">漏洞复现</a></li>
+<li><a href="#%E5%85%B3%E9%94%AE%E7%82%B9%E5%88%86%E6%9E%90">关键点分析</a>
+<ul>
+<li><a href="#%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95%E8%A7%A6%E5%8F%91%E7%82%B9">日志记录/触发点</a></li>
+<li><a href="#%E6%B6%88%E6%81%AF%E6%A0%BC%E5%BC%8F%E5%8C%96">消息格式化</a></li>
+<li><a href="#%E5%AD%97%E7%AC%A6%E6%9B%BF%E6%8D%A2">字符替换</a></li>
+<li><a href="#lookup-%E5%A4%84%E7%90%86">Lookup 处理</a></li>
+<li><a href="#jndi-%E6%9F%A5%E8%AF%A2">JNDI 查询</a></li>
+</ul>
+</li>
+<li><a href="#rc1-%E5%8F%8A%E7%BB%95%E8%BF%87">rc1 及绕过</a></li>
+<li><a href="#rc2-%E5%8F%8A%E6%80%9D%E8%80%83">rc2 及思考</a></li>
+<li><a href="#update-3208">UPDATE 3208</a></li>
+<li><a href="#2160-rc1">2.16.0-rc1</a></li>
+<li><a href="#%E6%8A%80%E5%B7%A7">技巧</a>
+<ul>
+<li><a href="#%E5%85%B3%E9%94%AE%E5%AD%97%E6%88%AA%E5%8F%96">关键字截取</a></li>
+<li><a href="#%E7%BC%96%E7%A0%81%E7%BB%95%E8%BF%87">编码绕过</a></li>
+<li><a href="#%E5%B5%8C%E5%A5%97">嵌套</a></li>
+<li><a href="#%E5%B8%A6%E5%A4%96">带外</a></li>
+</ul>
+</li>
+<li><a href="#appenders">Appenders</a></li>
+</ul>
+</li>
+<li><a href="#%E5%BD%B1%E5%93%8D%E8%8C%83%E5%9B%B4">影响范围</a>
+<ul>
+<li><a href="#log4j-1x">Log4j 1.x</a></li>
+<li><a href="#springboot">SpringBoot</a></li>
+<li><a href="#apache-struts2">Apache Struts2</a></li>
+<li><a href="#apache-solr">Apache Solr</a></li>
+<li><a href="#elasticsearch">Elasticsearch</a></li>
+<li><a href="#vmware-%E4%BA%A7%E5%93%81%E7%BA%BF">vmware 产品线</a></li>
+<li><a href="#%E5%85%B6%E4%BB%96">其他</a></li>
+</ul>
+</li>
+<li><a href="#%E4%BF%AE%E5%A4%8D%E5%92%8C%E9%98%B2%E5%BE%A1">修复和防御</a>
+<ul>
+<li><a href="#%E4%BF%AE%E5%A4%8D%E5%BB%BA%E8%AE%AE">修复建议</a></li>
+<li><a href="#%E7%9C%9F%E6%AD%A3%E7%9A%84%E5%AE%89%E5%85%A8%E5%BB%BA%E8%AE%AE">真正的安全建议</a></li>
+<li><a href="#%E5%A8%81%E8%83%81%E6%83%85%E6%8A%A5">威胁情报</a></li>
+</ul>
+</li>
+<li><a href="#%E6%84%9F%E8%A7%A6">感触</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/reading-2021/">
+              <h3 class="post-title">
+                2021 读书小结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

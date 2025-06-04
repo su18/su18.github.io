@@ -1,0 +1,385 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>从 CVE 学 Shiro 安全 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              从 CVE 学 Shiro 安全
+            </h2>
+            <div class="post-info">
+              <span>
+                2022-01-25
+              </span>
+              <span>
+                7 min read
+              </span>
+              
+                <a href="https://su18.org/tag/E4M5nwSul/" class="post-tag">
+                  # shiro
+                </a>
+              
+                <a href="https://su18.org/tag/9z0l498Gzl/" class="post-tag">
+                  # bypass
+                </a>
+              
+                <a href="https://su18.org/tag/k8dcecYrP9/" class="post-tag">
+                  # 权限绕过
+                </a>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/shiro-5.jpeg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>本文首发在梅子酒师傅的知识星球《<a href="https://wx.zsxq.com/dweb2/index/group/51288511812224">胡言乱语</a>》，感谢师傅邀请为嘉宾。进一步排版、修改之后会发在 <a href="https://nosec.org/home/index">NoSec</a> 平台及相关公众号中。</p>
+<p>当然，校准后的文章和测试代码会更新至 <a href="https://javasec.org">JavaSec</a> 中。</p>
+<h1 id="前言">前言</h1>
+<p>本文继续漏洞原理系列文章，这次简单的学习和分析了权限校验框架 Shiro 在历史上爆出的共 11 个带有 CVE 编号的漏洞，根据每个 CVE 漏洞的原理，版本更新的代码来分析安全漏洞产生的原理、利用方式、特性、坑。</p>
+<p>主要还是对基础洞的学习，用来积累思路和姿势，目前对于 Java 安全来讲，单一的基础洞只能打打垃圾站，能够普遍适用的漏洞还需要组合拳来搞定，因此对思路、姿势的积累愈发重要，任何一个小 tricks 都能成为日后组链的关键点。</p>
+<p>个人能力有限，如文章中有描述不清、有偏差甚至是错误的情况，希望师傅们不吝赐教。</p>
+<h1 id="目录">目录</h1>
+<p>点击左边连接可以直接跳到对应漏洞的调试记录。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">链接</th>
+<th style="text-align:left">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-1/#%E7%AE%80%E4%BB%8B">简介</a></td>
+<td style="text-align:left">Apache Shiro 简介</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-1/#%E5%88%9D%E8%AF%86">初识</a></td>
+<td style="text-align:left">几个关键类的介绍</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-1/#%E4%BD%BF%E7%94%A8">使用</a></td>
+<td style="text-align:left">在 Servlet 项目和 Spring 项目中的简单使用</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-1/#cve-2010-3863">CVE-2010-3863</a></td>
+<td style="text-align:left">由于未标准化路径导致的绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-1/#cve-2014-0074">CVE-2014-0074</a></td>
+<td style="text-align:left">使用 ldap 服务器认证时两个场景的绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-2/#cve-2016-4437">CVE-2016-4437</a></td>
+<td style="text-align:left">RememberMe 反序列化漏洞</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-2/#cve-2016-6802">CVE-2016-6802</a></td>
+<td style="text-align:left">Context Path 路径标准化导致绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-2/#cve-2019-12422">CVE-2019-12422</a></td>
+<td style="text-align:left">Padding Oracle Attack &amp; CBC Byte-Flipping Attack</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-3/#cve-2020-1957">CVE-2020-1957</a></td>
+<td style="text-align:left">Spring 与 Shiro 对于 &quot;/&quot; 和 &quot;;&quot; 处理差异导致绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-3/#cve-2020-11989">CVE-2020-11989</a></td>
+<td style="text-align:left">Shiro 二次解码导致的绕过以及 ContextPath 使用 &quot;;&quot; 的绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-3/#cve-2020-13933">CVE-2020-13933</a></td>
+<td style="text-align:left">由于 Shiro 与 Spring 处理路径时 URL 解码和路径标准化顺序不一致<br>导致的使用 &quot;%3b&quot; 的绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-4/#cve-2020-17510">CVE-2020-17510</a></td>
+<td style="text-align:left">由于 Shiro 与 Spring 处理路径时 URL 解码和路径标准化顺序不一致<br>导致的使用 &quot;%2e&quot; 的绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-4/#cve-2020-17523">CVE-2020-17523</a></td>
+<td style="text-align:left">Shiro 匹配鉴权路径时会对分隔的 token 进行 trim 操作<br>导致的使用 &quot;%20&quot; 的绕过</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-4/#cve-2021-41303">CVE-2021-41303</a></td>
+<td style="text-align:left">由于 Shiro 的 BUG 导致特定场景的绕过（不确定）</td>
+</tr>
+<tr>
+<td style="text-align:left"><a href="https://su18.org/post/shiro-4/#cve-2022-32532">CVE-2022-32532</a></td>
+<td style="text-align:left">使用 RegExPatternMatcher 和 &quot;.&quot; 误配置时导致权限绕过</td>
+</tr>
+</tbody>
+</table>
+<h1 id="总结">总结</h1>
+<p>通过对 Shiro 漏洞的学习和调试，我们对 Shiro 的一些技术的实现和安全部署有了一定的了解。除了 SHIRO-550 和 SHIRO-721 的反序列化以及 CVE-2014-0074 的 ldap 绕过之外，其他的绕过都是在路径处理过程中产生问题导致的绕过。</p>
+<p>这些绕过多数是由于 shiro 的处理逻辑有误，或和中间件、其他框架的处理逻辑不一致导致的安全问题，通常会依赖场景。</p>
+<p>更多时候，在真实的环境中，开发人员自己的配置也会导致鉴权的绕过，例如配置顺序、配置中是否有空格、配置中一些特殊符号的使用、Ant 表达式使用差异、开发人员鉴权代码逻辑有误等等，这部分目前在文章中没有涉及，后续会考虑补上。</p>
+<p>另外，随着一些转发中间件、API 中间件等等中间层的介入，会扰乱 shiro 的鉴权配置，也会导致很多的安全问题。</p>
+<p>可以预见的是，在特定场景下的绕过还是会出现的。</p>
+<p>在 Shiro 的修复过程中还能看到的是，shiro 会提供解决方案，但有时不是升级版本就可以的，也有时修复的也并不全面，所以实现 shiro 安全还是需要安全知识和经验的加持。</p>
+<h1 id="杂记汇总">杂记汇总</h1>
+<p>在整个的学习和调试过程中，有一些觉得有趣的杂记，放在这里供大家查看。</p>
+<h2 id="spring-版本">Spring 版本</h2>
+<p>Spring 的版本会完全的影响漏洞的触发，在某些 CVE 中，低版本生效，高版本不生效，在某些 CVE 中则相反，还有时由于 Spring 版本高可以绕过 Shiro 的更新补丁。</p>
+<p>这些在具体的漏洞分析都提到了，实际上是因为 <code>alwaysUseFullPath</code> 导致的，详细的内容可以自行了解。</p>
+<h2 id="ant-表达式中的">Ant 表达式中的 “*”</h2>
+<p>在 Ant 表达式中的 “*” 撑起了 shiro bypass 的大旗。其中关键点用一句话解释就是：</p>
+<blockquote>
+<p><code>/audit/*</code> 不能匹配 <code>/audit/</code> 也不能匹配 <code>/audit/a/</code></p>
+</blockquote>
+<h2 id="彩蛋">彩蛋</h2>
+<p>在翻 Shiro 的 ISSUES 时，发现李三师傅提交的 <a href="https://issues.apache.org/jira/browse/SHIRO-760">SHIRO-760</a> 提到了在使用 Tomcat AJP 时会导致的绕过问题。</p>
+<p>但是官方认为其不算漏洞，就没下文了。可以预想到，关于不同协议下对请求路径的处理差异、或能够控制 Attribute 的场景下也可能导致绕过的产生。</p>
+<h2 id="tips">Tips</h2>
+<p>这里分享几个分析时的小技巧。</p>
+<p>第一，通过如下链接就可以查看这个版本修复了哪些 ISSUES ，方便定位。</p>
+<blockquote>
+<p>https://issues.apache.org/jira/issues/?jql=project%20%3D%20SHIRO%20AND%20fixVersion%20%3D%201.5.2</p>
+</blockquote>
+<p>第二，通过 diff 版本来查看差异代码分析漏洞，语法如下。</p>
+<blockquote>
+<p>https://github.com/用户名/项目/compare/TAG名...TAG名</p>
+</blockquote>
+<p>例如：https://github.com/apache/shiro/compare/shiro-root-1.7.0...shiro-root-1.7.1</p>
+<h1 id="反序列化">反序列化</h1>
+<p>目前针对 Shiro 讨论最多的，还是 RememberMe 反序列化漏洞的延伸和姿势，我大概过了一下全网的文章，主要包括以下几个点：</p>
+<ul>
+<li>Shiro 组件的检测：检测站点是否包含 shiro 组件，cookie 关键字不是 rememberMe 等情况；</li>
+<li>Shiro AES 弱密钥的检测：检测 Shiro 是否内置或配置了常见的弱密钥；</li>
+<li>Shiro 内置链的利用：无 CC 依赖的 CB 链反序列化利用；</li>
+<li>配合 RMI 利用：处理由于插入反序列化链导致的 Header 长度的问题，以及 Transformer 数组加载不到报错问题；</li>
+<li>其他绕过 Tomcat Header 长度的姿势：反射修改 AbstractHttp11Protocol 的 maxHeaderSize、gzip + base64压缩编码、从外部或从 HTTP 请求 body 中加载类字节码；</li>
+<li>Ysoserial 改造：由于 shiro RememberMe 反序列化流程中加载类方式不同导致需要对 ysoserial 中 CC 等链的改造；</li>
+<li>组合攻击：在 weblogic/Tomcat 等中间件上完成 shiro 的攻击、gadget 的利用、内存马的写入等组合操作；</li>
+<li>改 Key：对于弱加密密钥，在攻击后将其修改，让目标仅为自己所用。</li>
+</ul>
+<p>这部分内容算是进阶内容，没有放在本篇用于入门学习的笔记类文章中。感兴趣的同学可以在先知和Seebug<br>
+Paper 中搜索关键字 Shiro 来了解。</p>
+<h1 id="感想">感想</h1>
+<p>看师傅们文章越发的有感触，厚积才能薄发。搞安全搞的是什么？搞的是积累，搞的是思路，搞的不是混脸熟，搞的不是唬住要 50 k，唬不住要 5k。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#%E7%9B%AE%E5%BD%95">目录</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+<li><a href="#%E6%9D%82%E8%AE%B0%E6%B1%87%E6%80%BB">杂记汇总</a>
+<ul>
+<li><a href="#spring-%E7%89%88%E6%9C%AC">Spring 版本</a></li>
+<li><a href="#ant-%E8%A1%A8%E8%BE%BE%E5%BC%8F%E4%B8%AD%E7%9A%84">Ant 表达式中的 “*”</a></li>
+<li><a href="#%E5%BD%A9%E8%9B%8B">彩蛋</a></li>
+<li><a href="#tips">Tips</a></li>
+</ul>
+</li>
+<li><a href="#%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96">反序列化</a></li>
+<li><a href="#%E6%84%9F%E6%83%B3">感想</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/log4j2/">
+              <h3 class="post-title">
+                Log4j2：里程碑式的顶级供应链漏洞
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

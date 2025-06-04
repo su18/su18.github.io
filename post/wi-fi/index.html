@@ -1,0 +1,892 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>[旧文归档] WI-FI 攻击利器 Pineapple Nano 初探 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              [旧文归档] WI-FI 攻击利器 Pineapple Nano 初探
+            </h2>
+            <div class="post-info">
+              <span>
+                2018-11-13
+              </span>
+              <span>
+                41 min read
+              </span>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/wi-fi.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h2 id="一-简介">一、简介</h2>
+<p>The WiFi Pineapple 是由国外无线安全审计公司Hak5开发并售卖的一款无线安全测试神器（俗称大菠萝），从2008年起目前已经发布到第六代产品。当前的主打产品是The WiFi Pineapple NANO 和WiFI Pineapple TETRA（支持5GHz频段）</p>
+<p>手上这款是WiFi Pineapple NANO</p>
+<p><strong>产品规格</strong>：</p>
+<ul>
+<li>CPU：400 MHz MIPS Atheros AR9331 SoC</li>
+<li>内存：64 MB DDR2 RAM</li>
+<li>磁盘：16 MB ROM + Micro SD（6G）</li>
+<li>无线：Atheros AR9331（wlan0）+ Atheros AR9271（wlan1），均为IEEE 802.11 b / g / n</li>
+<li>端口：（2）RP-SMA天线，USB网卡（ASIX AX88772A）</li>
+<li>USB 2.0主机，Micro SD读卡器</li>
+<li>电源：USB 5V 1.5A. 包括 Y型USB电源线</li>
+<li>可配置状态指示灯LED</li>
+<li>可配置的重置按钮</li>
+</ul>
+<p>本文是作为一个新手接触这款产品时使用的一些记录和理解，由于入手时在网上找到的资料有限，翻译成为中文的文档也更是少之又少，没有找到较好的指导文档（也可能姿势不对）。因此出现了本篇文章，对使用及测试过程中遇到的问题和心得进行记录，并包括对于不同模块的简单介绍，对于某些模块测试记录了简单示例，以供跟我一样的新人基础入门，如果想要完整地进行一些攻击的话，需要熟练使用不同模块，了解原理和机制，并不断进行尝试以达到目的，由于个人水平极其有限，文章中可能出现一些理解偏差，描述偏差甚至是错误的情况，不接受任何批评（哈哈哈哈，欢迎指正QAQ）。</p>
+<h2 id="二-使用背景">二、使用背景</h2>
+<p>对于这种黑客 “外设” 来讲，和其他外设没什么两样，都是烧钱的东西，那这个东西在什么情况下入手比较合适呢？</p>
+<p>1、安全研究</p>
+<p>对于正在进行安全研究并计划将研究方向定为wifi安全的小伙伴们，可以使用这款 “外设” 作为入门和进阶的部分，能够带领我们了解一些常见的wifi安全问题、原理和攻击手段，进一步的可以分析这些利用工具的原理，实现方法，组合攻击手段</p>
+<p>2、安全演示</p>
+<p>如果你是安服的小伙伴，给客户演示的时候不要总是带着自建靶场，给领导搞一个SQL注入，永恒之蓝，过时了！就算你配合Cobalt Strike来个主机上线，也顶多是视觉上的刺激。你带个wifipineapple，现场来个中间人，搞个绵羊墙，抓个密码，岂不美哉？</p>
+<p>3、有钱</p>
+<p>您老要是有闲钱，那就买个玩玩！</p>
+<h2 id="三-管理">三、管理</h2>
+<p>安装与配置过程不在此赘述，网上均有相关指导文章，在本文第十章&quot;参考链接&quot;处也能找到</p>
+<p>可以使用 USB 网卡或 wifi 进行网络接入</p>
+<p>Web管理端地址：http://172.16.42.1:1471</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1616638972076.png" alt="" loading="lazy"></figure>
+<p>第一次登陆会以root身份登陆，并在安装时配置密码</p>
+<p>这个密码将同样作为ssh连接时的root密码</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1616639057427.png" alt="" loading="lazy"></figure>
+<h2 id="四-特性">四、特性</h2>
+<ol>
+<li>用作 Wi-Fi 中间人攻击测试平台</li>
+<li>一整套的针对 AP 的渗透测试套件</li>
+<li>基于 WEB 应用的管理界面</li>
+<li>基于嵌入式 linux 系统</li>
+<li>不定时的各种软件更新，可以自定义模块、payload</li>
+</ol>
+<h2 id="五-管理页面简介">五、管理页面简介</h2>
+<h3 id="1-dashboard-仪表盘">1. Dashboard 仪表盘</h3>
+<p>仪表盘上显示了一些状态、统计信息、通知和公告的概览视图，包括：</p>
+<p>CPU 使用率、设备运行时间、客户端连接数量</p>
+<p>Landing Page 浏览状态，公告</p>
+<p>Bulletins从wifipineapple.com获取的最新项目信息</p>
+<h3 id="2-recon-侦察">2. Recon 侦察</h3>
+<p>Recon模块采用被动式扫描方式，扫描过程会自动将网卡设置为监听模式，监听周围不同信道上（客户端）发出的各种数据包。能够扫描出SSID、MAC地址、加密方式、是否启用了WPS功能、信道及信号强度等信息，甚至还能扫描出当前未连接任何AP的客户端</p>
+<p>从下拉列表为扫描的持续时间，增加扫描时间可以在每个信道上看到更多潜在的流量，选中“Continuous”框将启用正在进行的扫描。每隔一段时间进行持续扫描，并更新扫描结果列表，直到扫描停止</p>
+<p>扫描结果将显示在表格视图中</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1616639082583.png" alt="" loading="lazy"></figure>
+<p>未关联的客户端仅显示 MAC 地址。这些客户端具有活动无线电，但不与接入点关联</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1616639099110.png" alt="" loading="lazy"></figure>
+<p>单击SSID和MAC地址旁的下拉菜单，会出现如下两张图的菜单，用于 PineAP 模块的 Filter(过滤) 和 Tracking(追踪) 功能，以及进行 Deauth(取消认证洪水) 攻击中发送取消身份验证帧的倍数参数</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1616639115053.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1616639128542.png" alt="" loading="lazy"></figure>
+<p>需要注意的是，使用 Recon 模块进行扫描将会断开已有的连接</p>
+<h3 id="3-clients-客户端">3. Clients 客户端</h3>
+<p>如果在 PineAP 中勾选了 Allow Associations(允许关联)，WiFi Pineapple将允许客户端进行连接</p>
+<p>已连接的客户端将在“ Clients ”视图中列出它们各自的MAC地址，IP地址，它们已连接的 SSID （如果在PineAP中启用了Log Probes(日志探测) 功能）和主机名</p>
+<p>Kick按钮可以从Wi-Fi Pineapple网络中删除客户端</p>
+<p>MAC地址和SSID旁边的下拉菜单按钮用于 PineAP 模块的 Filter 和 Tracking 功能</p>
+<p>Refresh按钮可以刷新Clients表格视图</p>
+<h3 id="4-filters-过滤器">4. Filters 过滤器</h3>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1616639148693.png" alt="" loading="lazy"></figure>
+<p>可以通过客户端MAC地址或SSID来执行过滤。支持“Deny”和“Allow”模式，可以使用Swith按钮进行切换</p>
+<p><strong>Client Filtering  客户端过滤</strong></p>
+<p>在Deny Mode下，客户端过滤器中列出的具有MAC地址的客户端将无法连接到WiFi Pineapple</p>
+<p>在 Allow Mode下，只有客户端过滤器中列出的具有MAC地址的客户端才能连接</p>
+<p>进行WI-FI安全测试时，最好使用“Allow Mode”以确保仅针对参与范围内的客户端</p>
+<p><strong>SSID Filtering  SSID过滤</strong></p>
+<p>在Deny Mode下，如果客户端尝试连接到过滤器中列出的SSID，则客户端将无法与WiFi Pineapple关联</p>
+<p>在 Allow Mode下，如果过滤器中列出了他们尝试连接的SSID，则客户端只能与WiFi Pineapple关联</p>
+<p>SSID可以从与Recon中各自列表相关联的菜单按钮添加到过滤器中</p>
+<p>也可以手动添加或删除过滤器中的条目</p>
+<h3 id="5-pineap-pine接入点">5. PineAP Pine接入点</h3>
+<p>PineAP是通过伪造的Probe Response响应包来响应周围的客户端（可能是笔记本、手机、pad等等），让客户端以为周围存在着曾经成功连接过的无线AP，而用来欺骗客户端进行连接我们的Pineapple Nano设备</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1616639204488.png" alt="" loading="lazy"></figure>
+<p><strong>Allow Associations 允许关联</strong></p>
+<p>此项被勾选时，客户端可以通过任何请求的 SSID连接到Pineapple</p>
+<p>禁用时，客户端将不允许被连接。相当于以前的 karma</p>
+<p><strong>Log Probes 日志探测</strong></p>
+<p>开启后，将记录客户端的探针请求。可以从 Logging 模块里看查看分析</p>
+<p><strong>Log Associations 日志关联</strong></p>
+<p>开启后，客户端的连接信息将会被记录。可以从 Logging 模块里查看分析</p>
+<p>禁用后，连接成功的信息将不被记录，并且不会出现在 Clients 模块的 SSID 一栏里</p>
+<p><strong>PineAP Daemon PineAP 守护进程</strong></p>
+<p>这个进程必须开启</p>
+<p>可以使用 Beacon 响应，捕获 SSIDs 到池里，以及对SSID进行广播</p>
+<p>这个设置会作用于 wlan1 ，并且 wlan1 不能用于 Client 模式去桥接外网</p>
+<p><strong>Beacon Response Beacon 响应</strong></p>
+<p>开启之后，目标 beacons 将会发送给客户端设备，用来响应客户端的 SSID 探针请求</p>
+<p>这些 beacons 将不会被广播，而是指定发送给发送了探针请求的客户端设备。这可以防止beacon 被其他设备看见。如果 Allow Associations 启用并且有客户端连接，目标 beacon 响应将持续发送给客户端设备一段时间</p>
+<p>Beacon 响应将会使用源 mac 地址设置，并且也会与广播 SSID池特性共享</p>
+<p>Beacon 响应间隔将决定发射的频率</p>
+<p><strong>Capture SSIDs to Pool 捕获SSID到池中</strong></p>
+<p>开启之后，将会把捕捉到的探针请求里的 SSID 保存到 SSID 池中</p>
+<p><strong>Broadcast SSID Pool 广播SSID池</strong></p>
+<p>开始之后，SSID 池将会按照设定的时间间隔以及源地址、目标地址来广播beacon</p>
+<p>SSID 池也可以手动来管理，相当于以前的 Dogma</p>
+<p><strong>Source MAC 源Mac地址</strong></p>
+<p>默认情况下，是Pineapple wlan0 的 Mac 地址，可以在 Networking 里进行设置</p>
+<p><strong>Target MAC 目标Mac地址</strong></p>
+<p>默认情况下是广播的 Mac 地址 FF:FF:FF:FF:FF:FF</p>
+<p>用于广播帧数据将会被附近的客户端识别，如果设置为某一个固定的 mac 地址，将会对该地址本身进行 PineAP唯一的攻击目标</p>
+<p>类似 beacon 响应，只有池中的 SSID 广播会被目标客户端看到</p>
+<p>如果使用了 Filters，将更精确的定位到目标设备</p>
+<p><strong>Broadcast SSID Pool Interval 指定广播 SSID 的时间间隔</strong></p>
+<p>间隔越小，对 CPU 的占用就越高</p>
+<p><strong>Beacon Response Interval 指定 beacon 响应的时间间隔</strong></p>
+<p>间隔越小，对 CPU 的占用就越高</p>
+<p><strong>Save as Default on Boot 保存为启动默认配置</strong></p>
+<p>将会把设置保存，并且系统启动时会继续执行</p>
+<p><strong>SSID Pool SSID池</strong></p>
+<p>当 Capture SSID Pool 功能开启时，将会自动记录捕获到的SSID，也可以手动添加或删除</p>
+<h3 id="6-tracking-跟踪">6. Tracking 跟踪</h3>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1616639232254.png" alt="" loading="lazy"></figure>
+<p>跟踪功能将按MAC地址连续扫描指定的客户端，并执行可自定义的跟踪脚本</p>
+<p>此功能需要启用 PineAP 的 Log Probes 和 Log Associations 中的至少一个选项</p>
+<p>可以手动添加客户端，也可以在 Clients 或 Recon 视图中关联的MAC地址使用 PineAP Tracking Add MAC 按钮添加 Mac 地址到此模块中</p>
+<p>当客户端被识别时，将会执行自定义脚本。</p>
+<h3 id="7-logging-日志记录">7. Logging 日志记录</h3>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1616639248006.png" alt="" loading="lazy"></figure>
+<p>Logging模块共记录了 PineAP Log、System Log、Dmesg、Reporting Log四种日志</p>
+<p><strong>PineAP Log</strong></p>
+<p>如果启用了Log Probes 和 Log Associations其中的一个或全部，则按时间顺序显示PineAP事件。每个事件都包含时间戳，事件类型（探测请求或关联），客户端设备的MAC地址以及设备探测或关联的SSID</p>
+<p>可以对结果进行过滤，在按下&quot;Apply Filter&quot;之前，过滤器不会生效，默认情况下，PineAP日志位于/tmp中，重启不会保存</p>
+<p><strong>PineAP Log</strong></p>
+<p>系统日志，没什么好说的</p>
+<p><strong>Dmesg</strong></p>
+<p>设备故障的诊断，硬件连接断开等信息</p>
+<p><strong>Reporting Log</strong></p>
+<p>生成报告日志</p>
+<h3 id="8-reporting-报告">8. Reporting 报告</h3>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1616639267153.png" alt="" loading="lazy"></figure>
+<p>此功能能够以指定的间隔生成报告。报告可以通过电子邮件发送，也可以本地保存在SD卡上</p>
+<p>报告内容可选，包括PineAP日志（可以在生成报告后删除），PineAP Site Survey（可指定扫描时间）PineAP 探测和跟踪客户端报告。</p>
+<h3 id="9-networking-网络">9. Networking 网络</h3>
+<p>在 Networking 模块中，可以更改路由，接入点，MAC地址，主机名，并使用WiFi客户端模式连接到接入点</p>
+<p><strong>Route 路由</strong></p>
+<p>显示内核IP路由表，可以针对所选接口进行修改，默认网关为172.16.42.42</p>
+<p>使用WiFi Pineapple Connector Android应用程序时，IP路由将自动更新以使用usb0作为默认网关</p>
+<p>下来菜单可以重启DNS服务</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1616639294779.png" alt="" loading="lazy"></figure>
+<p><strong>Access Points 接入点</strong></p>
+<p>可以配置WiFi Pineapple主要开放接入点和管理接入点。开放和管理接入点共享相同的信道</p>
+<p>可以隐藏开放接入点，并且可以禁用管理接入点</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1616639309192.png" alt="" loading="lazy"></figure>
+<p><strong>WiFi Client Mode WI-FI客户端模式</strong></p>
+<p>能够将WiFi Pineapple连接到另一个无线接入点，以进行Internet或本地网络访问</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1616639317962.png" alt="" loading="lazy"></figure>
+<p><strong>MAC Addresses Mac地址</strong></p>
+<p>可以手动更改MAC地址，也可以设置随机MAC，更改MAC可能会断开连接的客户端与WiFi Pineapple的连接</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1616639327628.png" alt="" loading="lazy"></figure>
+<p><strong>Advanced 高级</strong></p>
+<p>能够更新主机名</p>
+<p>下拉菜单中能够将WI-FI配置恢复默认</p>
+<p>显示ifconfig的输出</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1616639348308.png" alt="" loading="lazy"></figure>
+<h3 id="10-configuration-配置">10. Configuration 配置</h3>
+<p><strong>General 常规</strong></p>
+<p>一些设备的常规设置，如设置时区、更改密码、关机、重启、恢复出厂设置</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1616639363886.png" alt="" loading="lazy"></figure>
+<p><strong>Landing Page  着陆页面(钓鱼)</strong></p>
+<p>启动后，客户端全部链接将会被强制导向到此页面，页面访问的统计信息将会显示在 Dashboard 上</p>
+<p>页面可以是 PHP 或 HTML 的</p>
+<p>只有WiFi Pineapple具有Internet连接时，才会显示此页面</p>
+<p>例如下图是之前写的模仿某宝的钓鱼页面</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1616639382700.png" alt="" loading="lazy"></figure>
+<h3 id="11-advanced-高级">11. Advanced 高级</h3>
+<p>高级视图提供有关系统资源，USB设备，文件系统表，CSS以及升级WiFi Pineapple固件的功能的信息</p>
+<p><strong>Resources  资源</strong></p>
+<p>显示文件系统磁盘使用情况和内存，下拉菜单按钮可以清除页面缓存</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1616639392011.png" alt="" loading="lazy"></figure>
+<p><strong>USB</strong></p>
+<p>显示外接USB，设置文件系统表（fstab）。下拉菜单按钮可以格式化SD卡</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1616639406008.png" alt="" loading="lazy"></figure>
+<p><strong>CSS 层叠样式表</strong></p>
+<p>可以修改WiFi Pineapple Web界面样式表</p>
+<p><strong>Firmware Upgrade 固件升级</strong></p>
+<p>固件升级将替换所有数据（不包括SD卡或USB等外部存储器）</p>
+<p>升级前应备份重要的非系统数据</p>
+<h2 id="六-常用模块">六、常用模块</h2>
+<h3 id="dwall-绵羊墙">Dwall 绵羊墙</h3>
+<p>DWall 是一款可以实时抓取 http 数据的插件，并且可以实时展示在web页面上</p>
+<p>Enable开启模块，Start Listening 开始监听</p>
+<p>所有连到 Pineapple 客户端的http连接都会被抓到</p>
+<p>页面显示了客户端、URL、Cookies、数据内容，以及图片</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1616639437847.png" alt="" loading="lazy"></figure>
+<h3 id="deauth-取消验证洪水攻击">Deauth 取消验证洪水攻击</h3>
+<p>De-authenticationFlood Attack，全称为取消身份验证洪水攻击或验证阻断洪水攻击，通常被简称为Deauth攻击，是无线网络拒绝服务攻击的一种形式。它旨在通过欺骗从AP到客户端单播地址的取消身份验证帧来将客户端转为未关联／未认证的状态</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1616639448845.png" alt="" loading="lazy"></figure>
+<p>normal模式下，选中网卡，点击 Start 后就开始攻击攻击过程中同网段内的网络认证（由于NANO不支持5G，所以攻击仅支持2.4G）均会失败，无法认证并连接</p>
+<p>要针对某个WI-FI攻击，可以在Editor中选中网卡，扫描WI-FI，并Add to Blacklist（添加到黑名单），在Mode中也选择blacklist，输入Channels，信道可以去SiteSurvey中查看</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1616639536306.png" alt="" loading="lazy"></figure>
+<p>测试过程中发现，blacklist模式不生效，Pineapple 没有发出数据包；normal模式可以使用，但已经认证成功并通信的连接无法阻断，只能攻击正在进行认证的连接</p>
+<h3 id="dnsdnsmasq-spoof-dns欺骗">DNS/DNSMasq Spoof DNS欺骗</h3>
+<p>这个插件会启动 DNSMasq 服务，对客户端访问的域名进行重定向</p>
+<p>在Hosts处填写要重定向的域名，写法与其他 Hosts 文件一致</p>
+<p>此处可以填写内网配置好的钓鱼服务器，也可以指到Pineapple，并在上面搭建服务</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1616639554232.png" alt="" loading="lazy"></figure>
+<p>点击 Start 之后，重定向就开始了，ping 域名可以发现被重定向到了内部网络IP</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1616639583182.png" alt="" loading="lazy"></figure>
+<p>针对钓鱼页面，可以修改Landing Page，也可以编写自己的页面，网页储存位置位于 /www 中</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1616639603533.png" alt="" loading="lazy"></figure>
+<p>支持 php 和 html</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1616639618254.png" alt="" loading="lazy"></figure>
+<h3 id="urlsnarf-url捕获">urlsnarf URL捕获</h3>
+<p>选定网口后点击 Start ，模块将会捕获全部的HTTP流量，GET及POST的数据均会显示</p>
+<p>显示格式为web访问日志类型</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1616634313817.png" alt="" loading="lazy"></figure>
+<h3 id="evil-portal-恶意门户认证">Evil Portal 恶意门户认证</h3>
+<p>模块主要由以下几个部分组成：</p>
+<ol>
+<li>Controls（控制）：启用模块和设置自动启动；</li>
+<li>Word Bench（创建工作目录）：包含门户页面的php文件等；</li>
+<li>White List（白名单）：不需要通过门户认证页面跳转的IP地址列表；</li>
+<li>Authorized Clients（认证客户端）：当前通过门户页面认证跳转过的IP地址列表；</li>
+<li>Live Preview（预览）：预览恶意门户页面。</li>
+</ol>
+<p>Evil Portal模块和自带的Landing Page功能很像，区别在于Landing Page仅能够提供一个强制跳转显示页面的效果，不具有认证、白名单以及更自由化的门户页面自定义功能。Evil Portal能够实现像现在的商业WiFi接入访问一样，提供一个由我们自定义的认证页面，引导客户端用户完成认证及跳转功能</p>
+<p>新建名为 test1 的项目，系统会自动生成三个页面</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1616639763958.png" alt="" loading="lazy"></figure>
+<p>可以随意修改三个页面达到想要的效果，也可以SSH登录到Nano的系统中，找到Evil Portal的配置文件夹直接将我们编辑好的页面复制进去</p>
+<p>如果要启动该项目，需要点击 Activate 按钮进行激活，就可以在 Live Preview 功能下看到页面状况</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1616639799771.png" alt="" loading="lazy"></figure>
+<p>启用模块后，凡是连接Pineapple wifi的客户端，均需要进行认证后再连接网络</p>
+<p>下面进行一个简单的示例，我们修改源代码</p>
+<p>index.php</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1616639828724.png" alt="" loading="lazy"></figure>
+<p>MyPortal.php</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1616639862531.png" alt="" loading="lazy"></figure>
+<p>此处注意目录的写权限，否则可能保存不成功</p>
+<p>ssh到Pineapple或使用Cabinet模块管理文件，在模块所在路径下创建portal.log</p>
+<p>认证一下，看看新建的log文件中是否记录</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1616639896727.png" alt="" loading="lazy"></figure>
+<p>连接后的客户端会被记录</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1616639927682.png" alt="" loading="lazy"></figure>
+<h3 id="ettercap-中间人攻击">ettercap 中间人攻击</h3>
+<p>这个模块相当于调用 ettercap 这款工具进行中间人欺骗，将参数转换为web页面，并将输出返回到页面上</p>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1616639977550.png" alt="" loading="lazy"></figure>
+<h3 id="sslsplit-ssl分离">SSLsplit SSL分离</h3>
+<p>SSLsplit可以作为中间人监听 SSL 信息及 HTTP 信息。SSL 实现代理的同时要与服务器建立连接，同时伪造证书与客户端建立连接，即双连接，依据获取的 Client 信息再与服务器通信，从而实现明文数据监听</p>
+<p>Configuration无需改变，使用默认即可</p>
+<p>在客户端使用HTTPS进行通讯时，将会由SSLsplit作为中间代理</p>
+<figure data-type="image" tabindex="36"><img src="https://su18.org/post-images/1616640011690.png" alt="" loading="lazy"></figure>
+<p>SLLsplit的实现需要配合其他欺骗手段，如果有Clients连接到Pineapple，那么就直接可以进行攻击，如果要攻击的目标在同一网段内，则需要将目标流量定向到此模块的监听端口，通常配合 ettercap等欺骗软件</p>
+<p>如果网站具有HSTS（HTTP Strict Transport Security）,网站将不能正常显示，也就无法攻击</p>
+<h3 id="tcpdump-网络数据采集">tcpdump 网络数据采集</h3>
+<p>tcpdump可以将网络中传送的数据包完全截获下来提供分析。它支持针对网络层、协议、主机、网络或端口的过滤，并提供and、or、not等逻辑语句来去掉无用的信息，是一款非常高级的网络数据分析工具</p>
+<p>与Pineapple上很多其他的模块一样，提供的可供点选的web管理界面</p>
+<p><strong>Options</strong>提供了基本的选项模块</p>
+<figure data-type="image" tabindex="37"><img src="https://su18.org/post-images/1616640047128.png" alt="" loading="lazy"></figure>
+<p>在下方选中或勾选的参数将会被格式化到 Command 处</p>
+<p>Interface 为需要监听的端口</p>
+<p>Verbose 对应 -v 选项，代表输出报文信息的详细程度</p>
+<p>Resolve 对应 -n 选项，不将主机名转换为IP地址，以及不进行端口名称的转换</p>
+<p>Timestamp 对应 -t 选项，指定是否输出时间戳或时间戳格式</p>
+<p>Don't print domain name qualification of host names:对应 -N 选项，不输出主机名中的域名部分。例如，'wiki.ver007.org'只输出'wiki'</p>
+<p>Show the packet's contents in both hex and ASCII:对应 -X 选项，在解析和打印时，除了打印每个包的报头之外，还要用十六进制和ASCII打印每个包的数据（通常用于分析一种协议）</p>
+<p>Print absolute sequence numbers：对应 -S 选项，将tcp的序列号以绝对值形式输出</p>
+<p>Get the ethernet header as well：对应 -e 选项，在输出行打印出数据链路层的头部信息</p>
+<p>Show less protocol information：对应 -q 选项，快速输出。只输出较少的协议信息</p>
+<p>Monitor mode：对应 -I 选项，使标准输出变为缓冲行形式，可以把数据导出到文件</p>
+<p><strong>Filter</strong>提供了一些过滤规则，我们可以利用Filter编写过滤表达式，用来匹配得到我们想要的结果，在点选参数之后，手动输入参数值，并继续点击下一个参数，同样的，如果你熟悉tcpdump的话，可以进行手工填写，跟wireshark什么的过滤语法道理都类似</p>
+<figure data-type="image" tabindex="38"><img src="https://su18.org/post-images/1616640110928.png" alt="" loading="lazy"></figure>
+<p>Output为系统回显，History则可以查看和管理抓住的完整tcp数据包</p>
+<figure data-type="image" tabindex="39"><img src="https://su18.org/post-images/1616640210307.png" alt="" loading="lazy"></figure>
+<p>例如，我想查看172.16.42.225和m.tool.chinaz.com之间端口为80的通讯</p>
+<figure data-type="image" tabindex="40"><img src="https://su18.org/post-images/1616640225640.png" alt="" loading="lazy"></figure>
+<p>Output中输出一些信息</p>
+<figure data-type="image" tabindex="41"><img src="https://su18.org/post-images/1616640236879.png" alt="" loading="lazy"></figure>
+<p>history中能看到捕获的数据包</p>
+<figure data-type="image" tabindex="42"><img src="https://su18.org/post-images/1616640259782.png" alt="" loading="lazy"></figure>
+<p>在此处可以将捕获的包下载，得到一个pcap文件，可以在wireshark、networkminer、科来等其他工具中</p>
+<p>具体的使用方法就根据需求不同定制，需要熟悉过滤表达式的编写</p>
+<p>需要注意的是，tcpdump只能抓取<strong>流经本机</strong>的数据包，因此确保有 Client 连接上网</p>
+<p>由于页面仅提供部分命令，如果想要达到与命令行完全一样的效果，可以SSH连接到Pineapple直接运行tcpdump.sh，路径在/pineapple/modules/tcpdump/scripts</p>
+<h3 id="meterpreter-漏洞攻击">Meterpreter 漏洞攻击</h3>
+<p>大名鼎鼎的 Meterpreter，配置主机端口后能够接收会话，无需更多介绍</p>
+<figure data-type="image" tabindex="43"><img src="https://su18.org/post-images/1616637677221.png" alt="" loading="lazy"></figure>
+<h3 id="nmap-网络地图">nmap 网络地图</h3>
+<p>著名的网络扫描工具，用法一模一样</p>
+<p>Options（选项）与图形化的Nmap页面相似，输入目标，在 Profile 中选择一些预置的规则</p>
+<p>各种参数设置在下面可以手动点选</p>
+<figure data-type="image" tabindex="44"><img src="https://su18.org/post-images/1616637722738.png" alt="" loading="lazy"></figure>
+<p>也可以在 Command 处手动输入参数</p>
+<figure data-type="image" tabindex="45"><img src="https://su18.org/post-images/1616637797246.png" alt="" loading="lazy"></figure>
+<p>结果会回显在 Output 中，也可以在Log Manager模块中查看记录结果</p>
+<figure data-type="image" tabindex="46"><img src="https://su18.org/post-images/1616637836092.png" alt="" loading="lazy"></figure>
+<p>测试发现无论针对内网和外网扫描，过程都比较慢，而且经常有进程退出的情况，效果不是很好</p>
+<h3 id="apitokens-api令牌">APITokens API令牌</h3>
+<p>/api 允许对Pineapple模块进行远程调用，存储路径为/pineapple/api</p>
+<p>已生成的API令牌存储在Pineapple本地数据库中，路径为/etc/pineapple/pineapple.db</p>
+<p>本模块的作用就是提供对API调用的访问控制</p>
+<p>只有在本模块中生成APIToken，并作为JSON参数进行传递时，Pineapple才会返回结果</p>
+<h3 id="autossh-反向ssh连接">autossh 反向SSH连接</h3>
+<p>autossh是一个程序，原理是启动一个 ssh 副本并进行监视，如果进程中断或停止流量传输，则根据需要重新启动</p>
+<p>想法来自rstunnel，但是由C语言编写的，使用端口转发循环或远程回显服务进行连接监视</p>
+<p>当遇到连接被拒绝等快速故障时，能够降低连接尝试的速率</p>
+<p>多数情况下，程序用于反向SSH，以及解决连接不稳定等问题，利用这个模块，我们可以利用具有公网IP的VPS随时随地连接到 Pineapple 下进行操作</p>
+<p>例如VPS 用户是 root IP是 1.1.1.1 SSH端口是 22，在反向连接Pineapple时，需要登录的端口是 8888</p>
+<p>那么应该如下填写</p>
+<figure data-type="image" tabindex="47"><img src="https://su18.org/post-images/1616637874130.png" alt="" loading="lazy"></figure>
+<p>填写后点击Save保存到下方的命令行中</p>
+<figure data-type="image" tabindex="48"><img src="https://su18.org/post-images/1616637918492.png" alt="" loading="lazy"></figure>
+<p>在Additional Configuration（附加配置）中生成公钥</p>
+<figure data-type="image" tabindex="49"><img src="https://su18.org/post-images/1616638007411.png" alt="" loading="lazy"></figure>
+<p>SSH到 Pineapple中，执行</p>
+<pre><code>cat ~/.ssh/id_rsa.autossh.pub | ssh -p 22 root@1.1.1.1 'mkdir -p ~/.ssh &amp;&amp; cat &gt;&gt; ~/.ssh/authorized_keys'
+</code></pre>
+<p>输入VPS密码，将Pineapple公钥导入VPS的authorized_keys中</p>
+<p>点击Start</p>
+<p>此时 SSH 反向连接已经建立，可以随时随地在VPS中ssh连接到 Pineapple</p>
+<p>在vps中输入</p>
+<pre><code>ssh localhost -p 8888
+</code></pre>
+<p>再输入Pineapple NANO 的密码，即可成功登录</p>
+<figure data-type="image" tabindex="50"><img src="https://su18.org/post-images/1616638066983.png" alt="" loading="lazy"></figure>
+<h3 id="base64encdec-base64编解码">base64encdec BASE64编/解码</h3>
+<p>一个普通的 base64 编码/解码 模块</p>
+<figure data-type="image" tabindex="51"><img src="https://su18.org/post-images/1616638104571.png" alt="" loading="lazy"></figure>
+<h3 id="cabinet-文件管理">Cabinet 文件管理</h3>
+<p>可以理解为一个文件管理的webshell（-_-||）</p>
+<figure data-type="image" tabindex="52"><img src="https://su18.org/post-images/1616638141142.png" alt="" loading="lazy"></figure>
+<h3 id="commander-指挥者">Commander 指挥者</h3>
+<p>此模块能够允许我们通过IRC来控制Pineapple</p>
+<figure data-type="image" tabindex="53"><img src="https://su18.org/post-images/1616638200701.png" alt="" loading="lazy"></figure>
+<p>下面这个图是官方论坛截的，从来没用过IRC，这辈子可能都不会用了，此模块略过了</p>
+<figure data-type="image" tabindex="54"><img src="https://su18.org/post-images/1616638233338.png" alt="" loading="lazy"></figure>
+<h3 id="connectedclients-已连接客户端">ConnectedClients 已连接客户端</h3>
+<p>这个模块直观的显示通过不同网卡连接的不同客户端</p>
+<p>包括主机名称、IP地址、MAC地址</p>
+<p>可以对客户端进行 Disassociate（取消关联）、Deauthenticate（解除认证）、Blachlist（黑名单）操作</p>
+<figure data-type="image" tabindex="55"><img src="https://su18.org/post-images/1616638286264.png" alt="" loading="lazy"></figure>
+<h3 id="cursedscreech-命令执行">CursedScreech 命令执行</h3>
+<p>这是一个远控模块</p>
+<figure data-type="image" tabindex="56"><img src="https://su18.org/post-images/1616638314568.png" alt="" loading="lazy"></figure>
+<p>Sein：信息收集功能，当监听的网络内出现漏洞系统时，将会更新模块的 target 列表</p>
+<p>Kuro：攻击功能，自动尝试连接Sein功能发现的目标机器，并连接</p>
+<figure data-type="image" tabindex="57"><img src="https://su18.org/post-images/1616638333507.png" alt="" loading="lazy"></figure>
+<p>Listening Interface（监听端口）：用于组播socket的接口，如果目标直接连接到Pineapple，使用br-lan就可以</p>
+<p>Multicast Group（组播组）：发送和接收目标心跳的地址，对于Sein和目标机器，组需要相同</p>
+<p>Multicast Port（组播端口）：Sein将从目标接收消息的端口。这个端口需要在payload的startMulticaster()方法中</p>
+<p>Heartbeat Interval（心跳间隔）：payload发送广播的间隔，Sein在3个心跳间隔还为收到广播包的话，就会判断目标为掉线状态</p>
+<p>Kuro Keys/Target Keys（密钥）：用于TLS通信时的密钥，可以使用Papers模块创建Keys</p>
+<p>可以从下方两个下载按钮下载 C# 和 Python  的payload模板</p>
+<figure data-type="image" tabindex="58"><img src="https://su18.org/post-images/1616638381897.png" alt="" loading="lazy"></figure>
+<p>Activity Log（活动日志）：记录 Kuro 功能执行过程中产生的全部记录，使用模块的大部分时间都是盯着这里看</p>
+<p>右边的Targets就是一个上线机器列表，以及一个命令执行功能</p>
+<p>如果有目标机器的话，可以通过Select选择机器，并执行命令</p>
+<p>EZ Cmds事先预置了一些cmd命令，可以添加及删除</p>
+<figure data-type="image" tabindex="59"><img src="https://su18.org/post-images/1616637580708.png" alt="" loading="lazy"></figure>
+<p>设置好了之后，按照下载的模板，编写payload，在目标机器上运行</p>
+<p>运行后点击Sein进行监听，测试时发现python版本的payload在监听后需要多等一下才能上线，此处要耐心等待一下，上线后可以开启Kuro，再耐心多等一会</p>
+<p>当日志显示Kuro is ready后，就可以执行命令了</p>
+<figure data-type="image" tabindex="60"><img src="https://su18.org/post-images/1616637430603.png" alt="" loading="lazy"></figure>
+<h3 id="dump1090-接收解码无线信号">dump1090 接收/解码无线信号</h3>
+<p>本模块能够对 1090MHz 的无线电进行收取和解码，通过调用google-API等方式，可以在web地图上描绘出飞机的轨迹，当然也可以手动更改频率如：</p>
+<ul>
+<li>我国民航使用的无线电频率：1090MHz</li>
+<li>民用对讲机使用的无线电频率：408-409MHz</li>
+<li>警用频率：350-390MHz</li>
+</ul>
+<p>等等</p>
+<figure data-type="image" tabindex="61"><img src="https://su18.org/post-images/1616637390465.png" alt="" loading="lazy"></figure>
+<p>软件有很多参数，但是界面上只显示了Gain</p>
+<p>Checkbox 参数可以切换度量衡使用公制单位、切换到自动获取、增大功率、将结果输出为csv格式</p>
+<p>使用此模块需要RTL-SDR（电视棒）接收无线电信号，插入模块，将显示地图</p>
+<figure data-type="image" tabindex="62"><img src="https://su18.org/post-images/1616637334940.png" alt="" loading="lazy"></figure>
+<h3 id="get-获取">get 获取</h3>
+<p>get模块用于获取客户端连接信息，包括浏览器和相关插件</p>
+<figure data-type="image" tabindex="63"><img src="https://su18.org/post-images/1616637300337.png" alt="" loading="lazy"></figure>
+<p>能够获取连接到 Pineapple 的 Clients信息，点击View Information能够查看获取的详细信息</p>
+<figure data-type="image" tabindex="64"><img src="https://su18.org/post-images/1616637259958.png" alt="" loading="lazy"></figure>
+<p>识别库比较老，插件识别的也比较少，能够获取屏幕尺寸还是挺惊喜的，不过在实战用处一般</p>
+<h3 id="hackrf-无线电攻击">HackRF 无线电攻击</h3>
+<p>这个模块需要配合HackRF 硬件进行使用，在接入HackRF后，会出现一个简单的设置界面</p>
+<figure data-type="image" tabindex="65"><img src="https://su18.org/post-images/1616637193873.png" alt="" loading="lazy"></figure>
+<p>模块选项相当于 hackrf_transfer 的相关参数</p>
+<p>Sample Rate（采样率）：每秒发送或接受的样本量。受到系统计算能力限制，设置过高可能会导致系统不稳定，此处建议设置默认10M或更低，相当于 -s</p>
+<p>Center Frequency（中心频率）：就是HackRF开始调谐的频率，相当于 -f</p>
+<p>Transceiever Mode（收发方式）：HackRF是半双工工作模式，因此必须指定是要 TX（发送）还是RX（接收），相当于 -t 或 -r</p>
+<p>File Name（文件名）：目标文件路径，可以将收到的信号记录，也可以从文件发送</p>
+<p>RF Amp &amp; Antenna Power（射频放大器和天线功率）：Enable RF AMP可以指定是否开启射频放大器，Antenna Power可以指定功率是否被传送到天线端口</p>
+<p>RX IF Gain &amp; RX BB Gain（RX二中频增益和RX BB增益）：根据不同层级的db及步长选择增益模式</p>
+<p>Repeat Transmission &amp; TX IF Gain（重复和TX二中频增益）：是否重复播放，以及设置发送增益</p>
+<p>先进行录制，并保存到文件中</p>
+<figure data-type="image" tabindex="66"><img src="https://su18.org/post-images/1616637158569.png" alt="" loading="lazy"></figure>
+<p>然后进行重放，即可攻击成功，如果重放失败，可以调整放大器的增益</p>
+<figure data-type="image" tabindex="67"><img src="https://su18.org/post-images/1616637119452.png" alt="" loading="lazy"></figure>
+<p>在实际测试过程中，将会如上图报错，调试了一会依旧无法实现功能</p>
+<p>这个模块仅仅是简单的收取/重放，如果想要解码、编码再重放，单靠这个是实现不了的，而且在不清楚无线电工作频率的情况下还是没有办法使用，因此还是将其定义为演示模块</p>
+<h3 id="key-manager-密钥管理">Key Manager 密钥管理</h3>
+<p>如题，本模块是用于SSH密钥管理的模块</p>
+<p>生成SSH Key Pair之后，自定义Remote Host（远程主机）主机名、端口、账户、密码</p>
+<p>下面两个按钮就是将自己的公钥复制到对方的主机上，或将对方的公钥加入自己的主机上</p>
+<figure data-type="image" tabindex="68"><img src="https://su18.org/post-images/1616637083115.png" alt="" loading="lazy"></figure>
+<p>在Known Hosts（已知主机）中可查看和管理目前已保存的一些公钥</p>
+<h3 id="led-controller-led灯控制">LED Controller LED灯控制</h3>
+<p>如题，就是一个控制LED灯的模块</p>
+<figure data-type="image" tabindex="69"><img src="https://su18.org/post-images/1616637026889.png" alt="" loading="lazy"></figure>
+<p>Trigger（触发器）有三个选项</p>
+<p>Netdev：在网络传输时会闪烁，Mode（模式） TX 代表发送 RX 代表接收，Interface 输入要监听的网口</p>
+<p>Timer（计时器）：将会根据设置的On和OFF时间进行交替亮灭，差不多是个呼吸灯，单位是 ms（毫秒）</p>
+<figure data-type="image" tabindex="70"><img src="https://su18.org/post-images/1616636970933.png" alt="" loading="lazy"></figure>
+<p>设置为None时将会常亮，测试效果没有图，但模块还是好用的</p>
+<h3 id="log-manager-日志管理">Log Manager 日志管理</h3>
+<p>该模块能够查看和管理各个模块产生的日志</p>
+<p>能够显示名称、模块、大小、日期，并能够查看、下载和删除</p>
+<figure data-type="image" tabindex="71"><img src="https://su18.org/post-images/1616636939264.png" alt="" loading="lazy"></figure>
+<h3 id="modem-manager-调制解调器管理">Modem Manager 调制解调器管理</h3>
+<p>这个模块允许Pineapple通过3G和4G USB调制解调器连接到互联网</p>
+<figure data-type="image" tabindex="72"><img src="https://su18.org/post-images/1616636817467.png" alt="" loading="lazy"></figure>
+<p>这个模块暂时不知道怎么用，略过</p>
+<h3 id="module-maker-模块制作">Module Maker 模块制作</h3>
+<p>能够生成及管理模块</p>
+<figure data-type="image" tabindex="73"><img src="https://su18.org/post-images/1616636793110.png" alt="" loading="lazy"></figure>
+<p>并给出了模块需要的模式</p>
+<figure data-type="image" tabindex="74"><img src="https://su18.org/post-images/1616636699417.png" alt="" loading="lazy"></figure>
+<p>是一个为开发者编写新模块的web界面</p>
+<h3 id="ngrep-网络抓取">ngrep 网络抓取</h3>
+<p>ngrep就相当于网络版的grep，支持大量的操作系统和网络协议。能识别TCP、UDP和ICMP包，理解bpf的过滤机制。与 tcpdump 类似</p>
+<figure data-type="image" tabindex="75"><img src="https://su18.org/post-images/1616636674347.png" alt="" loading="lazy"></figure>
+<h3 id="occupineapple-占领">Occupineapple 占领</h3>
+<p>Occupineapple 是一个干扰模块，能够在周围生成各种随机或者自定义的SSID</p>
+<figure data-type="image" tabindex="76"><img src="https://su18.org/post-images/1616636633247.png" alt="" loading="lazy"></figure>
+<p>Speed：每秒发送的数据包</p>
+<p>Channel：在哪个信道上生成虚假AP</p>
+<p>Show station as Ad-Hoc：将站点显示为点对点</p>
+<p>Set WEP bit (Generates encrypted networks)：设置WEP位（生成加密网络）</p>
+<p>Show station using WPA TKIP encryption：显示使用WPA-TKIP加密的站点</p>
+<p>Show station using WPA AES encryption：显示使用WPA-AES加密的站点</p>
+<p>Use valid accesspoint MAC from OUI database：使用来自OUI数据库的有效Access</p>
+<p>Editor 参数处可以选择、编辑或创建List，List中存放SSID名称及Mac地址</p>
+<figure data-type="image" tabindex="77"><img src="https://su18.org/post-images/1616640414069.png" alt="" loading="lazy"></figure>
+<p>在配置好参数后，点击Start就会在周围生成List中名称的SSID</p>
+<figure data-type="image" tabindex="78"><img src="https://su18.org/post-images/1616640428876.png" alt="" loading="lazy"></figure>
+<p>可以看到生成了事先预设的SSID</p>
+<figure data-type="image" tabindex="79"><img src="https://su18.org/post-images/1616640442806.png" alt="" loading="lazy"></figure>
+<p>这个模块的作用目前只能想到有两个，第一个就是SSID广告，可以利用这个发布一些广告信息，第二个是导致无线网卡产生拒绝服务攻击</p>
+<h3 id="online-hash-crack-在线哈希破解">Online Hash Crack 在线哈希破解</h3>
+<p>模块调用了<strong>www.onlinehashcrack.com</strong>网站接口，可以将Hash值或后缀为.cap/.pacp/.hccapd的WPA握手包</p>
+<p>传入模块中进行破解</p>
+<p>先设置 Email，点击Save保存，结果将会输出到回显并发送到邮箱中</p>
+<figure data-type="image" tabindex="80"><img src="https://su18.org/post-images/1616640463976.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="81"><img src="https://su18.org/post-images/1616640476727.png" alt="" loading="lazy"></figure>
+<h3 id="p0f-被动网络指纹识别">p0f 被动网络指纹识别</h3>
+<p>p0f是万能的被动操作系统指纹工具，利用SYN数据包实现操作系统被动检测技术，能够正确地识别目标系统类型。和其他扫描软件不同，它不向目标系统发送任何的数据，只是被动地接受来自目标系统的数据进行分析。因此，一个很大的优点是：几乎无法被检测到，而且p0f是专门系统识别工具，其指纹数据库非常详尽，更新也比较快，适合于安装在网关中</p>
+<p>依旧是一款在 KALI 中经常使用的信息收集软件，页面只给了设置网口的选项，没有提供其他参数选项</p>
+<figure data-type="image" tabindex="82"><img src="https://su18.org/post-images/1616640663547.png" alt="" loading="lazy"></figure>
+<p>测试过程中服务一直无法启动，暂略</p>
+<h3 id="papers-证件">Papers 证件</h3>
+<p>Papers模块的作用就是生成 公/私 密钥对，X.509数字证书，能生成可部署自签名证书</p>
+<p>有了这个模块我们可以在HTTPS上管理Pineapple，也可以让我们的钓鱼页面在HTTPS上部署，更具有一定的迷惑性</p>
+<p>我们可以在此模块生成证书，让我们的管理端口1471,80，等其他端口均通过443转发，也可以下载后部署于其他服务器上</p>
+<p>首先我们使用Build Certificates来生成证书</p>
+<figure data-type="image" tabindex="83"><img src="https://su18.org/post-images/1616640683616.png" alt="" loading="lazy"></figure>
+<p>Modify Certificate info（定义证书信息）：中包含了一些描述信息，可以自定义填写</p>
+<p>Encrypt Private Key（加密私钥）：选项勾选后，在访问时浏览器将会等待输入密码，在部署于其他网站应用时，应该进行勾选，但不建议在Pineapple上勾选</p>
+<p>Export keys to PKCS#12 container：将密钥导出到PKCS#12用户密钥储存库中</p>
+<p>填写完成之后点击Build Keys生成密钥对，我们就能在Certificate Store中查看和管理了</p>
+<figure data-type="image" tabindex="84"><img src="https://su18.org/post-images/1616640693832.png" alt="" loading="lazy"></figure>
+<p>生成证书存放位置/pineapple/modules/Papers/includes/ssl/</p>
+<figure data-type="image" tabindex="85"><img src="https://su18.org/post-images/1616640700950.png" alt="" loading="lazy"></figure>
+<p>将生成的两个文件copy至/etc/nginx/ssl/</p>
+<p>接下来我们配置nginx，修改 nginx 配置文件 /etc/nginx/nginx.conf</p>
+<p>添加监听端口 443 ssl</p>
+<figure data-type="image" tabindex="86"><img src="https://su18.org/post-images/1616640715289.png" alt="" loading="lazy"></figure>
+<p>设置完重启 nginx，点击Actions选项中的小锁头按钮，Pineapple会自动将1471端口转发到443上</p>
+<p>此时就可以通过HTTPS进行访问了</p>
+<p>由于证书是自签名，所以依旧会被浏览器标记为Not Secure（不安全），所以多少有点鸡肋，但是也具有一定的作用</p>
+<h3 id="portal-auth-门户认证">Portal Auth 门户认证</h3>
+<p>暂略</p>
+<h3 id="randomroll-随机翻滚">RandomRoll 随机翻滚</h3>
+<p>这个模块是一个略微搞怪的模块，开启模块后，将会把全部 http 连接进行重定向到内置的黑页中</p>
+<p>就是下面勾选的这些 rolls，每个对应一个黑页，随机选择出现</p>
+<figure data-type="image" tabindex="87"><img src="https://su18.org/post-images/1616640740723.png" alt="" loading="lazy"></figure>
+<p>模块开启后，客户机将会随机出现选中的黑页</p>
+<figure data-type="image" tabindex="88"><img src="https://su18.org/post-images/1616640753406.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="89"><img src="https://su18.org/post-images/1616640765442.png" alt="" loading="lazy"></figure>
+<p>不同的黑页具有不同的动态图，有的还有背景音乐，挺有意思的</p>
+<h3 id="responder-响应者">Responder 响应者</h3>
+<p>依旧是一款非常有名的LLMNR欺骗工具，还可以伪造HTTP/s、SMB、SQL Server、FTP、IMAP、POP3等多项服务，从而采用钓鱼的方式获取服务认证信息，如用户名和密码等</p>
+<p>使用方式和其他嵌入式软件一样，选择网卡，勾选参数即可</p>
+<figure data-type="image" tabindex="90"><img src="https://su18.org/post-images/1616640785417.png" alt="" loading="lazy"></figure>
+<h3 id="signalstrength-信号强度">SignalStrength 信号强度</h3>
+<p>选中一个网卡并扫描，将能够得到附近wifi信号的强度列表，原理是从iwlist命令收集信号强度和质量信息</p>
+<figure data-type="image" tabindex="91"><img src="https://su18.org/post-images/1616640805573.png" alt="" loading="lazy"></figure>
+<p>能够将结果以列表形式展示</p>
+<figure data-type="image" tabindex="92"><img src="https://su18.org/post-images/1616640824922.png" alt="" loading="lazy"></figure>
+<p>并绘制成饼状图，以供查看</p>
+<figure data-type="image" tabindex="93"><img src="https://su18.org/post-images/1616640836302.png" alt="" loading="lazy"></figure>
+<p>在扫描过程中发现，使用 wlan0 能够更快的进行扫描，而使用 wlan1 能够获得更大的扫描范围</p>
+<h3 id="site-survey-现场勘测">Site Survey 现场勘测</h3>
+<p>如题，这就是一个对周边进行扫描勘测的模块</p>
+<figure data-type="image" tabindex="94"><img src="https://su18.org/post-images/1616640854931.png" alt="" loading="lazy"></figure>
+<p>Interface 和 Monitor 需要两个网卡，一个作为通讯，一个作为监听</p>
+<figure data-type="image" tabindex="95"><img src="https://su18.org/post-images/1616640865641.png" alt="" loading="lazy"></figure>
+<p>点击Scan后可以进行扫描，结果将以列表的形式返回</p>
+<p>对于SSID和MAC，可以通过下拉菜单放入PineAP中进行下一步操作</p>
+<p>对于不同的网络，可以点击Capture进行抓包，也可以点击Deauth进行取消认证攻击</p>
+<p>模块使用airodump-ng 使用ssid参数捕获，记录发现的接入点的坐标，并写入一个文本文件中</p>
+<figure data-type="image" tabindex="96"><img src="https://su18.org/post-images/1616640894716.png" alt="" loading="lazy"></figure>
+<p>实际测试时，在此处使用Deauth会导致系统卡死，尤其是在使用wlan1作为监听网卡的时候，对此官方的回答是：你为什么要在进行初步勘测的时候就进行大范围的洪范类攻击？好吧，我竟无言以对</p>
+<p>而且在测试WPA握手时，一直报告No，尝试了很多次都报告No，感觉功能是不好用的，如果想要在Pineapple上实现此功能，建议使用Aircrack</p>
+<h3 id="status-状态">Status 状态</h3>
+<p>Status模块是一个展示模块，展示出了系统各方面运行情况</p>
+<figure data-type="image" tabindex="97"><img src="https://su18.org/post-images/1616640910569.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="98"><img src="https://su18.org/post-images/1616640927769.png" alt="" loading="lazy"></figure>
+<p>在网口处可以以图形实时显示一段时间内上下行流量状况</p>
+<figure data-type="image" tabindex="99"><img src="https://su18.org/post-images/1616640937940.png" alt="" loading="lazy"></figure>
+<h3 id="wps-wps攻击">wps wps攻击</h3>
+<p>此模块集成了 reaver 和 bully ，利用路由的wps漏洞来破解 WI-FI 密码</p>
+<h2 id="七-攻击场景">七、攻击场景</h2>
+<p>如果我们手里有Pineapple及一些相关设备，我们能进行哪些攻击呢？本章将列举一些攻击场景，并列出攻击场景使用的模块</p>
+<h3 id="1-简单搞怪">1. 简单搞怪</h3>
+<p>如果想要简单的搞怪一下周围的人，不进行恶意的破坏和复杂的攻击行为，可以使用Occupineapple或者RandomRoll模块</p>
+<p>使用Occupineapple在四周生成一些有趣的SSID，比如“XXX是个小智障”，“XXX是个小笨蛋”等等，十分有趣</p>
+<p>也可以使用RandomRoll，在有客户端连入Pineapple网络时，可以将HTTP网页重定向到默认搞怪的网页上，给人一个惊喜</p>
+<h3 id="2-技术演示">2. 技术演示</h3>
+<p>如果想要给身边的人演示一些简单的WI-FI攻击，无需特别多的技术准备，可以使用Dwall、DNS/DNSMasq Spoof、urlsnarf</p>
+<p>Dwall即是著名的“绵羊墙”，可以显示抓到的URL、cookie、图片用，用来做演示十分方便</p>
+<p>DNS/DNSMasq Spoof 可以重定向用户DNS，配合Landing Page或其他web应用可以进行钓鱼、嗅探等</p>
+<p>urlsnarf显示网络内http数据包，抓取到的url，显示也很直观</p>
+<p>配合HackRF硬件可以简单重放无线电攻击，进行一些演示</p>
+<h3 id="3-窃取密码">3. 窃取密码</h3>
+<p>如果想要窃取在同一网络下其他客户端产生的密码，也许是某些网站账户密码，也许是其他WI-FI密码，有几种方式可以达到目的</p>
+<p>想要获得附近的WI-FI密码，可以使用Site Survery抓取WPA握手包，再使用Online Hash Crack进行尝试破解</p>
+<p>使用wps模块直接进行WI-FI密码破解</p>
+<p>想要获得客户端在其他某些网站上的密码，可以使用Landing Page、Evil Portal、Portal Auth制作钓鱼页面，结合ettercap做欺骗，或者让客户端连接到Pineapple网络中，在钓鱼页面输入密码，进行记录</p>
+<p>也可以使用ettercap进行网络欺骗，将自己欺骗成为网关，获取流量，就可以截获明文传输的密码，配合SSLsplit即可抓取https传输的密码</p>
+<p>使用Responder进行欺骗，窃取某些协议中的密码/hash值</p>
+<h3 id="4-漏洞利用">4. 漏洞利用</h3>
+<p>Pineapple还提供了一些漏洞利用模块，可以针对网络内漏洞进行攻击</p>
+<p>可以通过ettercap欺骗，替换目标下载文件，可以改变js利用浏览器漏洞，可以改变文档利用office漏洞，可以改变exe利用各种漏洞</p>
+<p>可以使用CursedScreech的payload进行监听和执行命令</p>
+<p>也可以使用Meterpreter接收会话</p>
+<p>这个总结起来就是，我是你的网关，你的全部网络流量我都做主，我想怎么玩就怎么玩</p>
+<h3 id="5-数据采集展示">5. 数据采集展示</h3>
+<p>如果使用Pineapple在网络内采集数据，用于展示或进一步分析的话，可以使用一些抓取类模块</p>
+<p>tcpdump可以对网络数据进行抓取和过滤，配合其他软件可以进行展示</p>
+<p>ngrep功能同上，对网络内数据进行抓取及展示</p>
+<p>nmap用于网络内设备发现及扫描</p>
+<p>p0f被动网络指纹识别，被动收集网络内系统指纹</p>
+<p>get模块抓取客户端浏览器信息</p>
+<p>dump1090配合电视棒，可以获取无线电信息，展示如飞机航线等信息</p>
+<h3 id="6-恶意破坏">6. 恶意破坏</h3>
+<p>如果就是想要搞事情，Pineapple也可以实现一些功能</p>
+<p>可以使用ettercap进行网络欺骗，将自己欺骗成网关，可以导致断网</p>
+<p>Deauth模块可以导致网络内认证失败，无法进行认证连接</p>
+<h2 id="八-操作tips">八、操作Tips</h2>
+<ol>
+<li>
+<p>在使用过程中，发现root用户没有访问写权限，比如无法更改配置文件，在页面修改的文件保存不生效等等，此时应重新挂载磁盘，并赋予写权限</p>
+</li>
+<li>
+<p>有时候想要对整个Pineapple进行备份，所有模块同时备份，然后一键恢复，但是Pineapple本身不提供这种功能，所以解决办法就是/etc/config 下的文件整体复制，能够解决大部分的问题</p>
+</li>
+<li>
+<p>如果想快速确定Pineapple是否连接网络，只需点击首页加载信息的按钮，如果能够获得官网信息，则已经联网</p>
+</li>
+</ol>
+<figure data-type="image" tabindex="100"><img src="https://su18.org/post-images/1616640962343.png" alt="" loading="lazy"></figure>
+<ol start="4">
+<li>
+<p>WI-FI Pineapple可以在移动端使用，如果在公共场合嗅探，可以使用安卓手机进行管理，不会引人注目</p>
+</li>
+<li>
+<p>在更改完模块配置后，千万不要忘了点击Save，否则测试一万遍模块都不好使的（都是眼泪）</p>
+</li>
+<li>
+<p>测试过程中不一定完全依赖Pineapple本身，还可以配合一些常见的工具、平台进行进一步渗透，如Kali等</p>
+</li>
+</ol>
+<h2 id="九-总体感受">九、总体感受</h2>
+<p>玩了大概一周左右，最直观的感觉就是这玩意很坑（嗯，一个字足以概括）</p>
+<p>其实本质来讲就是一台Linux系统机器+好几块网卡+一些很牛的软件</p>
+<p>只不过有些人把这些东西放在了一起，做了个PHP web界面，并将硬件缩小化，然后就拿出来卖了</p>
+<p>所以学习使用这款工具，就变成了学习使用很多软件怎么使用</p>
+<p>使用过程中也不是很愉快，经常出现断网、wifi无法连接、机器卡死、页面刷新不出来等等</p>
+<p>而且有一些模块用起来确实是不太好用的，大多数模块都是网上很有名的软件（kali中也有收录），只是做了个web页面而已，而且点选复杂，还不能覆盖全部参数</p>
+<p>但是毋庸置疑，WI-FI Pineapple确实能够实现一些网络攻击方式，并且有一些有趣的模块以供选择，模块更新速度很快，也可以自定义模块</p>
+<p>因此，对于手中这款 WI-FI Pineapple NANO，作为学习、研究、演示用，还是可以的，但如果作为实际环境攻击、大型网络嗅探等较为复杂的环境，鉴于计算能力或其他各方面的限制，可能表现的不是那么优秀</p>
+<p>而且在实现一些接近实际环境的渗透测试时，需要一定的shell编程/php编程/python编程/网络流量分析等等技能，不同模块涉及知识面不同，需要多方面学习</p>
+<p>建议手头宽裕、有一定编程基础、并想要对WI-FI渗透进行入门学习研究的同学入手</p>
+<p>在测试时，如果思路广一点，可以实现很多组合攻击，如ettercap配合BeEF，XSS平台，配合metasploit，配合CobaltStrike，Evil Portal配合实时双因子认证钓鱼，网络嗅探类配合被动扫描等等，下面给一张图自己体会：</p>
+<figure data-type="image" tabindex="101"><img src="https://su18.org/post-images/1616640977341.png" alt="" loading="lazy"></figure>
+<p>具体实现就需要大家自己开脑洞并研究了</p>
+<h2 id="十-参考链接">十、参考链接</h2>
+<p>官方wiki：https://wiki.wifipineapple.com/#!index.md</p>
+<p>官方论坛：https://forums.hak5.org/</p>
+<p>Modules库：https://github.com/hak5/wifipineapple-modules</p>
+<p>中文用户手册：http://www.wifipi.org:8080/WiFiPineapple-%E7%94%A8%E6%88%B7%E6%89%8B%E5%86%8C-V1.3.pdf</p>
+<p>搭建视频：https://www.youtube.com/watch?v=Nv1eiIwOPKo</p>
+<p>模块编写视频：https://www.youtube.com/watch?v=Lvf2At3G1C0</p>
+<p>SSLsplit模块：https://www.roe.ch/SSLsplit</p>
+<p>ettercap模块：https://github.com/Ettercap/ettercap</p>
+<p>autossh模块：https://blog.csdn.net/fanwenjieok/article/details/53033317</p>
+<p>dump1090 模块：http://www.satsignal.eu/raspberry-pi/dump1090.html</p>
+<p>tcpdump 模块：http://www.tcpdump.org/</p>
+<p>ngrep 模块：https://www.trustauth.cn/wiki/10824.html</p>
+<p>CursedScreech 模块：https://github.com/sud0nick/CursedScreech</p>
+<p>Reaponder 模块：https://github.com/SpiderLabs/Responder</p>
+<p>组合案例演示视频：https://www.youtube.com/watch?v=Bvo43JvmeW0</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E4%B8%80-%E7%AE%80%E4%BB%8B">一、简介</a></li>
+<li><a href="#%E4%BA%8C-%E4%BD%BF%E7%94%A8%E8%83%8C%E6%99%AF">二、使用背景</a></li>
+<li><a href="#%E4%B8%89-%E7%AE%A1%E7%90%86">三、管理</a></li>
+<li><a href="#%E5%9B%9B-%E7%89%B9%E6%80%A7">四、特性</a></li>
+<li><a href="#%E4%BA%94-%E7%AE%A1%E7%90%86%E9%A1%B5%E9%9D%A2%E7%AE%80%E4%BB%8B">五、管理页面简介</a>
+<ul>
+<li><a href="#1-dashboard-%E4%BB%AA%E8%A1%A8%E7%9B%98">1. Dashboard 仪表盘</a></li>
+<li><a href="#2-recon-%E4%BE%A6%E5%AF%9F">2. Recon 侦察</a></li>
+<li><a href="#3-clients-%E5%AE%A2%E6%88%B7%E7%AB%AF">3. Clients 客户端</a></li>
+<li><a href="#4-filters-%E8%BF%87%E6%BB%A4%E5%99%A8">4. Filters 过滤器</a></li>
+<li><a href="#5-pineap-pine%E6%8E%A5%E5%85%A5%E7%82%B9">5. PineAP Pine接入点</a></li>
+<li><a href="#6-tracking-%E8%B7%9F%E8%B8%AA">6. Tracking 跟踪</a></li>
+<li><a href="#7-logging-%E6%97%A5%E5%BF%97%E8%AE%B0%E5%BD%95">7. Logging 日志记录</a></li>
+<li><a href="#8-reporting-%E6%8A%A5%E5%91%8A">8. Reporting 报告</a></li>
+<li><a href="#9-networking-%E7%BD%91%E7%BB%9C">9. Networking 网络</a></li>
+<li><a href="#10-configuration-%E9%85%8D%E7%BD%AE">10. Configuration 配置</a></li>
+<li><a href="#11-advanced-%E9%AB%98%E7%BA%A7">11. Advanced 高级</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%AD-%E5%B8%B8%E7%94%A8%E6%A8%A1%E5%9D%97">六、常用模块</a>
+<ul>
+<li><a href="#dwall-%E7%BB%B5%E7%BE%8A%E5%A2%99">Dwall 绵羊墙</a></li>
+<li><a href="#deauth-%E5%8F%96%E6%B6%88%E9%AA%8C%E8%AF%81%E6%B4%AA%E6%B0%B4%E6%94%BB%E5%87%BB">Deauth 取消验证洪水攻击</a></li>
+<li><a href="#dnsdnsmasq-spoof-dns%E6%AC%BA%E9%AA%97">DNS/DNSMasq Spoof DNS欺骗</a></li>
+<li><a href="#urlsnarf-url%E6%8D%95%E8%8E%B7">urlsnarf URL捕获</a></li>
+<li><a href="#evil-portal-%E6%81%B6%E6%84%8F%E9%97%A8%E6%88%B7%E8%AE%A4%E8%AF%81">Evil Portal 恶意门户认证</a></li>
+<li><a href="#ettercap-%E4%B8%AD%E9%97%B4%E4%BA%BA%E6%94%BB%E5%87%BB">ettercap 中间人攻击</a></li>
+<li><a href="#sslsplit-ssl%E5%88%86%E7%A6%BB">SSLsplit SSL分离</a></li>
+<li><a href="#tcpdump-%E7%BD%91%E7%BB%9C%E6%95%B0%E6%8D%AE%E9%87%87%E9%9B%86">tcpdump 网络数据采集</a></li>
+<li><a href="#meterpreter-%E6%BC%8F%E6%B4%9E%E6%94%BB%E5%87%BB">Meterpreter 漏洞攻击</a></li>
+<li><a href="#nmap-%E7%BD%91%E7%BB%9C%E5%9C%B0%E5%9B%BE">nmap 网络地图</a></li>
+<li><a href="#apitokens-api%E4%BB%A4%E7%89%8C">APITokens API令牌</a></li>
+<li><a href="#autossh-%E5%8F%8D%E5%90%91ssh%E8%BF%9E%E6%8E%A5">autossh 反向SSH连接</a></li>
+<li><a href="#base64encdec-base64%E7%BC%96%E8%A7%A3%E7%A0%81">base64encdec BASE64编/解码</a></li>
+<li><a href="#cabinet-%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86">Cabinet 文件管理</a></li>
+<li><a href="#commander-%E6%8C%87%E6%8C%A5%E8%80%85">Commander 指挥者</a></li>
+<li><a href="#connectedclients-%E5%B7%B2%E8%BF%9E%E6%8E%A5%E5%AE%A2%E6%88%B7%E7%AB%AF">ConnectedClients 已连接客户端</a></li>
+<li><a href="#cursedscreech-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C">CursedScreech 命令执行</a></li>
+<li><a href="#dump1090-%E6%8E%A5%E6%94%B6%E8%A7%A3%E7%A0%81%E6%97%A0%E7%BA%BF%E4%BF%A1%E5%8F%B7">dump1090 接收/解码无线信号</a></li>
+<li><a href="#get-%E8%8E%B7%E5%8F%96">get 获取</a></li>
+<li><a href="#hackrf-%E6%97%A0%E7%BA%BF%E7%94%B5%E6%94%BB%E5%87%BB">HackRF 无线电攻击</a></li>
+<li><a href="#key-manager-%E5%AF%86%E9%92%A5%E7%AE%A1%E7%90%86">Key Manager 密钥管理</a></li>
+<li><a href="#led-controller-led%E7%81%AF%E6%8E%A7%E5%88%B6">LED Controller LED灯控制</a></li>
+<li><a href="#log-manager-%E6%97%A5%E5%BF%97%E7%AE%A1%E7%90%86">Log Manager 日志管理</a></li>
+<li><a href="#modem-manager-%E8%B0%83%E5%88%B6%E8%A7%A3%E8%B0%83%E5%99%A8%E7%AE%A1%E7%90%86">Modem Manager 调制解调器管理</a></li>
+<li><a href="#module-maker-%E6%A8%A1%E5%9D%97%E5%88%B6%E4%BD%9C">Module Maker 模块制作</a></li>
+<li><a href="#ngrep-%E7%BD%91%E7%BB%9C%E6%8A%93%E5%8F%96">ngrep 网络抓取</a></li>
+<li><a href="#occupineapple-%E5%8D%A0%E9%A2%86">Occupineapple 占领</a></li>
+<li><a href="#online-hash-crack-%E5%9C%A8%E7%BA%BF%E5%93%88%E5%B8%8C%E7%A0%B4%E8%A7%A3">Online Hash Crack 在线哈希破解</a></li>
+<li><a href="#p0f-%E8%A2%AB%E5%8A%A8%E7%BD%91%E7%BB%9C%E6%8C%87%E7%BA%B9%E8%AF%86%E5%88%AB">p0f 被动网络指纹识别</a></li>
+<li><a href="#papers-%E8%AF%81%E4%BB%B6">Papers 证件</a></li>
+<li><a href="#portal-auth-%E9%97%A8%E6%88%B7%E8%AE%A4%E8%AF%81">Portal Auth 门户认证</a></li>
+<li><a href="#randomroll-%E9%9A%8F%E6%9C%BA%E7%BF%BB%E6%BB%9A">RandomRoll 随机翻滚</a></li>
+<li><a href="#responder-%E5%93%8D%E5%BA%94%E8%80%85">Responder 响应者</a></li>
+<li><a href="#signalstrength-%E4%BF%A1%E5%8F%B7%E5%BC%BA%E5%BA%A6">SignalStrength 信号强度</a></li>
+<li><a href="#site-survey-%E7%8E%B0%E5%9C%BA%E5%8B%98%E6%B5%8B">Site Survey 现场勘测</a></li>
+<li><a href="#status-%E7%8A%B6%E6%80%81">Status 状态</a></li>
+<li><a href="#wps-wps%E6%94%BB%E5%87%BB">wps wps攻击</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%83-%E6%94%BB%E5%87%BB%E5%9C%BA%E6%99%AF">七、攻击场景</a>
+<ul>
+<li><a href="#1-%E7%AE%80%E5%8D%95%E6%90%9E%E6%80%AA">1. 简单搞怪</a></li>
+<li><a href="#2-%E6%8A%80%E6%9C%AF%E6%BC%94%E7%A4%BA">2. 技术演示</a></li>
+<li><a href="#3-%E7%AA%83%E5%8F%96%E5%AF%86%E7%A0%81">3. 窃取密码</a></li>
+<li><a href="#4-%E6%BC%8F%E6%B4%9E%E5%88%A9%E7%94%A8">4. 漏洞利用</a></li>
+<li><a href="#5-%E6%95%B0%E6%8D%AE%E9%87%87%E9%9B%86%E5%B1%95%E7%A4%BA">5. 数据采集展示</a></li>
+<li><a href="#6-%E6%81%B6%E6%84%8F%E7%A0%B4%E5%9D%8F">6. 恶意破坏</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%AB-%E6%93%8D%E4%BD%9Ctips">八、操作Tips</a></li>
+<li><a href="#%E4%B9%9D-%E6%80%BB%E4%BD%93%E6%84%9F%E5%8F%97">九、总体感受</a></li>
+<li><a href="#%E5%8D%81-%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5">十、参考链接</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

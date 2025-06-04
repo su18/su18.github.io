@@ -1,0 +1,373 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Java 反序列化取经路 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Java 反序列化取经路
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-07-26
+              </span>
+              <span>
+                4 min read
+              </span>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/c16M0jvs3/" class="post-tag">
+                  # 总结
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/ysuserial.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>Java 反序列化相关学习笔记、研究内容目录，持续更新ing...</p>
+<p>（注：其实这种调用链非常复杂的漏洞调试文章，写出来基本没什么用，写的都是谁调用了谁，怎么想办法让这个 if else 走到这个调用点这一类的，如果只是为了构造 payload，那还好说，但是如果站在更高层面，如漏洞挖掘，0 day 防御这种目标的话，还是要了解思想，不能光看调用，而且如果你不自己动态调试，光看文章说的天花乱坠也是没用的，我在学的时候看其他人的文章也是一头雾水，调试过了才会理解构造的过程，不过依旧是一个学习记录的过程，当流水账般的日记发出来而已）</p>
+<h1 id="前置知识">前置知识</h1>
+<ul>
+<li><font color="teal">背景描述</font> ：<a href="https://su18.org/post/ysoserial-su18-1/#%E4%B8%80-%E8%83%8C%E6%99%AF%E6%8F%8F%E8%BF%B0">反序列化漏洞的发现与提出</a></li>
+<li><font color="teal">序列化与反序列化</font> ：<a href="https://su18.org/post/ysoserial-su18-1/#%E4%BA%8C-%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8E%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96">序列化与反序列化过程描述</a></li>
+<li><font color="teal">反序列化漏洞</font> ：<a href="https://su18.org/post/ysoserial-su18-1/#%E4%B8%89-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E">反序列化漏洞描述</a></li>
+</ul>
+<h1 id="ysoserial-补全计划">ysoserial 补全计划</h1>
+<p>特别鸣谢：0range 师傅的相关<a href="https://0range228.github.io/Java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%88%A9%E7%94%A8%E9%93%BE%E8%A1%A5%E5%85%A8%E8%AE%A1%E5%88%92/">博客</a></p>
+<p>以下红色为入口点（kick-off），紫色为触发点（sink），其余为中间的调用链（chain）</p>
+<ul>
+<li>
+<p><font color="teal">URLDNS</font> ：<a href="https://su18.org/post/ysoserial-su18-1/#urldns"><font color="red">HashMap</font> + <font color="cerulean">URL</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 1</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections1"><font color="red">AnnotationInvocationHandler</font> + LazyMap/TransformedMap + <font color="cerulean">Transformer</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 2</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections2"><font color="red">PriorityQueue</font> + TransformingComparator + <font color="cerulean">Transformer/TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 3</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections3"><font color="red">AnnotationInvocationHandler</font> + LazyMap + Transformer + TrAXFilter + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 4</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections4"><font color="red">PriorityQueue/TreeBag</font> + TransformingComparator + Transformer + TrAXFilter + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 5</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections5"><font color="red">BadAttributeValueExpException</font> + TiedMapEntry + LazyMap + <font color="cerulean">Transformer</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 6</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections6"><font color="red">HashMap/HashSet</font> + TiedMapEntry + LazyMap + <font color="cerulean">Transformer</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Collections 7</font> ：<a href="https://su18.org/post/ysoserial-su18-2/#commonscollections7"><font color="red">Hashtable</font> + TiedMapEntry + LazyMap + <font color="cerulean">Transformer</font></a></p>
+</li>
+<li>
+<p><font color="teal">Commons Beanutils</font> ：<a href="https://su18.org/post/ysoserial-su18-3/#commonsbeanutils1"><font color="red">PriorityQueue</font> + BeanComparator + CaseInsensitiveComparator + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Spring1</font> ：<a href="https://su18.org/post/ysoserial-su18-3/#spring1"><font color="red">AnnotationInvocationHandler</font> + MethodInvokeTypeProvider + TypeProvider +ObjectFactoryDelegatingInvocationHandler +  AnnotationInvocationHandler +<font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Spring2</font> ：<a href="https://su18.org/post/ysoserial-su18-3/#spring2"><font color="red">AnnotationInvocationHandler</font> + MethodInvokeTypeProvider + TypeProvider + JdkDynamicAopProxy +  AnnotationInvocationHandler + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Hibernate1</font> ：<a href="https://su18.org/post/ysoserial-su18-3/#hibernate1"><font color="red">HashMap</font> + TypedValue + PojoComponentTuplizer + GetterMethodImpl/BasicGetter + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Hibernate2</font> ：<a href="https://su18.org/post/ysoserial-su18-3/#hibernate2"><font color="red">HashMap</font> + TypedValue + PojoComponentTuplizer + GetterMethodImpl/BasicGetter + <font color="cerulean">JdbcRowSetImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Groovy1</font> ：<a href="https://su18.org/post/ysoserial-su18-3/#groovy1"><font color="red">AnnotationInvocationHandler</font> + ConvertedClosure + <font color="cerulean">MethodClosure</font></a></p>
+</li>
+<li>
+<p><font color="teal">FileUpload1</font> ：<a href="https://su18.org/post/ysoserial-su18-4/#fileupload1"><font color="red">DiskFileItem</font> + <font color="cerulean">DeferredFileOutputStream</font></a></p>
+</li>
+<li>
+<p><font color="teal">Wicket1</font> ：<a href="https://su18.org/post/ysoserial-su18-4/#wicket1"><font color="red">DiskFileItem</font> + <font color="cerulean">DeferredFileOutputStream</font></a></p>
+</li>
+<li>
+<p><font color="teal">MozillaRhino1</font> ：<a href="https://su18.org/post/ysoserial-su18-4/#mozillarhino1"><font color="red">BadAttributeValueExpException</font> + NativeError + NativeJavaMethod + NativeJavaObject + MemberBox + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">MozillaRhino2</font> ：<a href="https://su18.org/post/ysoserial-su18-4/#mozillarhino2"><font color="red">NativeJavaObject</font> + JavaAdapter + NativeJavaArray + Environment + JavaMembers + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Myfaces1</font> ：<a href="https://su18.org/post/ysoserial-su18-4/#myfaces1"><font color="red">HashMap</font> + ValueExpressionMethodExpression + <font color="cerulean">ValueExpression</font></a></p>
+</li>
+<li>
+<p><font color="teal">Myfaces2</font> ：<a href="https://su18.org/post/ysoserial-su18-4/#myfaces2"><font color="red">HashMap</font> + ValueExpressionMethodExpression + <font color="cerulean">ValueExpression</font></a></p>
+</li>
+<li>
+<p><font color="teal">ROME1</font> ：<a href="https://su18.org/post/ysoserial-su18-5/#rome"><font color="red">HashMap</font> + ObjectBean + EqualsBean + ToStringBean + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">BeanShell1</font> ：<a href="https://su18.org/post/ysoserial-su18-5/#beanshell"><font color="red">PriorityQueue</font> + XThis$Handler + This +<font color="cerulean">BshMethod</font></a></p>
+</li>
+<li>
+<p><font color="teal">C3P0</font> ：<a href="https://su18.org/post/ysoserial-su18-5/#c3p0"><font color="red">PoolBackedDataSourceBase</font> + ReferenceIndirector + ReferenceableUtils + <font color="cerulean">URLClassLoader</font></a></p>
+</li>
+<li>
+<p><font color="teal">Clojure1</font> ：<a href="https://su18.org/post/ysoserial-su18-5/#clojure"><font color="red">HashMap</font> + AbstractTableModel$ff19274a + clojure.core$comp$fn__4727 + clojure.core$constantly$fn__4614 + clojure.main$eval_opt + clojure.core$eval + <font color="cerulean">Compiler</font></a></p>
+</li>
+<li>
+<p><font color="teal">Click1</font> ：<a href="https://su18.org/post/ysoserial-su18-5/#click1"><font color="red">PriorityQueue</font> + Column$ColumnComparator + PropertyUtils + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">Vaadin1</font> ：<a href="https://su18.org/post/ysoserial-su18-5/#vaadin1"><font color="red">BadAttributeValueExpException</font> + PropertysetItem + NestedMethodProperty + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">AspectJWeaver</font> ：<a href="https://su18.org/post/ysoserial-su18-6/#aspectjweaver"><font color="red">HashSet</font> + TiedMapEntry + LazyMap + <font color="cerulean">SimpleCache$StorableCachingMap</font></a></p>
+</li>
+<li>
+<p><font color="teal">Jython</font> ：<a href="https://su18.org/post/ysoserial-su18-6/#jython"><font color="red">PriorityQueue</font> + Comparator + XThis$Handler + PyFunction + <font color="cerulean">PyBytecode</font></a></p>
+</li>
+<li>
+<p><font color="teal">JavassistWeld</font> ：<a href="https://su18.org/post/ysoserial-su18-6/#javassistweld"><font color="red">InterceptorMethodHandler</font> + SimpleInterceptionChain + SimpleMethodInvocation + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+<li>
+<p><font color="teal">JBossInterceptors</font> ：<a href="https://su18.org/post/ysoserial-su18-6/#jbossinterceptors"><font color="red">InterceptorMethodHandler</font> + SimpleInterceptionChain + SimpleMethodInvocation + <font color="cerulean">TemplatesImpl</font></a></p>
+</li>
+</ul>
+<h1 id="其他反序列化">其他反序列化</h1>
+<h1 id="一些项目的了解和学习">一些项目的了解和学习</h1>
+<h1 id="ysuserial">ysuserial</h1>
+<p>魔改</p>
+<p>目前已经完成魔改尝鲜版，支持了若干功能，可以在如下地址观看：</p>
+<p><a href="https://github.com/su18/ysoserial">https://github.com/su18/ysoserial</a></p>
+<p>已经打包好的 jar 包点击如下链接下载：</p>
+<p><a href="https://github.com/su18/ysoserial/releases/download/v0.1/ysuserial-0.1-su18-all.jar">https://github.com/su18/ysoserial/releases/download/v0.1/ysuserial-0.1-su18-all.jar</a></p>
+<h1 id="一些总结">一些总结</h1>
+<h2 id="annotationinvocationhandler-作用">AnnotationInvocationHandler 作用</h2>
+<p>在反序列化 gadget 中多次遇到 AnnotationInvocationHandler 这个类，那么他在反序列化漏洞的利用中都可以起到什么样的作用呢？</p>
+<h1 id="一些以前没有注意过的点">一些以前没有注意过的点</h1>
+<ul>
+<li>Method 对象可以反序列化出去用</li>
+<li>之前提到反序列化，一直盯着类的 readObject 方法看，实际上一个类的相关漏洞 writeObject 方法也许更重要。</li>
+<li><code>Class.forName()</code> 可以指定 ClassLoader。</li>
+</ul>
+<h1 id="漏洞调试有感">漏洞调试有感</h1>
+<p>弹计算器比找女朋友有意思多了。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a></li>
+<li><a href="#ysoserial-%E8%A1%A5%E5%85%A8%E8%AE%A1%E5%88%92">ysoserial 补全计划</a></li>
+<li><a href="#%E5%85%B6%E4%BB%96%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96">其他反序列化</a></li>
+<li><a href="#%E4%B8%80%E4%BA%9B%E9%A1%B9%E7%9B%AE%E7%9A%84%E4%BA%86%E8%A7%A3%E5%92%8C%E5%AD%A6%E4%B9%A0">一些项目的了解和学习</a></li>
+<li><a href="#ysuserial">ysuserial</a></li>
+<li><a href="#%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93">一些总结</a>
+<ul>
+<li><a href="#annotationinvocationhandler-%E4%BD%9C%E7%94%A8">AnnotationInvocationHandler 作用</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%80%E4%BA%9B%E4%BB%A5%E5%89%8D%E6%B2%A1%E6%9C%89%E6%B3%A8%E6%84%8F%E8%BF%87%E7%9A%84%E7%82%B9">一些以前没有注意过的点</a></li>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E8%B0%83%E8%AF%95%E6%9C%89%E6%84%9F">漏洞调试有感</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/memory-shell/">
+              <h3 class="post-title">
+                JavaWeb 内存马一周目通关攻略
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

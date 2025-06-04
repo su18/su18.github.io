@@ -1,0 +1,546 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>洞态 IAST 试用 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              洞态 IAST 试用
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-01
+              </span>
+              <span>
+                24 min read
+              </span>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/dongtai.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="0x01-前情提要">0x01 前情提要</h1>
+<p>北京时间11点42分，正准备划 20 分钟水去吃午饭，园长突然跟我说过火线的 IAST 突然开源了，原名<code>灵芝IAST</code>更名为<code>洞态IAST</code>，真是OMG。</p>
+<p>IAST 也是同样使用 agent 技术。同样一种技术，在不同人的手里用法也不同，同一种思路在不同人手里的实现方式也可能存在差异。那么既然他开源了，那就来看一看学习一下他的思路和实现，也顺便测试一下产品，取其精华。</p>
+<p>能有这样的产品开源供广大安全从业者测试和学习真的是一件非常好的事，真的是要撒花庆祝，感谢老板。由于明确项目定位是 IAST 产品，因此主要关注的是检测能力的实现和 sink/source/hook 点的选取。</p>
+<p>项目地址：<a href="https://github.com/HXSecurity/DongTai-agent-java">https://github.com/HXSecurity/DongTai-agent-java</a></p>
+<p>文档地址：<a href="https://github.com/HXSecurity/DongTaiDoc">https://github.com/HXSecurity/DongTaiDoc</a></p>
+<h1 id="0x02-项目结构">0x02 项目结构</h1>
+<p>首先看一下整个的代码逻辑，项目总共分为 3 个模块，分别是 <code>iast-agent</code>、<code>iast-core</code>、<code>iast-inject</code>。</p>
+<h2 id="iast-agent">iast-agent</h2>
+<p>入口类是 <code>com.secnium.iast.agent.Agent</code>，与任何一家使用 java agent 技术的产品一样，洞态也是使用了 Sun JVM Attach API 将 agent 附加到指定的 Java 进程上。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1617254157684.png" alt="" loading="lazy"></figure>
+<p><code>com.secnium.iast.agent.IASTProperties</code>  是 agent 的单例配置类，从 <code>src/main/resources/iast.properties</code> 中读取配置。</p>
+<p><code>com.secnium.iast.agent.IASTClassLoader</code> 是 agent 自定义的 ClassLoader，继承自 <code>URLClassLoader</code>，这个类的代码参考自 jvm-sandbox，其中需要注意的是，在卸载 agent 时需要关闭 ClassLoader，如果不能通过 ClassLoader 的 <code>close()</code> 方法进行关闭，则需要寻找已经打开的 jar 文件并释放文件句柄。</p>
+<p><code>com.secnium.iast.agent.UpdateUtils</code> 是由客户端主动向云端发送请求，用来检查版本更新和发送更新状态，其中静态方法 <code>sendRequest()</code> 可以向外发送 Http 请求。也可以看到发送请求使用了 ua： <code>SecniumIast Java Agent </code>，这部分其实可以做为一个特征。</p>
+<p><code>com.secnium.iast.agent.AgentLauncher</code> 是在应用程序指定了 javaagent 参数情况下的入口类，这个类中的 <code>premain</code> 和 <code>agentmain</code>  方法均调用了共同的 <code>install()</code> 方法安装 agent。这个方法则是调用 <code>com.secnium.iast.agent.manager.EngineManager</code> 对整个流程进行管理。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1617255903023.png" alt="" loading="lazy"></figure>
+<p>接下来我们看一下 <code>EngineManager</code> 这个类，这个类是 IAST 引擎管理器，并且使用单例对象，首先执行的是 <code>updateEnginePackage()</code> ，更新 IAST 引擎需要的 jar 包，从云端进行下载。</p>
+<p>然后调用 <code>install()</code> 方法，首先将 iast-inject.jar 注册到 BootstrapClassLoader 中，然后使用自定义的 <code>IASTClassLoader</code> 加载检测引擎 iast-core.jar ，并反射调用里面的 <code>com.secnium.iast.core.AgentEngine</code> 的 <code>install()</code> 进行检测逻辑的初始化和加载动作。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1617256792805.png" alt="" loading="lazy"></figure>
+<p>进一步加载检测引擎中的多个引擎：</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1617257826999.png" alt="" loading="lazy"></figure>
+<p>然后反射调用<code>com.secnium.iast.core.AgentEngine</code> 的 <code>start()</code> 方法，更新在检测引擎中的一个全局标识位。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1617257927076.png" alt="" loading="lazy"></figure>
+<p>检测引擎启动之后，agent 端还会启动几个守护线程：</p>
+<ul>
+<li>PerformanceMonitor：负责监控jvm性能状态，如果达到停止阈值（80%），则停止检测引擎；如果达到卸载阈值（90%），则卸载引擎。</li>
+<li>UpdateMonitor：监控云端，判断检测引擎是否需要更新。</li>
+<li>EngineMonitor：监控配置文件 <code>engine.status</code> 配置项的更改。</li>
+</ul>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1617258036075.png" alt="" loading="lazy"></figure>
+<p>这个模块就是起到一个 agent 入口的作用，无需多言。</p>
+<h2 id="iast-inject">iast-inject</h2>
+<p>这个模块只有一个类 <code>java.lang.iast.inject.Injecter</code>，难道不应该是 Injector 吗，害。</p>
+<p>这个类定义了一些回调方法钩子：</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1617333129744.png" alt="" loading="lazy"></figure>
+<p>并围绕这些钩子定义了若干方法，这些放在将会使用 ASM 时插入指定类的类字节码中。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1617333328604.png" alt="" loading="lazy"></figure>
+<p>这个类实际上是定义中间处理逻辑以及定义供 ASM 调用的方法。代码太长了，不想细看。</p>
+<h2 id="iast-core">iast-core</h2>
+<p>这个模块如其名字，是整个 agent 的核心，我们先来看一下整个项目的目录结构：</p>
+<ul>
+<li><strong>engines</strong>：支撑整个模块调度的几个引擎，包括：ConfigEngine（通过云端返回结果构建IAST的模型规则），LoggerEngine（日志记录引擎），SandboxEngine（创建 EngineManager 实例），ServiceFactory（服务引擎，使用定时任务实现心跳、报告发送以及 http 请求重放机制），SpyEngine（初始化 SpyUtils），TransformEngine（创建自定义 ClassFileTransformer，使用 retransform 方法处理类字节码）</li>
+<li><strong>enhance</strong>：如其名——增强，包括了自定义 ClassVisitor、自定义 AdviceAdapter、sink/source 点的选取、对一些框架和中间件的适配、SCA 检查功能的实现等等。</li>
+<li><strong>handler</strong>：针对漏洞的检测逻辑、策略模型的建立、污点图的构造、对整个流程的处理。</li>
+<li><strong>middlewarerecognition</strong>：用来检测当前的中间件</li>
+<li><strong>replay</strong>：HTTP 请求重放</li>
+<li><strong>report</strong>：一些报告和日志的实现</li>
+<li><strong>threadlocalpool</strong>：一些需要在线程之间传递的类</li>
+<li><strong>util</strong>：工具类</li>
+<li><strong>其他</strong>：一些负责管理和调用的类</li>
+</ul>
+<p>另外，在这个项目的 <strong>resources</strong> 中，还有一些基础的 txt 以及 xml 的配置，这部分等调用到此的时候再说。</p>
+<p>首先来继续之前的调用流程，iast-agent 通过反射调用<code>com.secnium.iast.core.AgentEngine</code> 的 <code>install()</code> 方法，调用各个引擎的 <code>start()</code> 方法。此处关注其中几个引擎：</p>
+<p><font color="green">ConfigEngine</font> 通过请求 <code>/api/v1/profiles</code>，并解析其中的结果，最后创建了一个 <code>IASTHookRuleModel</code> 实例，这个实例就是这个 agent 的处理模型，其中保存了很多处理中用到的规则。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1617266772820.png" alt="" loading="lazy"></figure>
+<p><font color="green">TransformEngine</font>使用 Instrumentation 接口，进行字节码的转换，调用了<code>com.secnium.iast.core.enhance.IASTClassFileTransformer#retransform</code> 方法。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1617267339971.png" alt="" loading="lazy"></figure>
+<p>这个方法使用了 <code>IASTClassHookPointMatcher#findForRetransform()</code> 使用 Instrumentation 对象的 <code>getAllLoadedClasses()</code> 获取所有已经被加载的类，并通过 <code>com.secnium.iast.core.util.matcher.ConfigMatcher#isHookPoint()</code> 方法进行筛选判断，返回了一个需要修改的类的 List 。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1617322692798.png" alt="" loading="lazy"></figure>
+<p>通过以上代码可知，agent 对以下的类没有 hook：</p>
+<ul>
+<li>类名 <code>com/secnium/iast</code> 开头的类</li>
+<li>类名 <code>java/lang/iast/</code> 开头的类</li>
+<li>类名包含 <code>CGLIB$$</code> 的类</li>
+<li>类名包含 <code>$$Lambda$</code> 的类</li>
+<li>类型包含 <code>_$$_jvst</code> 的类</li>
+<li>在资源文件 <code>com.secnium.iast.resources/blacklist.txt</code> 写入的类，其中包括了：<code>EDU/oswego/cs/dl/util/concurrent/*</code>、<code>net/sf/ehcache/*</code>、<code>net/bytebuddy/*</code>、<code>com/secnium/*</code>、<code>apple/*</code>、<code>com/octo/captcha/*</code>、<code>Routes$</code>、<code>aQute/service/*</code>、<code>ch/qos/logback/*</code>、<code>bsh/*</code>、<code>antlr/debug/*</code>、<code>com/bea/common/*</code>等。</li>
+</ul>
+<p>在 blacklist.txt 中写了多达 7 万多行的类名和前后缀，根据其注释，这是为了过滤掉 Sandbox 所需要的类，防止 ClassCircularityError 的发生。</p>
+<p>随后调用 <code>retransformClasses()</code> 会让类重新加载，从而使得注册的类修改器能够重新修改类的字节码，这要就会调用之前通过 <code>addTransformer()</code> 注册的 IASTClassFileTransformer 中重写的 <code>transform()</code> 方法。</p>
+<p>方法里首先调用 <code>com.secnium.iast.core.enhance.IASTClassAncestorQuery#scanCodeSource</code> 通过获取 jar 包中的 manifest 信息并将其发送回云端，这部分是 SCA 功能的实现。</p>
+<p>然后二次调用了 <code>ConfigMatcher.isHookPoint()</code> 判断 hook 类，感觉这个判断写重了，没必要。</p>
+<p>在 <code>IASTClassAncestorQuery</code> 里缓存了 CodeSource/ClassLoader/ClassName/SuperName/Interfaces。</p>
+<p>创建 ClassWriter，依然是使用 <code>COMPUTE_FRAMES</code> 自动计算帧的大小，并且重写了<code>getCommonSuperClass()</code> 方法，在计算两个类共同的父类时指定ClassLoader。</p>
+<p>创建 IASTContext 上下文，初始化 PluginRegister，这个类中包含了一个全局常量 PLUGINS，里面保存了很多的处理插件，这些类都实现了 DispatchPlugin 接口，这个接口包含两个方法：</p>
+<ul>
+<li><code>dispatch()</code>：分发不同的 classVisitor 处理对应的类</li>
+<li><code>isMatch()</code>：判断是否命中当前插件</li>
+</ul>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1617327886561.png" alt="" loading="lazy"></figure>
+<p>在上图的类中是 DispatchPlugin 的实现类，其中包含了 agent 中的一些 sink/source/hook 点，在这些类的 <code>dispatch()</code> 方法中，会创建继承至 AbstractClassVisitor 的各个ClassVisitor，在 ClassVisitor 中又通过重写 <code>visitMethod()</code> ，注册继承至 AbstractAdviceAdapter 的实现类，这些类重写父类的 <code>before()/after()</code> ，实际上是 AdviceAdapter 的 <code>onMethodEnter()/onMethodExit()</code> 实现了字节码的插入。具体的字节码插入部分是 ASM 的 API ，无需多言。</p>
+<p>这里可以看到，洞态为每种不同的 hook点/sink点/source点订制了不同的 ClassVisitor 和 MethodVisitor，也就是说写入的字节码不一致，那到底写入了什么呢？通过看 ASM 的 API 比较难以阅读，还是在字节码写入后把 class dump 出来看比较方便。</p>
+<p><font color="green">SpyEngine</font> 通过调用 <code>java.lang.iast.inject.Injecter#init</code> 方法将 <code>com.secnium.iast.core.handler.EventListenerHandlers</code> 中定义的全部处理方法存入了 <code>namespaceMethodHookMap</code> 中供全局调用。而在 EventListenerHandlers 中定义的这个方法，实际上又是由 Injecter 通过反射调用。</p>
+<p>而后续系统的全部功能，都是由 EventListenerHandlers 中定义的这些方法处理和调度的，这里不再进行一一分析。</p>
+<h1 id="0x03-功能实现探究">0x03 功能实现探究</h1>
+<h2 id="支持漏洞">支持漏洞</h2>
+<p>洞态 IAST 支持的漏洞类型位于 <code>com.secnium.iast.core.handler.vulscan.VulnType</code>，如下图：</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1617339738381.png" alt="" loading="lazy"></figure>
+<p>对应配置文件中的 model.xml，通过反向查找调用就可以查看相关的处理逻辑，各位看官请自行评测，本文不会对每种漏洞的实现进行一一介绍。</p>
+<h2 id="sca-实现">SCA 实现</h2>
+<p>一个优秀的 IAST 一定有 SCA 一类的功能，简单的实现都是通过收集客户段组件信息，发送到云端通过匹配 CPE，并链接到对应的 CVE/CWE/CNNVD 等，并进行展示，先看一下洞态的云端效果，在组件管理：</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1617342633445.png" alt="" loading="lazy"></figure>
+<p>看看右边的数量和左边的数量完全对应不上，难道是我对这些数字的理解有问题？点击进入条目，有该组件对应的一些信息的展示</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1617342614436.png" alt="" loading="lazy"></figure>
+<p>再点击就有对应 CVE 的一些漏洞信息描述的信息。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1617343685012.png" alt="" loading="lazy"></figure>
+<p>那么这个功能是如何实现的呢？在前面提到 SCA 是由<code>com.secnium.iast.core.enhance.IASTClassAncestorQuery#scanCodeSource</code> 所实现，这个方法有两个出口，据我判断，应该是不会走到下面那个 <code>scan()</code> 方法。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1617359380607.png" alt="" loading="lazy"></figure>
+<p><code>com.secnium.iast.core.enhance.sca.ManifestScaner#parseJarManifest</code> 调用 <code>getPackgeInfo</code> 获取 <code>Attributes</code> 中的 Implementation-Version 和 Implementation-Title</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1617349899718.png" alt="" loading="lazy"></figure>
+<p>最后拼接出了一些对应的信息发送给云端。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1617349096593.png" alt="" loading="lazy"></figure>
+<p>云端接收到这些信息处理入库，并对接自己 CPE/CVE 漏洞信息库进行分析和展示。</p>
+<p>这部分实际上是非常简单的实现，没有复杂的检查逻辑，这个功能 OWASP 有开源的，建议参考：https://github.com/jeremylong/DependencyCheck</p>
+<h2 id="sinksourcepropagatorhttp">sink/source/propagator/http</h2>
+<p>构建一个 IAST，重要的就是整个模型的构建，前面分析过，模型的构建是通过 <code>buildRemote()</code> 方法获取远端的配置。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1617352303587.png" alt="" loading="lazy"></figure>
+<p>由于这个 json 太长了，我没细看，在这里就不展示了，这个配置在本地也有一个 model.xml，以 xml 格式储存了这些信息，这些信息在处理后会被转为 <code>IASTHookRuleModel</code> 对象。</p>
+<p>在这个配置中我们发现了一些标记，他们都代表什么呢？</p>
+<ul>
+<li>type：这个 hook 点的类型，一个 hook 点会被分类为：1. 传播节点 2. source 点 3. filter 点 4. sink 点</li>
+<li>value：方法类型</li>
+<li>details：inherit 是否继承，value 方法签名，target 目标参数位置，source 源参数位置，track 标记是否要追踪</li>
+</ul>
+<p>其中 sink 点要标记污点所在的参数位置，传播节点要标记源位置和目标位置。分类处理完这些配置文件后，将会将所有信息保存到 <code>IASTHookRuleModel</code> 中的一些变量中。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1617361715564.png" alt="" loading="lazy"></figure>
+<p>在之前的分析中就提到过，对于每一种不同的 hook 点，插入的字节码是不一样的。</p>
+<p>sink 点插入:</p>
+<pre><code class="language-java">        try {
+            Injecter.enterSink(&quot;LingZhi&quot;);
+            if (Injecter.isFirstLevelSink(&quot;LingZhi&quot;)) {
+                Injecter.spyMethodOnBefore(对应sink点参数);
+            }
+
+            // 原始逻辑。。。
+
+            Injecter.leaveSink(&quot;LingZhi&quot;);
+            return 返回结果;
+        } catch (Exception e) {
+            throw e;
+        }
+</code></pre>
+<p>传播节点：</p>
+<pre><code class="language-java">        try {
+            Injecter.spyMethodEnterPropagator(&quot;LingZhi&quot;);
+
+            // 原始逻辑。。。
+
+            if (Injecter.isFirstLevelPropagator(&quot;LingZhi&quot;)) {
+                Injecter.spyMethodOnBefore(对应传播节点参数);
+            }
+            Injecter.spyMethodLeavePropagator(&quot;LingZhi&quot;);
+            return 返回结果;
+        } catch (Exception e) {
+            throw e;
+        }
+</code></pre>
+<p>source节点：</p>
+<pre><code class="language-java">        try {
+            Injecter.enterSource(&quot;LingZhi&quot;);
+            
+            // 原始逻辑。。。
+
+            if (Injecter.isFirstLevelSource(&quot;LingZhi&quot;)) {
+                Injecter.spyMethodOnBefore(对应source参数}
+            Injecter.leaveSource(&quot;LingZhi&quot;);
+            return 返回结果;
+        } catch (Exception e) {
+            throw e;
+        }
+</code></pre>
+<p>http节点：</p>
+<pre><code class="language-java">        try {
+            Injecter.enterHttp(&quot;LingZhi&quot;);
+            if (Injecter.isFirstLevelHttp(&quot;LingZhi&quot;)) {
+                Injecter.spyMethodOnBefore(对应参数);
+            }
+            // 原始逻辑。。。
+
+            Injecter.leaveHttp(&quot;LingZhi&quot;);
+        } catch (Exception e) {
+            throw e;
+        }
+</code></pre>
+<p>这其中的逻辑，总结起来是这样的，系统中定义了了一个 <code>com.secnium.iast.core.handler.controller.TrackerHelper</code>，用来作为一个全局的计数器？（追踪器），当进入一个节点时，对应的成员变量会自增 1，而退出时，会 -1，并且判断当前节点是否为第一层级节点，如果不是，将不会走入后续 <code>spyMethodOnBefore()</code> 方法。这个类中还定义个一个 trackCounts，目前还没有用上。</p>
+<p>在 <code>spyMethodOnBefore()</code> 方法中，将会 Hook 点类型的不同分别调用 <code>HttpImpl.solveHttp</code>、<code>PropagatorImpl.solvePropagator</code>、<code>SourceImpl.solveSource</code>、<code>SinkImpl.solveSink</code> 进行不同点的处理。</p>
+<h3 id="http-节点处理">http 节点处理</h3>
+<p>创建一个自定义的 <code>com.secnium.iast.core.util.http.HttpRequest</code> 对象，储存相关内容和 httpServletRequest 引用对象，静态文件不处理，目前定义的静态文件后缀是 <code>.js,.css,.htm,.html,.jpg,.png,.gif,.woff,.woff2,.ico,.maps,.xml</code>，看到了 htm/html 没有处理，这种情况下伪静态的网站可能会漏检查，根据正则查看 url 中是否含有 “login” 字样，并设置其是否为登陆 URL，将一些信息初始化和缓存到 EngineManager 中。这类节点主要负责标记和预处理的。</p>
+<h3 id="sink-节点处理">sink 节点处理</h3>
+<p>使用程序启动时加载的 IASTHookRuleModel，在其中获取方法签名对应的 sink 方法对象，这里返回的是一个 IASTSinkModel 对象，调用 <code>com.secnium.iast.core.handler.vulscan.ScannerFactory#preScan</code> 进行数据预处理，预处理主要是包括对 <code>unvalidated-redirect</code> 和 <code>sql-over-power</code> 两种漏洞类型的处理。</p>
+<p>预处理之后，调用 <code>com.secnium.iast.core.handler.vulscan.ScannerFactory#scan</code>，又分别进行动静态的扫描：</p>
+<ul>
+<li>静态扫描包括：<code>crypto-weak-randomness</code>、<code>crypto-bad-mac</code>、<code>crypto-bad-ciphers</code>、<code>cookie-flags-missing</code> 四种漏洞类型的支持。</li>
+<li>OverPower 扫描：目前没有具体实现。</li>
+<li>动态扫描：判断 sink 方法的污点来源是否命中污点池，将当前调用的污点事件存入 <code>EngineManager.TRACK_MAP</code> 中。</li>
+</ul>
+<h3 id="source-节点处理">source 节点处理</h3>
+<p>将当前污点来源事件存入 <code>EngineManager.TRACK_MAP</code> 中，将污点来源的返回结果放入 <code>EngineManager.TAINT_POOL</code> 污点池中。</p>
+<h3 id="propagator-节点处理">propagator 节点处理</h3>
+<p>处理传播节点的逻辑是最复杂，这里还是简单描述：</p>
+<ul>
+<li>如果污点池为空，证明还没有经过 source 点，则不处理传播节点，否则还是去 IASTHookRuleModel 里找对应的 IASTPropagatorModel 对象。</li>
+<li>如果找到了对应的对象，则调用 <code>auxiliaryPropagator()</code> 对象，根据传播节点的配置将结果写入 <code>event.outValue</code> 。并将传播节点时间写入  <code>EngineManager.TRACK_MAP</code> 中。</li>
+<li>如果没找到对应的对象，则调用 <code>TrackUtils.smartEventMatchAndSetTaint()</code> 判断，判断太长了没看，最后还是将传播节点写入 <code>EngineManager.TRACK_MAP</code> 中。</li>
+</ul>
+<p>看完了这些节点的处理方式，我们简单串一下逻辑：</p>
+<ol>
+<li>一次请求到达了应用程序，首先进入 http 节点处理逻辑，进行标记和预处理。</li>
+<li>请求进入到 source 点，将 event 放入 <code>EngineManager.TRACK_MAP</code> 中，将 source 的结果放入了 <code>EngineManager.TAINT_POOL</code> 污点池中。</li>
+<li>请求再进入 propagator 节点时，根据配置判断传播节点的参数是否存在于污点池中，如果是，则将传播节点 event 放入 <code>EngineManager.TRACK_MAP</code> 中。</li>
+<li>应用程序走到最后的 sink 点时，根据 sink 点的配置，判断 sink 点的参数是不是在 <code>TAINT_POOL</code> 中，如果是，则将 sink 点写入 <code>EngineManager.TRACK_MAP</code> 中。</li>
+<li>随着程序的多次调用，程序还会再次进入多次传播节点，这些节点也会被放入 <code>EngineManager.TRACK_MAP</code> 中。</li>
+<li>在应用程序执行完，回到 http 节点，最后执行到 <code>leaveHttp</code> 时，会调用 GraphBuilder 构造污点调用图并发送至云端。</li>
+</ol>
+<h2 id="越权检测">越权检测</h2>
+<p>在看代码的时候，多次看到 <code>over power</code> 一类的字样，想来想去终于想明白了，这可能是越权的意思。IAST 能检测越权？有点意思，那我们来看看他是如何实现的。</p>
+<p>之前提到过 <code>com.secnium.iast.core.handler.vulscan.ScannerFactory#preScan</code>，在这个位置命中 sink 点后，有两个处理逻辑：</p>
+<ol>
+<li>如果命中了 <code>unvalidated-redirect</code> 的 sink 点，并且是方法签名是 setHeader/addHeader 等，就将其理解为可能是登陆成功后的跳转操作，找到其中 Set-Cookie 的值：</li>
+</ol>
+<ul>
+<li>如果判断当前为登录逻辑，则保存到 AuthInfoCache中，</li>
+<li>否则将更新原有缓存的 cookie 信息，并且向云端发送报告</li>
+</ul>
+<ol start="2">
+<li>将会创建 <code>IJdbc</code> 的实例， 调用<code>LoginLogicRecognize.handleLoginLogicRecognize()</code> 方法处理登陆逻辑识别：</li>
+</ol>
+<ul>
+<li>通过 <code>isLoginSqlQuery()</code> 使用正则匹配 sql 语句，看是否有登录字样，识别是否为登录连接</li>
+<li>调用 <code>AuthInfoManager.handleAddCookieAction()</code> 方法将“登陆相关的sql查询语句”、“cookie”信息、sink 点的 ClassName发送至云端，并把 cookie 缓存到 AuthInfoCache 中。</li>
+</ul>
+<p>后续在之前也看到了，对应的 <code>OverPowerScanner</code> 的 scan 方法没有具体实现，那这时候我们可以猜测一下，作者主要是想通过 cookie 和登陆的 sql 语句进行关联。通过检查 sql 语句是否与污点池有关、检查 sink 点的参数是否与污点池有关来判断是否有越权。这些数据都被发送到了云端，那对于云端来说，如何区分不同权限的用户？如何判断这个请求是否应该匹配到用户？</p>
+<p>以目前程序里的处理逻辑，还做不到鉴权的功能，在云端中也没有展示这个漏洞类型，等待进一步的更新。</p>
+<h2 id="其他">其他</h2>
+<p>其他漏洞的检测逻辑没什么要说的，主要是 hook 点的选取。</p>
+<h1 id="0x04-测试">0x04 测试</h1>
+<p>在看完代码逻辑和简单试用后，我们正式的测试一下这个产品。<br>
+首先编译一下 agent，我这边的环境是：</p>
+<ul>
+<li>mvn 3.2.5</li>
+<li>JDK 1.8.0_131</li>
+<li>Tomcat 8.5.31/7.0.25</li>
+<li>测试代码：自写靶场，由于我的靶场是为了测试 RASP 产品而写，当时为了测试自家 LingXe 以及 OpenRasp 、云锁、安全狗等等产品包含的 RASP 功能，里面隐藏了很多可以用来插桩和绕过的点，因此用来测试 IAST 正好，园长发了个修改版在 <a href="https://github.com/tongasdp/tongasdp-test">https://github.com/tongasdp/tongasdp-test</a>，有兴趣的小伙伴也可以用来自测。</li>
+</ul>
+<p>通过调试发现自己编译 core 和 inject 没用，他的 agent 无论如何还是会从官网上自己下载这两个 jar 包并放到 temp 目录下，不知道是故意的还是写出来的 bug，因为如果从官网上下载，也只是下载 agent，在运行时动态下载 core 和 inject，应该是最开始打算试用，没打算开源？？由于我的目的是学习调试，所以我使用了自己编译的关闭了 proguard 混淆的版本，并修改了判断逻辑，使应用程序不去云端判断，直接加载本地 jar。</p>
+<p>为了更直观的看到 agent 对类字节码的更改，需要在配置文件中更改 <code>iast.dump.class.enable</code> 和 <code>iast.dump.class.path</code> 相关参数。</p>
+<h2 id="功能型测试">功能型测试</h2>
+<p>通过上一章功能实现的探究，我们已经关注到了几个安全检测功能的实现，那具体的检测结果怎么样呢？</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1617596713158.png" alt="" loading="lazy"></figure>
+<p>我在自己的靶场里触发了绝大部分的漏洞类型，但很遗憾的是，由于云端的搜索引擎问题，以及 sink 点选取问题，我没能在云端看到太多的检出漏洞。云端的漏洞展示是有问题的，看不到前一天的漏洞内容，不知道是 django 的问题还是什么，建议修复一下。</p>
+<p>也建议作者出一个官方漏洞靶场，能对应到所有洞态支持的漏洞类型，也容易理解和说明。</p>
+<h2 id="性能测试">性能测试</h2>
+<p>以下是使用 wrk 进行的压测：</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1617605937895.png" alt="" loading="lazy"></figure>
+<p>可以看到洞态给应用程序性能带来的影响特别大，当然 IAST 通常都在测试环境下使用，所以可能并不是特别关注性能。</p>
+<h1 id="0x05-评价">0x05 评价</h1>
+<p>出来在之前分析过程中的一些我将从两个方面对目前版本洞态 IAST 进行评价，首先是使用中的一些想法：</p>
+<ol>
+<li>SCA 漏洞组件管理没有整理和去重，在我测试的过程中多次重启项目导致同一个条目在云端能看到很多次。</li>
+<li>页面上表格查询和相关排序用起来真的难受，建议招一个设计。</li>
+<li>搜索功能面对小白非常不友好，可以说如果对 IAST 不了解的情况完全用不了这个管理后台。</li>
+<li>支持的漏洞数量还是少了点，并且没有对这种漏洞的描述、解决建议什么的信息。</li>
+<li>既然是 java agent 技术的产品，那应该能够给到用户完整的调用链、一些关键调用点信息如代码行数等等，而不是只给到一个 http 请求。</li>
+</ol>
+<p>作为一名安全研究员，同时也是 RASP 产品的参与者，我提出几点想法：</p>
+<ol>
+<li>所有的 hook 点，全部是写死的规则文件，无论是本地的 xml 也好，还是远端的 json 也好，都将 hook 点的类，描述符，相关信息完全写死，我相信这些规则是通过某些手段生成出来的，但是一旦在 hook 点选取上没有选择使用动态手段，那就失去了和 0 day 打交道的能力。</li>
+<li>hook 点（这里指 sink ）的选取还是层次太浅、规律性较差。</li>
+<li>洞态 IAST 检测了当前环境使用的中间件，并发送给云端，目前除了信息收集还没看到有什么样的具体用途，但是通过hook点来看，对于http请求的点还是使用了适配各个中间件的方式， OpenRASP 也是采用这种方式，这种方式在功能上没有什么问题，但是同样地还是失去了动态性，不优雅，也不能做到通用。</li>
+<li>应用在实现上使用了太多的字符串比较处理，以及正则，这将对原应用性能带来极大的影响。</li>
+<li>在调试过程中，包括污点图的处理，总是被大量的无效信息占用了过多的时间，比如 StringBuilder 一类的传播节点，这其实不是漏洞调用的关键节点，个人认为没有必要处理他。</li>
+<li>agent 每次收到请求，只要不是静态的，都要向云端发送报告，丧心病狂吧。</li>
+<li>没有对 ClassLoader 进行相关处理，无论是前两年的冰蝎，还是各种反序列化的利用 gadget ，包括我自己的 su18.jsp ，都少不了使用 ClassLoader 加载恶意类的请求，这应该目前 Java 安全关注点比较高的地方，还是建议给 IAST 一个挖 gadget 的可能。</li>
+<li>攻击者目前常用的类似内存马、动态注册 Filter 一类的、以及像一些反序列化恶意类找 response 对象回显的，其实都可以试着搞一搞。</li>
+</ol>
+<p>就这样吧，也不想说太多了。</p>
+<h1 id="0x06-吐槽">0x06 吐槽</h1>
+<p>通过个人角度，主要觉得这个项目有以下槽点：</p>
+<ul>
+<li>错别拼写真的不少<br>
+<img src="https://su18.org/post-images/1617263376663.png" alt="" loading="lazy"></li>
+<li>代码重复也不少<br>
+<img src="https://su18.org/post-images/1617370964669.png" alt="" loading="lazy"></li>
+<li>报告导出的 word 字体到底是咋回事<br>
+<img src="https://su18.org/post-images/1617359148734.png" alt="" loading="lazy"></li>
+<li>这个功能我点了，不好使，我没看代码有没有相关实现，但这功能贼危险，建议还是不要搞了<br>
+<img src="https://su18.org/post-images/1617365070597.png" alt="" loading="lazy"></li>
+<li>应用漏洞的展示页面中不会出现重复漏洞，会进行合并，但是可怕的是我触发一次SQL注入漏洞，页面上的出现次数就涨 5 次，这应该是同一条请求调用链上触发多个 sink 点导致的？<br>
+<img src="https://su18.org/post-images/1617365397476.png" alt="" loading="lazy"></li>
+<li>这个日志记录提供清空和删除功能不说，详细度也完全不够，绝对过不了等保。。。<br>
+<img src="https://su18.org/post-images/1617365695682.png" alt="" loading="lazy"></li>
+<li>搜索显示完全有问题<br>
+<img src="https://su18.org/post-images/1617366240188.png" alt="" loading="lazy"></li>
+<li>后端明明回数据了，为啥前面不展示呢<br>
+<img src="https://su18.org/post-images/1617366189968.png" alt="" loading="lazy"></li>
+<li>一个方法的多个重载方法，没必要都写进去，因为有自调用啊<br>
+<img src="https://su18.org/post-images/1617368689020.png" alt="" loading="lazy"></li>
+<li>区分应用是怎么区分的呢？<br>
+<img src="https://su18.org/post-images/1617503813784.png" alt="" loading="lazy"></li>
+</ul>
+<h1 id="0x07-总结">0x07 总结</h1>
+<p>对于一款使用 Java agent 技术开发的工具/产品，重中之重就是 hook 点的选取，以及处理各项逻辑的具体实现，因为需要将代码运行到服务器端，不影响原有功能、不影响原有性能是首要考虑的目标。</p>
+<p>这是作为框架考虑的，其次是针对各个漏洞点的检测逻辑，这部分是需要对漏洞理解的足够深入，也就是需要安全研究人员的介入，目前洞态有一部漏洞的检测是写死在代码里的，一部分漏洞的检测是依靠配置文件的设置的。还没有处理成大家习惯的框架-插件的模式，所以想在此基础上二开还是需要花费较多时间理解代码。</p>
+<p>期待更新。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#0x01-%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81">0x01 前情提要</a></li>
+<li><a href="#0x02-%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84">0x02 项目结构</a>
+<ul>
+<li><a href="#iast-agent">iast-agent</a></li>
+<li><a href="#iast-inject">iast-inject</a></li>
+<li><a href="#iast-core">iast-core</a></li>
+</ul>
+</li>
+<li><a href="#0x03-%E5%8A%9F%E8%83%BD%E5%AE%9E%E7%8E%B0%E6%8E%A2%E7%A9%B6">0x03 功能实现探究</a>
+<ul>
+<li><a href="#%E6%94%AF%E6%8C%81%E6%BC%8F%E6%B4%9E">支持漏洞</a></li>
+<li><a href="#sca-%E5%AE%9E%E7%8E%B0">SCA 实现</a></li>
+<li><a href="#sinksourcepropagatorhttp">sink/source/propagator/http</a>
+<ul>
+<li><a href="#http-%E8%8A%82%E7%82%B9%E5%A4%84%E7%90%86">http 节点处理</a></li>
+<li><a href="#sink-%E8%8A%82%E7%82%B9%E5%A4%84%E7%90%86">sink 节点处理</a></li>
+<li><a href="#source-%E8%8A%82%E7%82%B9%E5%A4%84%E7%90%86">source 节点处理</a></li>
+<li><a href="#propagator-%E8%8A%82%E7%82%B9%E5%A4%84%E7%90%86">propagator 节点处理</a></li>
+</ul>
+</li>
+<li><a href="#%E8%B6%8A%E6%9D%83%E6%A3%80%E6%B5%8B">越权检测</a></li>
+<li><a href="#%E5%85%B6%E4%BB%96">其他</a></li>
+</ul>
+</li>
+<li><a href="#0x04-%E6%B5%8B%E8%AF%95">0x04 测试</a>
+<ul>
+<li><a href="#%E5%8A%9F%E8%83%BD%E5%9E%8B%E6%B5%8B%E8%AF%95">功能型测试</a></li>
+<li><a href="#%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95">性能测试</a></li>
+</ul>
+</li>
+<li><a href="#0x05-%E8%AF%84%E4%BB%B7">0x05 评价</a></li>
+<li><a href="#0x06-%E5%90%90%E6%A7%BD">0x06 吐槽</a></li>
+<li><a href="#0x07-%E6%80%BB%E7%BB%93">0x07 总结</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/fastjson/">
+              <h3 class="post-title">
+                fastjson：我一路向北，离开有你的季节
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

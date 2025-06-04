@@ -1,0 +1,440 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>[旧文归档] 记一次sign签名校验绕过 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              [旧文归档] 记一次sign签名校验绕过
+            </h2>
+            <div class="post-info">
+              <span>
+                2019-05-01
+              </span>
+              <span>
+                20 min read
+              </span>
+              
+                <a href="https://su18.org/tag/wKzcPyHqj/" class="post-tag">
+                  # 校验绕过
+                </a>
+              
+                <a href="https://su18.org/tag/TjYa_DdRZS/" class="post-tag">
+                  # 渗透测试
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/wechatjs.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>最近在玩一款微信小游戏，叫做消灭病毒，是我老妹分享给我的，点了个链接就随便玩了一会，不得不说还是挺有意思的，基本上就是像雷电一样的打飞机类游戏，游戏体验还不错，机制也很简单，打怪，攒钱，升武器，打更厉害的怪，攒更多的钱，继续升武器，过程十分漫长。但是这个游戏不提供充钱的渠道（本来也没打算充钱），获取钻石、金币的途径也就只有看广告一条路，一个广告15秒，升级实在是太慢了。于是就想搞一搞事情。</p>
+<p>对于游戏的破解或篡改，一般是几个思路：</p>
+<ul>
+<li>黑掉服务器改数据库，这就是一个想法（QAQ）。</li>
+<li>本地修改内存，所谓内存挂，比较常见，在windows中一般用CE，我也写过植物大战僵尸的挂，在我的Github中叫Dave，在手机端，之前用塞班系统时的利器八门神器，不知道有没有人用过，在安卓中一般是root手机然后使用xposed框架hook相关的点进行修改，也比较常见。</li>
+<li>修改本地资源文件，游戏可能在本地存数据库，或者一些游戏属性值，常见的有射击类游戏的秒杀挂，吃鸡类游戏的除草功能。</li>
+<li>寻找网络传输数据包中的内容，绕过校验，破解加密手段，越权漏洞，等等。</li>
+</ul>
+<p>对于微信小程序这种，我们可以简单理解为HTML+CSS+JS，只不过JS是微信JS而已。</p>
+<p>所以在这个场景下，我们的思路就是找到小程序源码，看看JS里面有没有什么能利用的东西，对网络传输进行抓包，试试有没有漏洞。</p>
+<h1 id="一-配置抓包环境">一、配置抓包环境</h1>
+<p>手机是 OPPO R9s Plus，电脑 windows10，抓包软件 Fiddler，配置过程简单叙述一下：</p>
+<p>在Fiddler中设置端口，允许远程连接，开启https抓包及解密，重启软件。</p>
+<p>将手机连接到与电脑同一网络中，指定IP地址及端口，安装Fiddler的证书。</p>
+<p>需要注意的是，在OPPO中安装证书时，用处选择VPN和应用，选wlan那个还是抓不到。</p>
+<p>如果在这一步遇到了问题，可以在搜索引擎上获得大量资料，比较简单。</p>
+<h1 id="二-微信小程序源码获取">二、微信小程序源码获取</h1>
+<p>获取办法：在已经ROOT的手机上使用RE文件管理器查看微信源码目录，并复制导出到电脑中。</p>
+<p>微信小程序源文件保存在 <code>/data/data/com.tencent.mm/MicroMsg/.../appbrand/pkg/</code> 这个目录下，中间的“...”是一串32位的16进制字符串名文件夹。</p>
+<p>如果有很多不确定是哪个的情况下，我的解决办法是删掉所有这样的目录，在微信中删掉小程序重新添加，就可以看到新创建的目录。找到指定目录并拷贝至电脑上，我们就获得了微信小程序的源代码，在我的手机上有两个wxapkg文件，不清楚是哪个，先都拷贝出来。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1616632779409.png" alt="" loading="lazy"></figure>
+<p>下一步是反编译源文件，用大佬写的 wxappUnpacker，Github地址：https://github.com/qwerty472123/wxappUnpacker</p>
+<p>我们首先安装nodejs环境：https://nodejs.org/en/</p>
+<p>装一下依赖：</p>
+<ul>
+<li>npm install esprima</li>
+<li>npm install css-tree</li>
+<li>npm install cssbeautify</li>
+<li>npm install vm2</li>
+<li>npm install uglify-es</li>
+<li>npm install js-beautify</li>
+<li>npm install escodegen</li>
+</ul>
+<p>最后使用这个命令进行反编译源文件：node wuWxapkg.js filepath，例如我的是：</p>
+<pre><code class="language-cmd">node wuWxapkg.js E:\wx\_-404367246_53.wxapkg
+</code></pre>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1616632795649.png" alt="" loading="lazy"></figure>
+<p>这样就得到了程序源码，在code.js中，我们可以看到长达43231行的JS代码，是游戏的全部主逻辑代码。</p>
+<h1 id="三-抓取网络流量">三、抓取网络流量</h1>
+<p>打开微信小游戏，在Fiddler中查看流量，在此过程中尽量关闭其他的应用程序，避免流量混杂带来的数据分析困难，在游戏的过程中，我们发现消灭病毒这款微信小游戏使用了chiji-h5.com这个域名，子域名包括commcdn、wxwyjh、jsonconfig 等几个子域名。</p>
+<p>我们从下载资源，打开游戏，玩一局游戏，死一次，领取游戏奖励，打开排行榜，这样将小程序功能走一遍之后，回头来看抓取的流量，其中通过名称发现了一些端倪。</p>
+<p>通过协议排序，我们看到一些操作如登录认证、获取信息、邀请好友等等业务功能都是访问wxwyjh这个子域名。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1616632808374.png" alt="" loading="lazy"></figure>
+<p>我们对这个子域名进行额外查看，发现一个POST请求的数据包</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1616632819147.png" alt="" loading="lazy"></figure>
+<p>请求地址为 /api/archive/upload</p>
+<p>在请求中，发现了一些跟用户相关的敏感数据，我们现在将这个数据包单提出来如下（敏感数据以***显示）：</p>
+<pre><code class="language-http">POST https://wxwyjh.chiji-h5.com/api/archive/upload HTTP/1.1
+charset: utf-8
+Accept-Encoding: gzip
+referer: https://servicewechat.com/wxa2c324b63b2a9e5e/53/page-frame.html
+content-type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Linux; Android 6.0.1; OPPO R9s Plus Build/MMB29M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/73.0.3683.90 Mobile Safari/537.36 MicroMessenger/7.0.4.1420(0x27000439) Process/appbrand0 NetType/WIFI Language/zh_CN
+Content-Length: 1178
+Host: wxwyjh.chiji-h5.com
+Connection: Keep-Alive
+
+{&quot;plat&quot;:&quot;wx&quot;,&quot;v&quot;:1,&quot;record&quot;:&quot;{\&quot;v\&quot;:\&quot;***\&quot;,\&quot;uid\&quot;:\&quot;***\&quot;,\&quot;isPingJiaed\&quot;:false,\&quot;isSoundOff\&quot;:true,\&quot;isShackOff\&quot;:false,\&quot;GMTimeG\&quot;:-1,\&quot;GMTimeP\&quot;:-1,\&quot;shareTime\&quot;:-1,\&quot;level\&quot;:134,\&quot;levelMax\&quot;:134,\&quot;lDamage\&quot;:121,\&quot;lCount\&quot;:121,\&quot;lJiaZhi\&quot;:133,\&quot;lRiChang\&quot;:133,\&quot;curFu\&quot;:6,\&quot;levelFuCount\&quot;:[3,1,1,1,1,1,1,1,1,1],\&quot;levelFuDamage\&quot;:[22,20,1,1,1,1,1,1,1,1],\&quot;getTime\&quot;:\&quot;0\&quot;,\&quot;bgIndex\&quot;:5,\&quot;bgmIndex\&quot;:1,\&quot;money\&quot;:\&quot;810429\&quot;,\&quot;tipFU\&quot;:false,\&quot;G1\&quot;:false,\&quot;G2\&quot;:false,\&quot;tiLi\&quot;:68,\&quot;tiLiBackTime\&quot;:1556441780825,\&quot;today\&quot;:28,\&quot;playCount\&quot;:2,\&quot;shareCount\&quot;:0,\&quot;videoCount\&quot;:1,\&quot;isGuanZhu\&quot;:0,\&quot;isShouCang\&quot;:true,\&quot;tryFuCount\&quot;:1,\&quot;pos\&quot;:\&quot;北京,北京\&quot;,\&quot;posUpdate\&quot;:28,\&quot;zuanShi\&quot;:0,\&quot;teQuanTime\&quot;:-1,\&quot;isTeQuaned\&quot;:false,\&quot;jiFenId\&quot;:[\&quot;\&quot;],\&quot;getTime2\&quot;:1556440949083,\&quot;teQuanShowed\&quot;:false,\&quot;teQuanGetTime\&quot;:-1,\&quot;loginTime\&quot;:0,\&quot;EM_isFirst\&quot;:true,\&quot;EM_score\&quot;:0,\&quot;EM_localRank\&quot;:0,\&quot;EM_refreshRankTime\&quot;:0,\&quot;nickName\&quot;:\&quot;\&quot;,\&quot;mode\&quot;:1,\&quot;wjCount\&quot;:0,\&quot;ID\&quot;:***,\&quot;s\&quot;:\&quot;***\&quot;}&quot;,&quot;time&quot;:1556441812478,&quot;openid&quot;:&quot;***&quot;,&quot;sign&quot;:&quot;***&quot;}
+</code></pre>
+<p>看到这个数据包的时候，简直是美滋滋，这个数据包上传了用户几乎全部的信息，这些数据讲道理是存在服务端的，正常的逻辑就是将用户ID加一些校验传过去，获取这些数据再加载到本地，在数据有变化后将变化的数据分不同的接口上传，服务端校验，再改数据库。</p>
+<p>像这种一次传全部数据的，基本可以确定我们能够搞事情了。</p>
+<p>通过命名，我们可以知道一些信息：</p>
+<ul>
+<li>
+<p><code>isPingJiaed/isSoundOff/isShackOff/GMTimeG/GMTimeP/shareTime</code>：一些基本的配置信息或标识信息</p>
+</li>
+<li>
+<p><code>level/levelMax</code>：等级</p>
+</li>
+<li>
+<p><code>lDamage/lCount</code>:主武器伤害和射速</p>
+</li>
+<li>
+<p><code>lJiaZhi/lRiChang</code>：金币价值和日常收益</p>
+</li>
+<li>
+<p><code>curFu/levelFuCount/levelFuDamage</code>：目前使用的副武器/副武器射速/副武器伤害</p>
+</li>
+<li>
+<p><code>money/zuanShi</code>：金币/钻石数量</p>
+</li>
+</ul>
+<p>剩余的都是一些用于描述用户行为或者画像的东西，我们不做研究</p>
+<p>我们直接修改一些参数值并提交，发现服务器返回了code 1000，这并不是正常的情况，在正常情况下，服务器应返回0，这说明服务器端还是有校验的。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1616632897628.png" alt="" loading="lazy"></figure>
+<p>我们还发现，在数据包尾部，有名为sign的键值对，这可能是按照某种逻辑对上传数据包进行校验的签名，在这种情况下，我们需要查看源代码，找到签名的逻辑，按照逻辑将自己修改后的数据包重新进行计算，这样才能在服务器端校验成功。</p>
+<h1 id="四-校验算法回顾">四、校验算法回顾</h1>
+<p>为了保证数据在通信时的安全性，可以采用参数签名的方式来进行相关验证。这种方式的基本原理就是将传递的数据加一些参数做MD5，并跟随数据包一起进行传递，在服务器端进行再次验证，将计算得到的MD5与收到的MD5进行比对，如果不同，则说明数据包被篡改过。</p>
+<p>这个过程就是为了防止数据包在传递过程中遭到篡改的一种校验算法。</p>
+<p>Sign签名的方式能够在一定程度上防止信息被篡改和伪造，但是对于微信小程序来说，逻辑都写在 JS 中，而 JS 源码是能够逆出来的，我们能够通过查看源代码得知程序逻辑，再更改数据包之后，我们自行组织逻辑，算出MD5，一同发送至服务器，就可以绕过校验。</p>
+<p>我们目前面对的就是一个典型的web应用中前端sign逻辑校验情况，是存在安全问题的。</p>
+<h1 id="五-分析小程序源码">五、分析小程序源码</h1>
+<p>由于不懂JS，只能努力的看下逻辑，参考了很多网上的教程，但是程序更新周期很短，这种教程和分析的技术文章很有时效性，方法全部失效了，所以我们需要自己分析，重新发掘手段。</p>
+<p>核心代码在 code.js 文件中，主逻辑都在这个文件中，我们对其进行分析。</p>
+<p>首先查看发送数据包的部分，通过搜索URL部分关键字找到uploadRecord方法：</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1616632911615.png" alt="" loading="lazy"></figure>
+<p>可以看到一个addEvent，名为saveServer，调用uploadRecord，到这一步我们更加坚定，我们上传的数据包可以更改服务器端的数据。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1616633052800.png" alt="" loading="lazy"></figure>
+<p>sendPost函数负责发送数据包：</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1616633044872.png" alt="" loading="lazy"></figure>
+<p>我们大概明白了发送数据的流程，中间经过一个十分重要的 this.sign 算法，跟到这个sign值的生成算法，通过搜索sign、hash等关键字找到关键函数sign。</p>
+<p>此处有两处sign，一个一个看，第一处sign：</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1616633064469.png" alt="" loading="lazy"></figure>
+<p>这处的sign接了两个参数，我们可以看到第二个参数e，实际上就是True和False的判断，这是为了和下面的第二个sign做区分。</p>
+<p>我们来看一下这个代码的逻辑，定义了空数组i（python 中的空列表），空字符串 s，t 是 uploadRecord 中传入的对象（python中的字典），又加了一些新的键值对 openid, wx_appid, wx_secret，使用sort进行排序，然后使用for循环将键值对编程 url 参数形式，拼接为字符串，在return中，将对象 t  中的 wx_appid , wx_secret 键值对删掉，这两个参数仅用作 sign 计算，不会发送。</p>
+<p>第二处sign：</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1616633076819.png" alt="" loading="lazy"></figure>
+<p>这处的 sign 只接一个参数，在t中添加新的键值对，s:kunpo，然后将 json 对象转为字符串，再加上一个字符 d ，最后将 t.s 替换为算完的 hash 值。这部分 sign 是对单独对数据部分进行校验的，代码比较简单。对应的值就是数据包里 result 里面的 s 。</p>
+<p>两处 sign 算法都调用了 Js.I.hash 方法计算，跟到hash算法实现部分，最终都是调用了windows.md5，就是普通的MD5算法。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1616633094773.png" alt="" loading="lazy"></figure>
+<p>逻辑和算法都弄清楚之后，我们发现还有wx_appid, wx_secret这两个值我们没有，跟到相应的位置，凭代码看不出来什么：</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1616633106160.png" alt="" loading="lazy"></figure>
+<p>通过动态调试获得了自己的 appID，secret 和 secret1 等参数值，</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1616633117871.png" alt="" loading="lazy"></figure>
+<p>OK，到了这步，我们基本上就搞定了程序完整的一些逻辑。</p>
+<h1 id="六-校验机制还原">六、校验机制还原</h1>
+<p>我们先看第一个校验，就是数据包里的 s 签名值，我们把主要逻辑拿出来，走一遍就可以，代码如下：</p>
+<pre><code class="language-html">&lt;script src='md5.min.js'&gt;&lt;/script&gt;
+&lt;script&gt;
+
+var t={&quot;uid&quot;:&quot;***&quot;,&quot;isPingJiaed&quot;:false,&quot;isSoundOff&quot;:true,&quot;isShackOff&quot;:false,&quot;GMTimeG&quot;:-1,&quot;GMTimeP&quot;:-1,&quot;shareTime&quot;:-1,&quot;level&quot;:237,&quot;levelMax&quot;:237,&quot;lDamage&quot;:740,&quot;lCount&quot;:360,&quot;lJiaZhi&quot;:550,&quot;lRiChang&quot;:550,&quot;curFu&quot;:8,&quot;levelFuCount&quot;:[3,1,1,1,1,1,1,1,33,1],&quot;levelFuDamage&quot;:[22,20,1,1,1,1,1,1,722,1],&quot;getTime&quot;:&quot;0&quot;,&quot;bgIndex&quot;:6,&quot;bgmIndex&quot;:2,&quot;money&quot;:&quot;2589626&quot;,&quot;tipFU&quot;:false,&quot;G1&quot;:false,&quot;G2&quot;:false,&quot;tiLi&quot;:80,&quot;tiLiBackTime&quot;:1556499997717,&quot;today&quot;:29,&quot;playCount&quot;:5,&quot;shareCount&quot;:0,&quot;videoCount&quot;:0,&quot;isGuanZhu&quot;:0,&quot;isShouCang&quot;:true,&quot;tryFuCount&quot;:0,&quot;pos&quot;:&quot;北京,北京&quot;,&quot;posUpdate&quot;:28,&quot;zuanShi&quot;:0,&quot;teQuanTime&quot;:-1,&quot;isTeQuaned&quot;:false,&quot;jiFenId&quot;:[&quot;&quot;],&quot;getTime2&quot;:1556500058658,&quot;teQuanShowed&quot;:false,&quot;teQuanGetTime&quot;:-1,&quot;loginTime&quot;:0,&quot;EM_isFirst&quot;:true,&quot;EM_score&quot;:0,&quot;EM_localRank&quot;:0,&quot;EM_refreshRankTime&quot;:0,&quot;nickName&quot;:&quot;&quot;,&quot;mode&quot;:1,&quot;wjCount&quot;:0,&quot;ID&quot;:***}
+	t.s = &quot;kunpo&quot;;
+	var e = JSON.stringify(t) + String.fromCharCode(100);
+	console.log(e)
+	t.s = md5(e)
+	console.log(t.s)
+	console.log(t)
+&lt;/script&gt;
+
+</code></pre>
+<p>其实很简单，就是拿到数据包部分，注意，前面有一个 v 字段不参与校验，写入 's':'kunpo' ，做MD5，再把值填回去，跟我们抓包得到的MD5值相同，说明校验成功。</p>
+<p>再来看第二个校验，这次校验是针对整个数据包部分做的校验。</p>
+<pre><code class="language-html">&lt;script src='md5.min.js'&gt;&lt;/script&gt;
+&lt;script&gt;
+
+var e = []
+var i = &quot;&quot;;
+var t = {
+	plat:&quot;wx&quot;,
+	v:'1',
+	record:数据,
+	time:1556598662284,
+	openid:&quot;***&quot;,
+	wx_appid:&quot;***&quot;,
+	wx_secret:&quot;***&quot;,
+	}
+	for (var s in t){
+		e.push(s);
+	}
+	console.log(e)
+	e.sort(function(t, e) {
+		return t &gt; e ? 1 : t &lt; e ? -1 : 0
+    });
+	var n;
+	for (n in e) i += (s = e[n]) + &quot;=&quot; + t[s] + &quot;&amp;&quot;;
+	console.log(i.substring(0, i.length - 1));
+	console.log(md5(i.substring(0, i.length - 1)));
+&lt;/script&gt;
+</code></pre>
+<p>其他接口调用的都是第二个校验，调取不同的接口就把不同的数据扔进record中就可以了。</p>
+<p>在调用我们所关注的 /api/archive/upload 接口时，传入的数据格式为：</p>
+<pre><code class="language-js">&quot;{\&quot;v\&quot;:\&quot;***\&quot;,\&quot;uid\&quot;:\&quot;***\&quot;,\&quot;isPingJiaed\&quot;:false,\&quot;isSoundOff\&quot;:true,\&quot;isShackOff\&quot;:false,\&quot;GMTimeG\&quot;:-1,\&quot;GMTimeP\&quot;:-1,\&quot;shareTime\&quot;:-1,\&quot;level\&quot;:1161,\&quot;levelMax\&quot;:1161,\&quot;lDamage\&quot;:1200,\&quot;lCount\&quot;:360,\&quot;lJiaZhi\&quot;:622,\&quot;lRiChang\&quot;:621,\&quot;curFu\&quot;:8,\&quot;levelFuCount\&quot;:[3,1,1,1,1,1,1,1,33,1],\&quot;levelFuDamage\&quot;:[22,20,1,1,1,1,1,1,1200,1],\&quot;getTime\&quot;:\&quot;0\&quot;,\&quot;bgIndex\&quot;:5,\&quot;bgmIndex\&quot;:3,\&quot;money\&quot;:\&quot;18147188\&quot;,\&quot;tipFU\&quot;:false,\&quot;G1\&quot;:false,\&quot;G2\&quot;:false,\&quot;tiLi\&quot;:80,\&quot;tiLiBackTime\&quot;:1556615771635,\&quot;today\&quot;:30,\&quot;playCount\&quot;:5,\&quot;shareCount\&quot;:0,\&quot;videoCount\&quot;:0,\&quot;isGuanZhu\&quot;:0,\&quot;isShouCang\&quot;:true,\&quot;tryFuCount\&quot;:0,\&quot;pos\&quot;:\&quot;北京,北京\&quot;,\&quot;posUpdate\&quot;:28,\&quot;zuanShi\&quot;:0,\&quot;teQuanTime\&quot;:-1,\&quot;isTeQuaned\&quot;:false,\&quot;jiFenId\&quot;:[\&quot;\&quot;],\&quot;getTime2\&quot;:1556615812623,\&quot;teQuanShowed\&quot;:false,\&quot;teQuanGetTime\&quot;:-1,\&quot;loginTime\&quot;:0,\&quot;EM_isFirst\&quot;:true,\&quot;EM_score\&quot;:0,\&quot;EM_localRank\&quot;:0,\&quot;EM_refreshRankTime\&quot;:0,\&quot;nickName\&quot;:\&quot;\&quot;,\&quot;mode\&quot;:1,\&quot;wjCount\&quot;:0,\&quot;ID\&quot;:***,\&quot;s\&quot;:\&quot;***\&quot;}&quot;
+</code></pre>
+<p>实际上就是我们之前校验好的数据包，在前面添加了v。</p>
+<p>OK，我们先简单修改一下金币，将金币改为12345，看看效果。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1616633134411.png" alt="" loading="lazy"></figure>
+<p>可以看到返回是成功的，接下来我们将小程序删除，重新添加，为了避免本地数据再次更新到服务器上，重新加载游戏后发现修改成功。</p>
+<h1 id="七-代码实现">七、代码实现</h1>
+<p>每次去执行这个流程并手动计算是重复性劳动，并且在这几天网上搜集资料的时候竟然发现淘宝还有卖这东西的。</p>
+<p>也是挺厉害的，接下来我们将其写成代码，一键加满！</p>
+<p>由于是纯技术分析，涉及到线上游戏的平衡问题，代码就不发了，留张截图压压惊。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1616633145597.png" alt="" loading="lazy"></figure>
+<p>可以看到我们把副武器和主武器的伤害加到1200（满级），射速调到32，金币改到了 999999，级别调成了996，纪念一下 996.ICU。</p>
+<p>下面是截图：</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1616633156077.png" alt="" loading="lazy"></figure>
+<p>完成~撒花~收工~</p>
+<p>此处有几个需要注意的点是：</p>
+<ul>
+<li>
+<p>第一，这个数据中 money（金币）参数的值是字符串类型，而不是数字型的；</p>
+</li>
+<li>
+<p>第二，在调取不同接口时由于传参的不同，使用的 wx_secret 不同，需要区别对待（这个位置坑了我很长时间）。具体哪处调用了哪处可以参考我的代码，里面都是写死的；</p>
+</li>
+<li>
+<p>第三，数据是有上限的，部分数据会牵扯到游戏中的一些算法，比如病毒生成等等，改太高会出错的，一旦你数据在拉回本地解析出现问题，将会弹窗报错，并 upload 成初始化等级，只不过是从头再来；</p>
+</li>
+<li>
+<p>第四，经过多个账号测试，不同渠道的游戏版本更迭不同，校验方式不一样，有的来源使用的是老版本的校验，有的来源是新版本的，因此我写的脚本是不通用的！！！不通用的！！！不通用的！！！我这个只对应安卓微信新版本的校验，老版本的网上都有很多教程和工具了。至于是哪个版的判断一下 archive/get 接口返回的数据就好了。</p>
+</li>
+<li>
+<p>先执行登录操作，再执行获取数据，否则服务器返回的 loginTime 值为 null，本地解析也会产生问题。</p>
+</li>
+</ul>
+<h1 id="八-心得">八、心得</h1>
+<p>第一次研究一个前端签名校验数据的问题，活活搞了3天，这三天弄得我是饭饭没少吃，觉觉没少睡，实验室问了一圈，大佬们也表示反编译的小程序源码也是经过混淆和压缩的，看着真是要哭了。</p>
+<p>其次在写成 python 脚本的时候，才发现在不同类型之间的转换，不同字符的编码还留下非常多的坑，很多东西如果基础没跟上，出错的时候都不知道为什么。实验室大佬早就说过，写 python 的大部分时间都是在处理字符串，仔细想想还是非常有道理的。</p>
+<p>表面上看着这篇文章是一篇游戏外挂，实际上很简单，归咎到底还是web安全，就是通过抓包发现了更新数据库的接口，然后分析 js 源代码找到签名校验算法，绕过校验的过程。</p>
+<p>终于搞定了心里成就感还是非常爽的，遇到难题攻克难关的感觉很好，感觉一块石头落了地，又可以开开心心的工作和生活了，截止文章写到现在，是2019-5-1 15:32:44，祝大家五一快乐哦~</p>
+<h1 id="九-参考链接">九、参考链接</h1>
+<p>https://kuaibao.qq.com/s/20190418A02HKM00?refer=cp_1026</p>
+<p>https://github.com/qwerty472123/wxappUnpacker</p>
+<p>http://www.51xuediannao.com/xiaochengxu/019c08cc.html</p>
+<p>https://blog.csdn.net/qq_15901351/article/details/80175169</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E9%85%8D%E7%BD%AE%E6%8A%93%E5%8C%85%E7%8E%AF%E5%A2%83">一、配置抓包环境</a></li>
+<li><a href="#%E4%BA%8C-%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F%E6%BA%90%E7%A0%81%E8%8E%B7%E5%8F%96">二、微信小程序源码获取</a></li>
+<li><a href="#%E4%B8%89-%E6%8A%93%E5%8F%96%E7%BD%91%E7%BB%9C%E6%B5%81%E9%87%8F">三、抓取网络流量</a></li>
+<li><a href="#%E5%9B%9B-%E6%A0%A1%E9%AA%8C%E7%AE%97%E6%B3%95%E5%9B%9E%E9%A1%BE">四、校验算法回顾</a></li>
+<li><a href="#%E4%BA%94-%E5%88%86%E6%9E%90%E5%B0%8F%E7%A8%8B%E5%BA%8F%E6%BA%90%E7%A0%81">五、分析小程序源码</a></li>
+<li><a href="#%E5%85%AD-%E6%A0%A1%E9%AA%8C%E6%9C%BA%E5%88%B6%E8%BF%98%E5%8E%9F">六、校验机制还原</a></li>
+<li><a href="#%E4%B8%83-%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0">七、代码实现</a></li>
+<li><a href="#%E5%85%AB-%E5%BF%83%E5%BE%97">八、心得</a></li>
+<li><a href="#%E4%B9%9D-%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5">九、参考链接</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/xss/">
+              <h3 class="post-title">
+                [旧文归档] XSS 笔记乱记
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

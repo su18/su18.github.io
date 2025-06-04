@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://su18.org</id>
+    <title>素十八</title>
+    <updated>2025-06-04T06:31:54.962Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://su18.org"/>
+    <link rel="self" href="https://su18.org/atom.xml"/>
+    <subtitle>你救赎的人 终将成为你的光</subtitle>
+    <logo>https://su18.org/images/avatar.png</logo>
+    <icon>https://su18.org/favicon.ico</icon>
+    <rights>All rights reserved 2025, 素十八</rights>
+    <entry>
+        <title type="html"><![CDATA[Postgresql JDBC Attack and Stuff]]></title>
+        <id>https://su18.org/post/postgresql-jdbc-attack-and-stuff/</id>
+        <link href="https://su18.org/post/postgresql-jdbc-attack-and-stuff/">
+        </link>
+        <updated>2025-06-02T02:29:13.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2023 年终总结]]></title>
+        <id>https://su18.org/post/pleaseimhungry/</id>
+        <link href="https://su18.org/post/pleaseimhungry/">
+        </link>
+        <updated>2023-12-29T05:16:11.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[以 Desperate Cat 为始学一些姿势]]></title>
+        <id>https://su18.org/post/Desperate-Cat/</id>
+        <link href="https://su18.org/post/Desperate-Cat/">
+        </link>
+        <updated>2022-10-20T08:38:34.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[如何一夜之间成为 Vulfocus 榜一大哥]]></title>
+        <id>https://su18.org/post/fuck-vulfocus/</id>
+        <link href="https://su18.org/post/fuck-vulfocus/">
+        </link>
+        <updated>2022-08-15T05:45:13.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Hessian 反序列化知一二]]></title>
+        <id>https://su18.org/post/hessian/</id>
+        <link href="https://su18.org/post/hessian/">
+        </link>
+        <updated>2022-04-29T14:21:53.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[关于一个静态博客竟然需要登录才能看文章内容这件事]]></title>
+        <id>https://su18.org/post/donotknowcannotsay/</id>
+        <link href="https://su18.org/post/donotknowcannotsay/">
+        </link>
+        <updated>2022-02-28T16:00:00.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[高效挖掘反序列化漏洞——GadgetInspector改造]]></title>
+        <id>https://su18.org/post/gadgetor/</id>
+        <link href="https://su18.org/post/gadgetor/">
+        </link>
+        <updated>2022-02-21T02:43:56.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[从 CVE 学 Shiro 安全]]></title>
+        <id>https://su18.org/post/shiro-5/</id>
+        <link href="https://su18.org/post/shiro-5/">
+        </link>
+        <updated>2022-01-25T07:26:51.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Log4j2：里程碑式的顶级供应链漏洞]]></title>
+        <id>https://su18.org/post/log4j2/</id>
+        <link href="https://su18.org/post/log4j2/">
+        </link>
+        <updated>2021-12-13T10:13:35.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2021 读书小结]]></title>
+        <id>https://su18.org/post/reading-2021/</id>
+        <link href="https://su18.org/post/reading-2021/">
+        </link>
+        <updated>2021-12-11T06:47:24.000Z</updated>
+    </entry>
+</feed>
